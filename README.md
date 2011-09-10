@@ -9,18 +9,21 @@ Getting Started
 
 Install SWI-Prolog from http://www.swi-prolog.org
 
-Get the latest plmake source from github. Add it to your path:
+Get the latest plmake source from github. No installation steps are
+required. Add it to your path:
 
     export PATH=$PATH:$HOME/plmake/bin
 
-Get help from the command line:
+(changing the directory as necessary)
+
+Get (minimal) help from the command line:
 
     plmake -h
 
 Examples
 --------
 
-plmake expects a file called makespec.pro to be present in your
+plmake expects a file called `makespec.pro` to be present in your
 current directory.
 
 Assume you have two file formats, foo and bar, and a foo2bar converter.
