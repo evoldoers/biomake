@@ -1,2 +1,0 @@
-#!/bin/sh
-swwipl -g "use_module(library(plmake/plmake)),consult_buildfile,build('$@')"
