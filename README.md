@@ -69,21 +69,25 @@ variables. The following spec is equivalent:
     '$Base.bar' <-- ['$Base.foo'],
         'foo2bar $Base.foo > $Base.bar'.
 
+Note that unlike Makefiles, the variables are not enclosed in
+parentheses. These are not Makefile variable, but are actually prolog
+variables (and must conform to prolog syntax).
+
 You can mix and match if you like:
 
     '$Base.bar' <-- ['$Base.foo'],
         'foo2bar $< > $@'.
 
 Unlike makefiles, plmake allows multiple variables in pattern
-matching. Let's say we have a program called "align" that compares two
+matching. Let's say we have a program called `align that compares two
 files (e.g. biological sequence alignment, or ontology
-alignment). Assume our file convention is to suffix ".fa" on the
+alignment). Assume our file convention is to suffix `.fa` on the
 inputs.  We can write a makespec with the following:
 
     'align-$X-$Y.tbl' <-- ['$X.fa', '$Y.fa'],
         'align $X.fa $Y.fa > $@'.
 
-Now if we have files x.fa and y.fa we can type:
+Now if we have files `x.fa` and `y.fa` we can type:
 
     plmake align-x-y.tbl
 
@@ -108,6 +112,7 @@ We can use a prolog database to make top-level targets. E.g:
 
     pair(X,Y) :- sp(X),sp(Y),X@<Y.
 
+    % a more convenience syntax may be available in future...
     all <-- Deps, 
       {findall( t(['align-',X,-,Y,'.tbl']),
                 pair(X,Y),
@@ -123,5 +128,24 @@ targets. Type
 
 And all pairs are compared (exlcuding identical and reciprocal pairs).
 
+More
+----
 
+There are a few more features that will be documented in the
+future. The core will likely stay minimal. The core system is
+extensive and powerful so you should be able to do lots by
+using/abusing either prolog or shell wrappers.
 
+In the future there may be extensions for:
+
+* a web-based build environment (a la Galaxy)
+* semantic web enhancement (using NEPOMUK file ontology)
+* using other back ends and target sources (sqlite db, REST services)
+* cloud-based computing
+* running computes on clusters
+
+History
+-------
+
+This is a much simplified version of a system called "BioMake" some
+time ago....
