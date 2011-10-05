@@ -5,7 +5,11 @@
            build/1,
            build/2,
            consult_buildfile/0,
-           consult_buildfile/1
+           consult_buildfile/1,
+
+           target_bindrule/2,
+           rule_dependencies/3,
+           is_rebuild_required/4
            ]).
 
 /** <module> Prolog implementation of Makefile-inspired build system
@@ -13,6 +17,8 @@
   See the README
 
   */
+
+
 
 % ----------------------------------------
 % TOP-LEVEL
@@ -77,6 +83,9 @@ write_tab(_,_) :- write('    ').
 % DEPENDENCY MANAGEMENT
 % ----------------------------------------
 
+is_rebuild_required(_,_,_,Opts) :-
+        member(always_make(true),Opts), % TODO
+        !.
 is_rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
@@ -196,6 +205,14 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 
 :- user:op(1100,xfy,<--).
 
+/*
+consult_makefile(F) :-
+        ensure_loaded(gnumake_parser),
+        parse_makefile(F,RL),
+        forall(member( rule(T,Ds,Cs), RL),
+               add_spec_clause( (T <-- Ds, Cs))).
+*/
+
 consult_buildfile :- consult_buildfile('makespec.pro').
 consult_buildfile(F) :-
         debug(build,'reading: ~w',[F]),
@@ -242,8 +259,14 @@ add_spec_clause(Term,_) :-
 % PATTERN SYNTAX AND API
 % ----------------------------------------
 
-:- multifile mkrule/3,mkrule/4,with/2.
-:- dynamic mkrule/3,mkrule/4,with/2.
+:- multifile
+        mkrule/3,
+        mkrule/4,
+        with/2.
+:- dynamic
+        mkrule/3,
+        mkrule/4,
+        with/2.
 
 mkrule_default(T,D,E,true,VNs) :- with(mkrule(T,D,E),VNs).
 mkrule_default(T,D,E,G,VNs) :- with(mkrule(T,D,E,G),VNs).

@@ -15,6 +15,8 @@ main :-
         parse_args(Args,Opts_1),
         flatten(Opts_1,Opts),
         consult_buildfile,
+        forall(member(goal(G),Opts),
+               G),
         forall(member(rest(T),Opts),
                build(T,Opts)),
         halt.
@@ -42,6 +44,23 @@ parse_arg(['-n'|L],L,dry_run(true)).
 arg_info('--dry-run','','Print the commands that would be executed, but do not execute them').
 
 parse_arg(['-h'|L],L,null) :- show_help.
+
+parse_arg(['--always-make'|L],L,always_make(true)).
+parse_arg(['-t',F|L],L,null) :-
+        !,
+        ensure_loaded(library(plmake/gnumake_parser)),
+        translate_makefile(F).
+
+parse_arg(['-l',F|L],L,
+          goal( (collect_stored_targets(F,[]),
+                 show_stored_targets
+                ) )) :-
+        ensure_loaded(library(plmake/plmake_db)),
+        !.
+        
+
+
+
 
 show_help :-
         Fake=[X|_],
