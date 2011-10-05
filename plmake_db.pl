@@ -17,6 +17,10 @@
 %% stored_target(?Target, ?Dependencies, ?Status, ?TimeBuilt, ?TimeChecked)
 :- dynamic stored_target/5.
 
+%% collect_stored_targets(+Path,+Opts:list)
+%
+% iterates over files and directories in Path, generating metadata
+% on each file, storing in stored_target/5
 collect_stored_targets(Opts):-
         collect_stored_targets('.',Opts).
 collect_stored_targets(Path,Opts):-

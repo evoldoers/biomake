@@ -37,19 +37,30 @@ parse_args([A|Args],[rest(A)|Opts]) :-
 :- discontiguous arg_info/3.
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
-arg_info('--debug',atom,'(developers) debug target').
+arg_info('--debug','TARGET','[developers] debug target. E.g. --debug plmake').
 
 parse_arg(['--dry-run'|L],L,dry_run(true)).
 parse_arg(['-n'|L],L,dry_run(true)).
 arg_info('--dry-run','','Print the commands that would be executed, but do not execute them').
+arg_info('-n','','Shortcut for --dry-run').
 
-parse_arg(['-h'|L],L,null) :- show_help.
+parse_arg(['-h'|L],L,null) :-
+        show_help,
+        nl,
+        writeln('For more info see http://github.com/cmungall/plmake'),
+        nl,
+        halt.
+arg_info('-h','','Show help').
+
 
 parse_arg(['--always-make'|L],L,always_make(true)).
+arg_info('--always-make','','Always build fresh target even if dependency is up to date').
+
 parse_arg(['-t',F|L],L,null) :-
         !,
         ensure_loaded(library(plmake/gnumake_parser)),
         translate_makefile(F).
+arg_info('-t','MAKEFILE','Translates a GNU Makefile to a makeprog [incomplete]').
 
 parse_arg(['-l',F|L],L,
           goal( (collect_stored_targets(F,[]),
@@ -57,6 +68,7 @@ parse_arg(['-l',F|L],L,
                 ) )) :-
         ensure_loaded(library(plmake/plmake_db)),
         !.
+arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
         
 
 
