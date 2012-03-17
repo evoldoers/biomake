@@ -14,7 +14,8 @@ main :-
         !,
         parse_args(Args,Opts_1),
         flatten(Opts_1,Opts),
-        consult_buildfile,
+        option(makespec(MF),Opts,'makespec.pro'),
+        consult_buildfile(MF),
         forall(member(goal(G),Opts),
                G),
         forall(member(rest(T),Opts),
@@ -45,6 +46,9 @@ arg_info('--dry-run','','Print the commands that would be executed, but do not e
 arg_info('-n','','Shortcut for --dry-run').
 
 parse_arg(['-h'|L],L,null) :-
+        writeln('plmake [OPTION...] target1 target2...'),
+        nl,
+        writeln('Options:'),
         show_help,
         nl,
         writeln('For more info see http://github.com/cmungall/plmake'),
@@ -60,7 +64,10 @@ parse_arg(['-t',F|L],L,null) :-
         !,
         ensure_loaded(library(plmake/gnumake_parser)),
         translate_makefile(F).
-arg_info('-t','MAKEFILE','Translates a GNU Makefile to a makeprog [incomplete]').
+arg_info('-t','GNUMAKEFILE','Translates a GNU Makefile to a makeprog [incomplete]').
+
+parse_arg(['-f',F|L],L,makespec(F)) :- !.
+arg_info('-f','MAKEPROG','Uses MAKEPROG as the build specification [default: makespec.pro]').
 
 parse_arg(['-l',F|L],L,
           goal( (collect_stored_targets(F,[]),
@@ -69,8 +76,6 @@ parse_arg(['-l',F|L],L,
         ensure_loaded(library(plmake/plmake_db)),
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
-        
-
 
 
 

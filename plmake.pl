@@ -41,13 +41,13 @@ build(T,SL,Opts) :-
         debug(build3,'  Bindrule: ~w',[Rule]),
         rule_dependencies(Rule,DL,Opts),
         report('NT: ~w <-- ~w',[T,DL],SL,Opts),
-        build_targets(DL,[T|SL],Opts),
+        !,
+        build_targets(DL,[T|SL],Opts), % semidet
         (   is_rebuild_required(T,DL,SL,Opts)
         ->  rule_execs(Rule,Execs,Opts),
             run_execs(Execs,Opts)
         ;   true),
-        report('NT: ~w is up to date',[T],SL,Opts),
-        !.
+        report('NT: ~w is up to date',[T],SL,Opts).
 build(T,SL,Opts) :-
         debug(build3,'  checking if rebuild required for ~w',[T]),
         \+ is_rebuild_required(T,[],SL,Opts),
@@ -55,6 +55,7 @@ build(T,SL,Opts) :-
         report('T: ~w exists',[T],SL,Opts).
 build(T,SL,Opts) :-
         report('T: ~w FAILED',[T],SL,Opts),
+        !,
         fail.
 
 % potentially split this into two steps:
