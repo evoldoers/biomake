@@ -20,33 +20,43 @@ Get (minimal) help from the command line:
 
     plmake -h
 
+Command-line
+------------
+
+  plmake [-h] [-t GNUMAKEFILE] [-l TARGET] [-n|--dry-run] [--always-make] [TARGET...]
+
 Examples
 --------
+
+(this assumes some knowledge of make and makefiles)
 
 plmake expects a file called `makespec.pro` to be present in your
 current directory.
 
-Assume you have two file formats, foo and bar, and a foo2bar converter.
+Assume you have two file formats, ".foo" and ".bar", and a foo2bar
+converter.
 
-Add the following target to your makespec.pro:
+Add the following rule to your makespec.pro:
 
-    '%.bar' <-- ['%.foo'],
+    '%.bar' <-- '%.foo',
         'foo2bar $< > $@'.
 
 Unlike makefiles, whitespace is irrelevant. Remember the closing ".",
 as this is prolog syntax.
 
-To convert a file "x.foo" to "x.bar" type:
+To convert a pre-existing file "x.foo" to "x.bar" type:
 
     plmake x.bar
 
-Let's say we can go from a bar to a baz:
+Let's say we can go from a .bar to a .baz using a bar2baz
+converter. We can add an additional rule:
 
-    '%.baz' <-- ['%.bar'],
+    '%.baz' <-- '%.bar',
         'bar2baz $< > $@'.
 
-We type:
+Now if we type:
 
+    touch x.foo
     plmake x.baz
 
 The output will be something like:
@@ -59,33 +69,37 @@ The output will be something like:
       bar2baz x.bar > x.baz
     NT: x.baz is up to date
 
-In the future this will be more configurable. The idea is to show the
-dependencies as a tree structure.
+In the future the output format will be more configurable. The idea is
+to show the dependencies as a tree structure.
 
 The syntax in the makespec above is designed to be similar to what is
 already used in makefiles. You can bypass this and use prolog
-variables. The following spec is equivalent:
+variables. The following form is functionally equivalent:
 
-    '$Base.bar' <-- ['$Base.foo'],
+    '$Base.bar' <-- '$Base.foo',
         'foo2bar $Base.foo > $Base.bar'.
 
 Note that unlike Makefiles, the variables are not enclosed in
 parentheses. These are not Makefile variable, but are actually prolog
-variables (and must conform to prolog syntax).
+variables (and must conform to prolog syntax - they must have a
+leading uppercase, and only alphanumeric characters plus underscore).
 
 You can mix and match if you like:
 
-    '$Base.bar' <-- ['$Base.foo'],
+    '$Base.bar' <-- '$Base.foo',
         'foo2bar $< > $@'.
 
 Unlike makefiles, plmake allows multiple variables in pattern
-matching. Let's say we have a program called `align that compares two
-files (e.g. biological sequence alignment, or ontology
-alignment). Assume our file convention is to suffix `.fa` on the
-inputs.  We can write a makespec with the following:
+matching. Let's say we have a program called "align" that compares two
+files producing some output (e.g. biological sequence alignment, or
+ontology alignment). Assume our file convention is to suffix `.fa` on
+the inputs.  We can write a makespec with the following:
 
     'align-$X-$Y.tbl' <-- ['$X.fa', '$Y.fa'],
         'align $X.fa $Y.fa > $@'.
+
+(note that if we have multiple dependecies, these must be separated by
+commas and enclodes in square brackets - i.e. a prolog list]
 
 Now if we have files `x.fa` and `y.fa` we can type:
 
@@ -104,29 +118,51 @@ program when the inputs match a certain table in our database:
         {sp(X),sp(Y)},
         'align $X.fa $Y.fa > $@'.
 
-We can use a prolog database to make top-level targets. E.g:
+Note that here the rule consists of 4 parts:
 
+ * the target/output
+ * dependencies
+ * a prolog goal, enclosed in {}s, that is called to determine values
+ * the command
+
+In this case, the prolog goal succeeds with 9 solutions, with 3
+different values for X and Y. If we type:
+
+  plmake align-platypus-coelocanth.tbl
+
+It will not succeed, even if the .fa files are on the filesystem. This
+is because the goal cannot be satisfied for these two values.
+
+We can create a top-level target that generates all solutions:
+
+    % Database of species
     sp(mouse).
     sp(human).
     sp(zebrafish).
 
+    % rule for generating a pair of (non-identical) species (asymetric)
     pair(X,Y) :- sp(X),sp(Y),X@<Y.
 
-    % a more convenience syntax may be available in future...
+    % top level target
     all <-- Deps, 
       {findall( t(['align-',X,-,Y,'.tbl']),
                 pair(X,Y),
                 Deps)}.
 
+    % plmake rule
     'align-$X-$Y.tbl' <-- ['$X.obo', '$Y.obo'],
         'align $X.obo $Y.obo > $@'.
 
-This example exposes the underlying prolog structures for representing
-targets. Type
+It takes a little knowledge of prolog metalogical operators to
+construct the generator - in future there may be a convenient
+syntactic form that hides this.
+
+Now if we type:
 
     plmake all
 
-And all pairs are compared (exlcuding identical and reciprocal pairs).
+And all non-identical pairs are compared (in one direction only - the
+assumption is that "align" is symmetric).
 
 More
 ----
@@ -143,9 +179,17 @@ In the future there may be extensions for:
 * using other back ends and target sources (sqlite db, REST services)
 * cloud-based computing
 * running computes on clusters
+* make2plmake partial translator
+* alternate syntaxes
+
+Real-life examples
+------------------
+
+See http://code.google.com/p/omeo/ - in particular,
+http://code.google.com/p/omeo/source/browse/trunk/build/makespec.pro
 
 History
 -------
 
-This is a much simplified version of a system called "BioMake" some
-time ago....
+This is a much simplified version of a system called "BioMake" from
+some time ago.
