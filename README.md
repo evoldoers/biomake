@@ -185,6 +185,8 @@ In the future there may be extensions for:
 Real-life examples
 ------------------
 
+The makespec.pro in this project is used to make the pack release.
+
 See http://code.google.com/p/omeo/ - in particular,
 http://code.google.com/p/omeo/source/browse/trunk/build/makespec.pro
 
