@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=640" />
+
+    <link rel="stylesheet" href="stylesheets/core.css" media="screen"/>
+    <link rel="stylesheet" href="stylesheets/mobile.css" media="handheld, only screen and (max-device-width:640px)"/>
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
+
+    <script type="text/javascript" src="javascripts/modernizr.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="javascripts/headsmart.min.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function () {
+        $('#main_content').headsmart()
+      })
+    </script>
+    <title>Plmake by cmungall</title>
+  </head>
+
+  <body>
+    <a id="forkme_banner" href="https://github.com/cmungall/plmake">View on GitHub</a>
+    <div class="shell">
+
+      <header>
+        <span class="ribbon-outer">
+          <span class="ribbon-inner">
+            <h1>Plmake</h1>
+            <h2>Make-like build system based on prolog</h2>
+          </span>
+          <span class="left-tail"></span>
+          <span class="right-tail"></span>
+        </span>
+      </header>
+
+      <section id="downloads">
+        <span class="inner">
+          <a href="https://github.com/cmungall/plmake/zipball/master" class="zip"><em>download</em> .ZIP</a><a href="https://github.com/cmungall/plmake/tarball/master" class="tgz"><em>download</em> .TGZ</a>
+        </span>
+      </section>
+
+
+      <span class="banner-fix"></span>
+
+
+      <section id="main_content">
+        <h1>Plmake</h1>
+
+<p>This is a Makefile-like system for managing builds between multiple
+dependent files. Some knowledge of prolog is assumed.</p>
+
+<h2>Getting Started</h2>
+
+<p>Install SWI-Prolog from <a href="http://www.swi-prolog.org">http://www.swi-prolog.org</a></p>
+
+<p>Get the latest plmake source from github. No installation steps are
+required. Add it to your path:</p>
+
+<pre><code>export PATH=$PATH:$HOME/plmake/bin
+</code></pre>
+
+<p>(changing the directory as necessary)</p>
+
+<p>Get (minimal) help from the command line:</p>
+
+<pre><code>plmake -h
+</code></pre>
+
+<h2>Command-line</h2>
+
+<p>plmake [-h] [-t GNUMAKEFILE] [-l TARGET] [-n|--dry-run] [--always-make] [TARGET...]</p>
+
+<h2>Examples</h2>
+
+<p>(this assumes some knowledge of make and makefiles)</p>
+
+<p>plmake expects a file called <code>makespec.pro</code> to be present in your
+current directory.</p>
+
+<p>Assume you have two file formats, ".foo" and ".bar", and a foo2bar
+converter.</p>
+
+<p>Add the following rule to your makespec.pro:</p>
+
+<pre><code>'%.bar' &lt;-- '%.foo',
+    'foo2bar $&lt; &gt; $@'.
+</code></pre>
+
+<p>Unlike makefiles, whitespace is irrelevant. Remember the closing ".",
+as this is prolog syntax.</p>
+
+<p>To convert a pre-existing file "x.foo" to "x.bar" type:</p>
+
+<pre><code>plmake x.bar
+</code></pre>
+
+<p>Let's say we can go from a .bar to a .baz using a bar2baz
+converter. We can add an additional rule:</p>
+
+<pre><code>'%.baz' &lt;-- '%.bar',
+    'bar2baz $&lt; &gt; $@'.
+</code></pre>
+
+<p>Now if we type:</p>
+
+<pre><code>touch x.foo
+plmake x.baz
+</code></pre>
+
+<p>The output will be something like:</p>
+
+<pre><code>NT: x.baz &lt;-- [x.bar]
+  NT: x.bar &lt;-- [x.foo]
+    T: x.foo
+    foo2bar x.foo &gt; x.bar
+  NT: x.bar is up to date
+  bar2baz x.bar &gt; x.baz
+NT: x.baz is up to date
+</code></pre>
+
+<p>In the future the output format will be more configurable. The idea is
+to show the dependencies as a tree structure.</p>
+
+<p>The syntax in the makespec above is designed to be similar to what is
+already used in makefiles. You can bypass this and use prolog
+variables. The following form is functionally equivalent:</p>
+
+<pre><code>'$Base.bar' &lt;-- '$Base.foo',
+    'foo2bar $Base.foo &gt; $Base.bar'.
+</code></pre>
+
+<p>Note that unlike Makefiles, the variables are not enclosed in
+parentheses. These are not Makefile variable, but are actually prolog
+variables (and must conform to prolog syntax - they must have a
+leading uppercase, and only alphanumeric characters plus underscore).</p>
+
+<p>You can mix and match if you like:</p>
+
+<pre><code>'$Base.bar' &lt;-- '$Base.foo',
+    'foo2bar $&lt; &gt; $@'.
+</code></pre>
+
+<p>Unlike makefiles, plmake allows multiple variables in pattern
+matching. Let's say we have a program called "align" that compares two
+files producing some output (e.g. biological sequence alignment, or
+ontology alignment). Assume our file convention is to suffix <code>.fa</code> on
+the inputs.  We can write a makespec with the following:</p>
+
+<pre><code>'align-$X-$Y.tbl' &lt;-- ['$X.fa', '$Y.fa'],
+    'align $X.fa $Y.fa &gt; $@'.
+</code></pre>
+
+<p>(note that if we have multiple dependecies, these must be separated by
+commas and enclodes in square brackets - i.e. a prolog list]</p>
+
+<p>Now if we have files <code>x.fa</code> and <code>y.fa</code> we can type:</p>
+
+<pre><code>plmake align-x-y.tbl
+</code></pre>
+
+<p>We can include arbitrary prolog, including both database facts and
+rules. We can use these rules to control flow in a way that is more
+powerful than makefiles. Let's say we only want to run a certain
+program when the inputs match a certain table in our database:</p>
+
+<pre><code>sp(mouse).
+sp(human).
+sp(zebrafish).
+
+'align-$X-$Y.tbl' &lt;-- ['$X.fa', '$Y.fa'],
+    {sp(X),sp(Y)},
+    'align $X.fa $Y.fa &gt; $@'.
+</code></pre>
+
+<p>Note that here the rule consists of 4 parts:</p>
+
+<ul>
+<li>the target/output</li>
+<li>dependencies</li>
+<li>a prolog goal, enclosed in {}s, that is called to determine values</li>
+<li>the command</li>
+</ul><p>In this case, the prolog goal succeeds with 9 solutions, with 3
+different values for X and Y. If we type:</p>
+
+<p>plmake align-platypus-coelocanth.tbl</p>
+
+<p>It will not succeed, even if the .fa files are on the filesystem. This
+is because the goal cannot be satisfied for these two values.</p>
+
+<p>We can create a top-level target that generates all solutions:</p>
+
+<pre><code>% Database of species
+sp(mouse).
+sp(human).
+sp(zebrafish).
+
+% rule for generating a pair of (non-identical) species (asymetric)
+pair(X,Y) :- sp(X),sp(Y),X@&lt;Y.
+
+% top level target
+all &lt;-- Deps, 
+  {findall( t(['align-',X,-,Y,'.tbl']),
+            pair(X,Y),
+            Deps)}.
+
+% plmake rule
+'align-$X-$Y.tbl' &lt;-- ['$X.obo', '$Y.obo'],
+    'align $X.obo $Y.obo &gt; $@'.
+</code></pre>
+
+<p>It takes a little knowledge of prolog metalogical operators to
+construct the generator - in future there may be a convenient
+syntactic form that hides this.</p>
+
+<p>Now if we type:</p>
+
+<pre><code>plmake all
+</code></pre>
+
+<p>And all non-identical pairs are compared (in one direction only - the
+assumption is that "align" is symmetric).</p>
+
+<h2>More</h2>
+
+<p>There are a few more features that will be documented in the
+future. The core will likely stay minimal. The core system is
+extensive and powerful so you should be able to do lots by
+using/abusing either prolog or shell wrappers.</p>
+
+<p>In the future there may be extensions for:</p>
+
+<ul>
+<li>a web-based build environment (a la Galaxy)</li>
+<li>semantic web enhancement (using NEPOMUK file ontology)</li>
+<li>using other back ends and target sources (sqlite db, REST services)</li>
+<li>cloud-based computing</li>
+<li>running computes on clusters</li>
+<li>make2plmake partial translator</li>
+<li>alternate syntaxes</li>
+</ul><h2>Real-life examples</h2>
+
+<p>The makespec.pro in this project is used to make the pack release.</p>
+
+<p>See <a href="http://code.google.com/p/omeo/">http://code.google.com/p/omeo/</a> - in particular,
+<a href="http://code.google.com/p/omeo/source/browse/trunk/build/makespec.pro">http://code.google.com/p/omeo/source/browse/trunk/build/makespec.pro</a></p>
+
+<h2>History</h2>
+
+<p>This is a much simplified version of a system called "BioMake" from
+some time ago.</p>
+      </section>
+
+      <footer>
+        <span class="ribbon-outer">
+          <span class="ribbon-inner">
+            <p>this project by <a href="https://github.com/cmungall">cmungall</a> can be found on <a href="https://github.com/cmungall/plmake">GitHub</a></p>
+          </span>
+          <span class="left-tail"></span>
+          <span class="right-tail"></span>
+        </span>
+        <p>Generated with <a href="http://pages.github.com">GitHub Pages</a> using Merlot</p>
+        <span class="octocat"></span>
+      </footer>
+
+    </div>
+
+    
+  </body>
+</html>
