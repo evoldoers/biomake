@@ -1,7 +1,7 @@
 #!/bin/sh
 PATH_TO_ME=`dirname $0`;
 if [ -z "$PLMAKE_PATH" ]; then
-   PLMAKE_PATH=$PATH_TO_ME/..;
+   PLMAKE_PATH=$PATH_TO_ME/../prolog;
 fi
 
 SWIPL=swipl
@@ -10,5 +10,5 @@ if [ -z `which swipl` ]; then
   SWIPL=/opt/local/bin/swipl;
 fi
 
-$SWIPL -L0 -G0 -T0 -q -p library=$PLMAKE_PATH  -g main,halt -t halt -s $PLMAKE_PATH/plmake_cli -- "$@"
+$SWIPL -L0 -G0 -T0 -q -p library=$PLMAKE_PATH  -g main,halt -t halt -s $PLMAKE_PATH/plmake/plmake_cli -- "$@"
 ##swipl -g "use_module(library(plmake/plmake)),debug(build),consult_buildfile,build('$@')"

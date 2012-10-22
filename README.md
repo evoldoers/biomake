@@ -182,17 +182,11 @@ In the future there may be extensions for:
 * make2plmake partial translator
 * alternate syntaxes
 
-Real-life examples
-------------------
+Examples
+--------
 
 The makespec.pro in this project is used to make the pack release.
 
 See http://code.google.com/p/omeo/ - in particular,
 http://code.google.com/p/omeo/source/browse/trunk/build/makespec.pro
-
-History
--------
-
-This is a much simplified version of a system called "BioMake" from
-some time ago.
 
