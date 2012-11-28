@@ -7,23 +7,56 @@ dependent files. Some knowledge of prolog is assumed.
 Getting Started
 ---------------
 
-Install SWI-Prolog from http://www.swi-prolog.org
+1. Install SWI-Prolog from http://www.swi-prolog.org
 
-Get the latest plmake source from github. No installation steps are
+2. Get the latest plmake source from github. No installation steps are
 required. Add it to your path:
 
     export PATH=$PATH:$HOME/plmake/bin
 
 (changing the directory as necessary)
 
-Get (minimal) help from the command line:
+3. Get (minimal) help from the command line:
 
     plmake -h
+
+4. Create a 'makefile.pro' (see below)
+
+Alternate installation instructions
+-----------------------------------
+
+This can also be installed via the SWI-Prolog pack system
+
+Just start SWI and type:
+
+   ?- pack_install('plmake').
 
 Command-line
 ------------
 
   plmake [-h] [-t GNUMAKEFILE] [-l TARGET] [-n|--dry-run] [--always-make] [TARGET...]
+
+Options
+-------
+
+```
+--debug TARGET
+    [developers] debug target. E.g. --debug plmake
+--dry-run 
+    Print the commands that would be executed, but do not execute them
+-n 
+    Shortcut for --dry-run
+-h 
+    Show help
+--always-make 
+    Always build fresh target even if dependency is up to date
+-t GNUMAKEFILE
+    Translates a GNU Makefile to a makeprog [incomplete]
+-f MAKEPROG
+    Uses MAKEPROG as the build specification [default: makespec.pro]
+-l DIRECTORY
+    Iterates through directory writing metadata on each file found
+```
 
 Examples
 --------
