@@ -10,11 +10,9 @@ Getting Started
 1. Install SWI-Prolog from http://www.swi-prolog.org
 
 2. Get the latest plmake source from github. No installation steps are
-required. Add it to your path:
+required. Add it to your path (changing the directory if necessary):
 
     export PATH=$PATH:$HOME/plmake/bin
-
-(changing the directory as necessary)
 
 3. Get (minimal) help from the command line:
 
