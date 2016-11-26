@@ -96,11 +96,6 @@ debug_report(Topic,Fmt,Args,SL) :-
 % ----------------------------------------
 
 is_rebuild_required(T,_,SL,Opts) :-
-        member(always_make(true),Opts), % TODO
-        target_bindrule(T,_),
-        !,
-        report('Specified --always-make; building target ~w',[T],SL,Opts).
-is_rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
         report('Target ~w not materialized - will rebuild if required',[T],SL,Opts).
@@ -110,7 +105,11 @@ is_rebuild_required(T,DL,SL,Opts) :-
         is_built_after(D,T,Opts),
         !,
         report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
-
+is_rebuild_required(T,_,SL,Opts) :-
+        member(always_make(true),Opts),
+        target_bindrule(T,_),
+        !,
+        report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
 
 is_built_after(A,B,_Opts) :-
         time_file(A,TA),
