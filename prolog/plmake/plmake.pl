@@ -37,8 +37,9 @@ build(T,Opts) :-
 
 build(T,SL,Opts) :-
         %report('Target: ~w',[T]),
+        debug_report(build,'  Target: ~w',[T],SL),
         target_bindrule(T,Rule),
-        debug(build3,'  Bindrule: ~w',[Rule]),
+        debug_report(build,'  Bindrule: ~w',[Rule],SL),
         rule_dependencies(Rule,DL,Opts),
         report('NT: ~w <-- ~w',[T,DL],SL,Opts),
         !,
@@ -49,7 +50,7 @@ build(T,SL,Opts) :-
         ;   true),
         report('NT: ~w is up to date',[T],SL,Opts).
 build(T,SL,Opts) :-
-        debug(build3,'  checking if rebuild required for ~w',[T]),
+        debug_report(build,'  checking if rebuild required for ~w',[T],SL),
         \+ is_rebuild_required(T,[],SL,Opts),
         !,
         report('T: ~w exists',[T],SL,Opts).
@@ -73,20 +74,27 @@ build_targets([T|TL],SL,Opts) :-
 report(Fmt,Args,Opts) :-
         report(Fmt,Args,[],Opts).
 
-report(Fmt,Args,SL,Opts) :-
-        maplist(write_tab(Opts),SL),
-        format(Fmt,Args),
+report(Fmt,Args,SL,_) :-
+        stack_indent(SL,Fmt,IndentedFmt),
+        format(IndentedFmt,Args),
         nl.
 
-write_tab(_,_) :- write('    ').
+stack_indent([],Text,Text).
+stack_indent([_|T],Text,Indented) :-
+        string_concat('    ',Text,Tab),
+	stack_indent(T,Tab,Indented).
+
+debug_report(Topic,Fmt,Args) :-
+        debug_report(Topic,Fmt,Args,[]).
+
+debug_report(Topic,Fmt,Args,SL) :-
+        stack_indent(SL,Fmt,IndentedFmt),
+	debug(Topic,IndentedFmt,Args).
 
 % ----------------------------------------
 % DEPENDENCY MANAGEMENT
 % ----------------------------------------
 
-is_rebuild_required(_,_,_,Opts) :-
-        member(always_make(true),Opts), % TODO
-        !.
 is_rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
@@ -97,7 +105,11 @@ is_rebuild_required(T,DL,SL,Opts) :-
         is_built_after(D,T,Opts),
         !,
         report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
-
+is_rebuild_required(T,_,SL,Opts) :-
+        member(always_make(true),Opts),
+        target_bindrule(T,_),
+        !,
+        report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
 
 is_built_after(A,B,_Opts) :-
         time_file(A,TA),
@@ -151,11 +163,11 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         % we allow multiple heads;
         % only one of the specified targets has to match
         member(TP,TPs),
-        debug(build3,'  pre TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
+        debug(bindrule,'  pre TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
         uniq_pattern_match(TP,T),
-        debug(build3,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
+        debug(bindrule,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
         Goal,
-        debug(build3,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
+        debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
         maplist(pattern_target,DPs,Ds),
         maplist(toks_exec,ExecPs,Execs).
 
@@ -163,12 +175,12 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
 
 % semidet
 uniq_pattern_match(TL,A) :-
-        debug(build3,'Matching: ~w to ~w',[TL,A]),
+        debug(bindrule,'Matching: ~w to ~w',[TL,A]),
         pattern_match(TL,A),
-        debug(build3,' Matched: ~w to ~w',[TL,A]),
+        debug(bindrule,' Matched: ~w to ~w',[TL,A]),
         !.
 uniq_pattern_match(TL,A) :-
-        debug(build3,' NO_MATCH: ~w to ~w',[TL,A]),
+        debug(bindrule,' NO_MATCH: ~w to ~w',[TL,A]),
         fail.
 
 
@@ -216,7 +228,7 @@ consult_makefile(F) :-
 
 consult_buildfile :- consult_buildfile('makespec.pro').
 consult_buildfile(F) :-
-        debug(build,'reading: ~w',[F]),
+        debug(buildfile,'reading: ~w',[F]),
         open(F,read,IO,[]),
         repeat,
         (   at_end_of_stream(IO)
@@ -224,10 +236,10 @@ consult_buildfile(F) :-
         ;   read_term(IO,Term,[variable_names(VNs),
                                syntax_errors(error),
                                module(plmake)]),
-            debug(build3,'adding: ~w',[Term]),
+            debug(buildfile,'adding: ~w',[Term]),
             add_spec_clause(Term,VNs),
             fail),
-        debug(build3,'read: ~w',[F]),
+        debug(buildfile,'read: ~w',[F]),
         close(IO).
 
 add_spec_clause( (Var = X,{Goal}) ,VNs) :-
@@ -251,7 +263,7 @@ add_spec_clause( (Head <-- Deps) ,VNs) :-
 add_spec_clause(Rule,VNs) :-
         Rule =.. [mkrule|_],
         !,
-        debug(build3,'with: ~w ~w',[Rule,VNs]),
+        debug(buildfile,'with: ~w ~w',[Rule,VNs]),
         assert(with(Rule,VNs)).
 add_spec_clause(Term,_) :-
         assert(Term).
@@ -290,7 +302,7 @@ normalize_patterns(X,X,_) :- var(X),!.
 normalize_patterns([],[],_) :- !.
 normalize_patterns([P|Ps],[N|Ns],V) :-
         !,
-        debug(build3,'*norm: ~w',[P]),
+        debug(pattern,'*norm: ~w',[P]),
         normalize_pattern(P,N,V),
         normalize_patterns(Ps,Ns,V).
 normalize_patterns(P,Ns,V) :-
@@ -306,10 +318,10 @@ normalize_pattern(t(X),t(X),_) :- !.
 normalize_pattern(Term,t(Args),_) :-
         Term =.. [t|Args],!.
 normalize_pattern(X,t(Toks),V) :-
-        debug(build3,'PARSING: ~w // ~w',[X,V]),
+        debug(pattern,'PARSING: ~w // ~w',[X,V]),
         atom_chars(X,Chars),
         phrase(toks(Toks,V),Chars),
-        debug(build3,'PARSED: ~w ==> ~w',[X,Toks]),
+        debug(pattern,'PARSED: ~w ==> ~w',[X,Toks]),
         !.
 
 toks([],_) --> [].
@@ -336,7 +348,7 @@ bindvar('*',v(X,_,_,_),X) :- !.
 bindvar('@',v(_,X,_,_),X) :- !.
 bindvar('<',v(_,_,X,_),X) :- !.
 bindvar(VL,v(_,_,_,_),X) :- global_binding(VL,X),!.
-bindvar(VL,v(_,_,_,BL),X) :- debug(build3,'binding ~w= ~w // ~w',[VL,X,BL]),member(VL=X,BL),debug(build3,'bound ~w= ~w',[VL,X]),!.
+bindvar(VL,v(_,_,_,BL),X) :- debug(pattern,'binding ~w= ~w // ~w',[VL,X,BL]),member(VL=X,BL),debug(pattern,'bound ~w= ~w',[VL,X]),!.
 
 
 

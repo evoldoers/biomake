@@ -10,7 +10,7 @@ user:prolog_exception_hook(_,
 
 main :-
         current_prolog_flag(argv, Arguments),
-        append(_SytemArgs, [--|Args], Arguments),
+        (append(_SytemArgs, [--|Args], Arguments) ; =(Arguments,Args)),
         !,
         parse_args(Args,Opts_1),
         flatten(Opts_1,Opts),
@@ -58,7 +58,9 @@ arg_info('-h','','Show help').
 
 
 parse_arg(['--always-make'|L],L,always_make(true)).
+parse_arg(['-B'|L],L,always_make(true)).
 arg_info('--always-make','','Always build fresh target even if dependency is up to date').
+arg_info('-B','','Shortcut for --always-make').
 
 parse_arg(['-t',F|L],L,null) :-
         !,
