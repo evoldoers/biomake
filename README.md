@@ -48,6 +48,8 @@ Options
     Show help
 --always-make 
     Always build fresh target even if dependency is up to date
+-B
+    Shortcut for --always-make
 -t GNUMAKEFILE
     Translates a GNU Makefile to a makeprog [incomplete]
 -f MAKEPROG

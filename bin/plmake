@@ -13,8 +13,5 @@ if [ -z `which swipl` ]; then
     fi
 fi
 
-echo $SWIPL
-echo $PLMAKE_PATH
-
 $SWIPL -L0 -G0 -T0 -q -p library=$PLMAKE_PATH  -g main,halt -t halt -s $PLMAKE_PATH/plmake/plmake_cli -- "$@"
 ##swipl -g "use_module(library(plmake/plmake)),debug(build),consult_buildfile,build('$@')"
