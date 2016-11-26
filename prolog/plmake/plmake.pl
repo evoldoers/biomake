@@ -228,7 +228,7 @@ consult_makefile(F) :-
 
 consult_buildfile :- consult_buildfile('makespec.pro').
 consult_buildfile(F) :-
-        debug(build,'reading: ~w',[F]),
+        debug(buildfile,'reading: ~w',[F]),
         open(F,read,IO,[]),
         repeat,
         (   at_end_of_stream(IO)
@@ -302,7 +302,7 @@ normalize_patterns(X,X,_) :- var(X),!.
 normalize_patterns([],[],_) :- !.
 normalize_patterns([P|Ps],[N|Ns],V) :-
         !,
-        debug(buildfile,'*norm: ~w',[P]),
+        debug(pattern,'*norm: ~w',[P]),
         normalize_pattern(P,N,V),
         normalize_patterns(Ps,Ns,V).
 normalize_patterns(P,Ns,V) :-
@@ -318,10 +318,10 @@ normalize_pattern(t(X),t(X),_) :- !.
 normalize_pattern(Term,t(Args),_) :-
         Term =.. [t|Args],!.
 normalize_pattern(X,t(Toks),V) :-
-        debug(buildfile,'PARSING: ~w // ~w',[X,V]),
+        debug(pattern,'PARSING: ~w // ~w',[X,V]),
         atom_chars(X,Chars),
         phrase(toks(Toks,V),Chars),
-        debug(buildfile,'PARSED: ~w ==> ~w',[X,Toks]),
+        debug(pattern,'PARSED: ~w ==> ~w',[X,Toks]),
         !.
 
 toks([],_) --> [].
@@ -348,7 +348,7 @@ bindvar('*',v(X,_,_,_),X) :- !.
 bindvar('@',v(_,X,_,_),X) :- !.
 bindvar('<',v(_,_,X,_),X) :- !.
 bindvar(VL,v(_,_,_,_),X) :- global_binding(VL,X),!.
-bindvar(VL,v(_,_,_,BL),X) :- debug(buildfile,'binding ~w= ~w // ~w',[VL,X,BL]),member(VL=X,BL),debug(buildfile,'bound ~w= ~w',[VL,X]),!.
+bindvar(VL,v(_,_,_,BL),X) :- debug(pattern,'binding ~w= ~w // ~w',[VL,X,BL]),member(VL=X,BL),debug(pattern,'bound ~w= ~w',[VL,X]),!.
 
 
 
