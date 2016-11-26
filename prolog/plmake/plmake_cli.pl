@@ -10,7 +10,7 @@ user:prolog_exception_hook(_,
 
 main :-
         current_prolog_flag(argv, Arguments),
-        append(_SytemArgs, [--|Args], Arguments),
+        (append(_SytemArgs, [--|Args], Arguments) ; =(Arguments,Args)),
         !,
         parse_args(Args,Opts_1),
         flatten(Opts_1,Opts),
