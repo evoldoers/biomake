@@ -73,10 +73,10 @@ arg_info('--always-make','','Always build fresh target even if dependency is up 
 arg_info('-B','','Shortcut for --always-make').
 
 parse_arg(['-f',F|L],L,gnu_makefile(F)).
-arg_info('-f','GNUMAKEFILE','Translates a GNU Makefile to a makeprog [incomplete]').
+arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification [incomplete]').
 
 parse_arg(['-p',F|L],L,makeprog(F)) :- !.
-arg_info('-p','MAKEPROG','Uses MAKEPROG as the build specification [default: makespec.pro]').
+arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: makespec.pro]').
 
 parse_arg(['-l',F|L],L,
           goal( (collect_stored_targets(F,[]),

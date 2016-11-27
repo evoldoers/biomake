@@ -2,7 +2,11 @@ Plmake
 ======
 
 This is a Makefile-like system for managing builds between multiple
-dependent files. Some knowledge of prolog is assumed.
+dependent files. No knowledge of prolog is necessary; plmake can
+run off a stripped-down GNU Makefile. However, if you're prepared to
+learn a little Prolog, you can do a lot more. And, really, logic
+programming is the way you _should_ be specifying dependencies and
+build chains; so what are you waiting for?
 
 Getting Started
 ---------------
@@ -50,10 +54,10 @@ Options
     Always build fresh target even if dependency is up to date
 -B
     Shortcut for --always-make
--f GNUMAKEFILE
-    Translates a GNU Makefile to a makeprog [incomplete]
+-f GNUMAKaEFILE
+    Use a GNU Makefile as the build specification [incomplete]
 -p MAKEPROG
-    Uses MAKEPROG as the build specification [default: makespec.pro]
+    Uses MAKEPROG as the (Prolog) build specification [default: makespec.pro]
 -l DIRECTORY
     Iterates through directory writing metadata on each file found
 ```
