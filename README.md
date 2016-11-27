@@ -67,8 +67,10 @@ Examples
 
 (this assumes some knowledge of make and makefiles)
 
-plmake expects a file called `makespec.pro` to be present in your
-current directory.
+plmake looks for a file called `makespec.pro` in your
+current directory. If it's not there, it will try looking for a
+`Makefile` in GNU Make format. The following examples describe the
+Prolog syntax.
 
 Assume you have two file formats, ".foo" and ".bar", and a foo2bar
 converter.
