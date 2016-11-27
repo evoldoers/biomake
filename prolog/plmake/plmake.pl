@@ -4,8 +4,9 @@
           [
            build/1,
            build/2,
-           consult_buildfile/0,
-           consult_buildfile/1,
+
+           consult_makeprog/1,
+           consult_gnu_makefile/1,
 
            target_bindrule/2,
            rule_dependencies/3,
@@ -218,17 +219,14 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 
 :- user:op(1100,xfy,<--).
 
-/*
-consult_makefile(F) :-
-        ensure_loaded(gnumake_parser),
-        parse_makefile(F,RL),
-        forall(member( rule(T,Ds,Cs), RL),
-               add_spec_clause( (T <-- Ds, Cs))).
-*/
+consult_gnu_makefile(F) :-
+        ensure_loaded(library(plmake/gnumake_parser)),
+        parse_gnu_makefile(F,RL),
+        forall(member( rule(Targets,Deps,Execs), RL),
+               add_spec_clause( mkrule(Targets,Deps,Execs), [] ) ).
 
-consult_buildfile :- consult_buildfile('makespec.pro').
-consult_buildfile(F) :-
-        debug(buildfile,'reading: ~w',[F]),
+consult_makeprog(F) :-
+        debug(makeprog,'reading: ~w',[F]),
         open(F,read,IO,[]),
         repeat,
         (   at_end_of_stream(IO)
@@ -236,10 +234,10 @@ consult_buildfile(F) :-
         ;   read_term(IO,Term,[variable_names(VNs),
                                syntax_errors(error),
                                module(plmake)]),
-            debug(buildfile,'adding: ~w',[Term]),
+            debug(makeprog,'adding: ~w',[Term]),
             add_spec_clause(Term,VNs),
             fail),
-        debug(buildfile,'read: ~w',[F]),
+        debug(makeprog,'read: ~w',[F]),
         close(IO).
 
 add_spec_clause( (Var = X,{Goal}) ,VNs) :-
@@ -263,7 +261,7 @@ add_spec_clause( (Head <-- Deps) ,VNs) :-
 add_spec_clause(Rule,VNs) :-
         Rule =.. [mkrule|_],
         !,
-        debug(buildfile,'with: ~w ~w',[Rule,VNs]),
+        debug(makeprog,'with: ~w ~w',[Rule,VNs]),
         assert(with(Rule,VNs)).
 add_spec_clause(Term,_) :-
         assert(Term).

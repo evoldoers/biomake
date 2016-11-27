@@ -14,13 +14,23 @@ main :-
         !,
         parse_args(Args,Opts_1),
         flatten(Opts_1,Opts),
-        option(makespec(MF),Opts,'makespec.pro'),
-        consult_buildfile(MF),
+	consult_makefile(Opts),
         forall(member(goal(G),Opts),
                G),
         forall(member(rest(T),Opts),
                build(T,Opts)),
         halt.
+
+consult_makefile(Opts) :-
+	DefaultMakeprog = 'makespec.pro',
+	DefaultGnuMakefile = 'Makefile',
+	(member(makeprog(BF),Opts)
+	 -> consult_makeprog(BF);
+	 (member(gnu_makefile(F),Opts)
+	  -> consult_gnu_makefile(F);
+	  (exists_file(DefaultMakeprog)
+	   -> consult_makeprog(DefaultMakeprog);
+	   consult_gnu_makefile(DefaultGnuMakefile)))).
 
 % ----------------------------------------
 % OPTION PROCESSING
@@ -38,7 +48,7 @@ parse_args([A|Args],[rest(A)|Opts]) :-
 :- discontiguous arg_info/3.
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
-arg_info('--debug','TARGET','[developers] debug target. E.g. --debug plmake').
+arg_info('--debug','TARGET','[developers] debugging messages. TARGET can be build, pattern, makeprog, makefile...').
 
 parse_arg(['--dry-run'|L],L,dry_run(true)).
 parse_arg(['-n'|L],L,dry_run(true)).
@@ -62,14 +72,11 @@ parse_arg(['-B'|L],L,always_make(true)).
 arg_info('--always-make','','Always build fresh target even if dependency is up to date').
 arg_info('-B','','Shortcut for --always-make').
 
-parse_arg(['-t',F|L],L,null) :-
-        !,
-        ensure_loaded(library(plmake/gnumake_parser)),
-        translate_makefile(F).
-arg_info('-t','GNUMAKEFILE','Translates a GNU Makefile to a makeprog [incomplete]').
+parse_arg(['-f',F|L],L,gnu_makefile(F)).
+arg_info('-f','GNUMAKEFILE','Translates a GNU Makefile to a makeprog [incomplete]').
 
-parse_arg(['-f',F|L],L,makespec(F)) :- !.
-arg_info('-f','MAKEPROG','Uses MAKEPROG as the build specification [default: makespec.pro]').
+parse_arg(['-p',F|L],L,makeprog(F)) :- !.
+arg_info('-p','MAKEPROG','Uses MAKEPROG as the build specification [default: makespec.pro]').
 
 parse_arg(['-l',F|L],L,
           goal( (collect_stored_targets(F,[]),

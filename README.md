@@ -32,14 +32,14 @@ Just start SWI and type:
 Command-line
 ------------
 
-  plmake [-h] [-t GNUMAKEFILE] [-l TARGET] [-n|--dry-run] [--always-make] [TARGET...]
+  plmake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
 
 Options
 -------
 
 ```
 --debug TARGET
-    [developers] debug target. E.g. --debug plmake
+    [developers] debugging messages. TARGET can be build, pattern, makeprog, makefile...
 --dry-run 
     Print the commands that would be executed, but do not execute them
 -n 
@@ -50,9 +50,9 @@ Options
     Always build fresh target even if dependency is up to date
 -B
     Shortcut for --always-make
--t GNUMAKEFILE
+-f GNUMAKEFILE
     Translates a GNU Makefile to a makeprog [incomplete]
--f MAKEPROG
+-p MAKEPROG
     Uses MAKEPROG as the build specification [default: makespec.pro]
 -l DIRECTORY
     Iterates through directory writing metadata on each file found
