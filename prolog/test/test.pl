@@ -67,6 +67,7 @@ exec_test(RefDir,TestDir,Args,Target) :-
 	working_directory(CWD,TestDir),
 	format("Running ~s in ~s~n",[Exec,TestDir]),
 	shell(Exec,Err),
+	!,
 	(Err = 0 -> true; format("Error ~w~n",Err), fail),
 	working_directory(_,CWD),
 	read_string_from_file(RefDir,Target,RefPath,RefText),
