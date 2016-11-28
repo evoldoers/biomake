@@ -52,9 +52,9 @@ report_test(RefDir,TestDir,Args,Target,Fmt,Vars) :-
 	nb_getval(tests,T),
 	format("Starting test #~d: ~s~n",[T,Desc]),
 	(exec_test(RefDir,TestDir,Args,Target)
-         -> (format("ok: passed test ~s~n~n",[Desc]),
+         -> (format("ok: passed test #~d: ~s~n~n",[T,Desc]),
 	 inc(passed));
-         format("not ok: failed test ~s~n~n",[Desc])).
+         format("not ok: failed test #~d: ~s~n~n",[T,Desc])).
 
 inc(Counter) :-
 	nb_getval(Counter, C),
@@ -65,21 +65,45 @@ exec_test(RefDir,TestDir,Args,Target) :-
 	plmake_path(Make),
 	format(string(Exec),"~s ~s ~s",[Make,Args,Target]),
 	working_directory(CWD,TestDir),
-	format("Running ~s in ~s~n",[Exec,TestDir]),
+	format("Running '~s' in ~s~n",[Exec,TestDir]),
 	shell(Exec,Err),
 	!,
 	(Err = 0 -> true; format("Error ~w~n",Err), fail),
 	working_directory(_,CWD),
-	read_string_from_file(RefDir,Target,RefPath,RefText),
-	read_string_from_file(TestDir,Target,TestPath,TestText),
-	(RefText = TestText -> true;
-	    (format(string(Diff),"diff ~s ~s",RefPath,TestPath),
-	    shell(Diff,_),
-	    fail)),
+	format(string(TestPath),"~s/~s",[TestDir,Target]),
+	format(string(RefPath),"~s/~s",[RefDir,Target]),
+	compare_files(TestPath,RefPath).
+
+compare_files(TestPath,RefPath) :-
+	format("Comparing ~s to ~s~n",[TestPath,RefPath]),
+	read_string_from_file(TestPath,TestText),
+	read_string_from_file(RefPath,RefText),
+	RefText = TestText,
 	format("~s matches ~s~n",[TestPath,RefPath]).
 
-read_string_from_file(Dir,Filename,Path,String) :-
-	format(string(Path),"~s/~s",[Dir,Filename]),
+compare_files(TestPath,RefPath) :-
+	exists_file(TestPath),
+	exists_file(RefPath),
+	format("~s does not match ~s~n",[TestPath,RefPath]),
+	format(string(Diff),"diff -y ~s ~s",[TestPath,RefPath]),
+	format("~s:~n",[Diff]),
+	shell(Diff,_),
+	fail.
+
+compare_files(TestPath,RefPath) :-
+	file_missing(TestPath),
+	fail.
+
+compare_files(TestPath,RefPath) :-
+	file_missing(RefPath),
+	fail.
+
+file_missing(Path) :-
+	\+ exists_file(Path),
+	format("File ~s does not exist~n",[Path]).
+
+read_string_from_file(Path,String) :-
+	exists_file(Path),
 	open(Path,read,IO,[]),
 	read_string(IO,"","",_,String),
 	close(IO).
