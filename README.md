@@ -2,7 +2,11 @@ Plmake
 ======
 
 This is a Makefile-like system for managing builds between multiple
-dependent files. Some knowledge of prolog is assumed.
+dependent files. No knowledge of prolog is necessary; plmake can
+run off a stripped-down GNU Makefile. However, if you're prepared to
+learn a little Prolog, you can do a lot more. And, really, logic
+programming is the way you _should_ be specifying dependencies and
+build chains; so what are you waiting for?
 
 Getting Started
 ---------------
@@ -32,14 +36,14 @@ Just start SWI and type:
 Command-line
 ------------
 
-  plmake [-h] [-t GNUMAKEFILE] [-l TARGET] [-n|--dry-run] [--always-make] [TARGET...]
+  plmake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
 
 Options
 -------
 
 ```
 --debug TARGET
-    [developers] debug target. E.g. --debug plmake
+    [developers] debugging messages. TARGET can be build, pattern, makeprog, makefile...
 --dry-run 
     Print the commands that would be executed, but do not execute them
 -n 
@@ -50,10 +54,10 @@ Options
     Always build fresh target even if dependency is up to date
 -B
     Shortcut for --always-make
--t GNUMAKEFILE
-    Translates a GNU Makefile to a makeprog [incomplete]
--f MAKEPROG
-    Uses MAKEPROG as the build specification [default: makespec.pro]
+-f GNUMAKaEFILE
+    Use a GNU Makefile as the build specification [incomplete]
+-p MAKEPROG
+    Uses MAKEPROG as the (Prolog) build specification [default: makespec.pro]
 -l DIRECTORY
     Iterates through directory writing metadata on each file found
 ```
@@ -63,8 +67,10 @@ Examples
 
 (this assumes some knowledge of make and makefiles)
 
-plmake expects a file called `makespec.pro` to be present in your
-current directory.
+plmake looks for a file called `makespec.pro` in your
+current directory. If it's not there, it will try looking for a
+`Makefile` in GNU Make format. The following examples describe the
+Prolog syntax.
 
 Assume you have two file formats, ".foo" and ".bar", and a foo2bar
 converter.
