@@ -4,8 +4,6 @@
           [
            build/1,
            build/2,
-
-	   test/0,
 	   
            consult_makeprog/1,
            consult_gnu_makefile/1,

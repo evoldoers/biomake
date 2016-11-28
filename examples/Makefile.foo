@@ -1,13 +1,27 @@
 
-# to test: plmake -f examples/Makefile.foo hello.world.baz
-# should build the following:
+# Tests:
+
+# plmake -f examples/Makefile.foo hello.world.baz
+# should build the following in `hello.world.baz':
  # Baz!
  # B= WORLD A= HELLO
  # I said Baz!
 
+ # plmake -B -f examples/Makefile.foo test 
+# should build the following in `test':
+ # ABC=abc DEF=abc XYZ= xyz
+
+ # plmake -B -f examples/Makefile.foo test DEF=def
+# should build the following in `test':
+ # ABC=abc DEF=def XYZ= xyz
+
+ # plmake -B -f examples/Makefile.foo test ABC=123
+# should build the following in `test':
+ # ABC=abc DEF=abc XYZ=123 xyz
+
 FOO = .foo
 
-%.bar: %$FOO
+%.bar: %$(FOO)
 	perl -pe 'tr/a-z/A-Z/' $< > $@
 
 $A.baz: $A.bar
@@ -15,3 +29,10 @@ $A.baz: $A.bar
 
 $A.$B.foo:
 	echo b= $B a= $A >$@
+
+XYZ := $(ABC) xyz
+DEF ?= $(ABC)
+ABC = abc
+
+test:
+	echo ABC=$(ABC) DEF=$(DEF) XYZ=$(XYZ) >$@
