@@ -1,5 +1,9 @@
 
- # to test: plmake -f examples/Makefile.foo hello.world.baz
+# to test: plmake -f examples/Makefile.foo hello.world.baz
+# should build the following:
+ # Baz!
+ # B= WORLD A= HELLO
+ # I said Baz!
 
 FOO = .foo
 

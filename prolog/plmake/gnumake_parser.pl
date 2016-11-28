@@ -10,21 +10,33 @@
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M) :-
     debug(makefile,'reading: ~w\n',[F]),
-    phrase_from_file(makefile_rules(M,1),F),
+    phrase_from_file(makefile_rules(M,1,F),F),
     debug(makefile,"rules: ~w\n",[M]).
 
 % Grammar for reading GNU Makefile
-makefile_rules([],_) --> call(eos), !.
-makefile_rules(Rules,Line) --> comment, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext).
-makefile_rules(Rules,Line) --> blank_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext).
-makefile_rules([Rule|Rules],Line) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext).
-makefile_rules([Assignment|Rules],Line) --> makefile_assignment(Assignment), !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext).
-makefile_rules(_,Line) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d: ~w",[Line,L]),syntax_error(Err)}.
+makefile_rules([],_,_) --> call(eos), !.
+makefile_rules(Rules,Line,File) --> comment, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
+makefile_rules(Rules,Line,File) --> blank_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
+makefile_rules(Rules,Line,File) --> include_line(Included), !, {Lnext is Line + 1, append(Included,Next,Rules)}, makefile_rules(Next,Lnext,File).
+makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
+makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment), !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
+makefile_rules(_,Line,File) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),syntax_error(Err)}.
 
 eos([], []).
 
+include_line(Rules) -->
+    opt_whitespace,
+    "include",
+    whitespace,
+    include_makefiles(Rules).
+
+include_makefiles(Rules) --> makefile_filename_string(F), opt_whitespace, "\n", !, {parse_gnu_makefile(F,Rules)}.
+include_makefiles(Rules) --> makefile_filename_string(F), whitespace, !, {parse_gnu_makefile(F,R)}, include_makefiles(Next), {append(R,Next,Rules)}.
+
 makefile_assignment(assignment(Var,Val)) -->
-    makefile_atom(Var),
+    opt_whitespace,
+    makefile_var_atom(Var),
+%    "FOO",
     opt_whitespace,
     "=",
     opt_whitespace,
@@ -42,18 +54,19 @@ makefile_rule(rule(Head,Deps,Exec),Lines) -->
 opt_makefile_targets(T) --> makefile_targets(T).
 opt_makefile_targets([]) --> !.
 
-makefile_targets([T|Ts]) --> opt_whitespace, makefile_token(T), whitespace, makefile_targets(Ts), opt_whitespace.
-makefile_targets([T]) --> opt_whitespace, makefile_token(T), opt_whitespace.
+makefile_targets([T|Ts]) --> opt_whitespace, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
+makefile_targets([T]) --> opt_whitespace, makefile_target_string(T), opt_whitespace.
 
-makefile_token(T) --> makefile_token_chars(Tc), {string_chars(T,Tc)}.
-makefile_atom(T) --> makefile_token_chars(Tc), {atom_chars(T,Tc)}.
-			       
-makefile_token_chars([C]) --> makefile_token_char(C).
-makefile_token_chars([C|Rest]) --> makefile_token_char(C), makefile_token_chars(Rest).
+makefile_filename_string(S) --> {string_codes(" \t\n",XL)}, string_toks(S,XL).
+makefile_target_string(S) --> {string_codes(": \t\n",XL)}, string_toks(S,XL).
+makefile_var_atom(S) --> {string_codes(":= \t\n",XL)}, atom_toks(S,XL).
 
-% I think the following is mixing up codes (C\=10) with chars (C\=':')
-% ...probably not safe
-makefile_token_char(C) --> [C],{C\='$',C\='%',C\=':',C\=' ',C\='\n',C\='\r',C\='\t',C\=10},!.
+string_toks(S,XL) --> clist(C,XL), {C\=[], string_chars(S,C)}.
+atom_toks(S,XL) --> clist(C,XL), {C\=[], atom_chars(S,C)}.
+
+clist([C|Cs],XL) --> [C], {forall(member(X,XL),C\=X)}, !, clist(Cs,XL).
+clist([C|Cs],XL) --> ['\\'], [C], !, clist(Cs,XL).
+clist([],_) --> [].
 
 whitespace --> " ", !, opt_whitespace.
 whitespace --> "\t", !, opt_whitespace.
