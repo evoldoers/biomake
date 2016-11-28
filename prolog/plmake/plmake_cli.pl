@@ -14,12 +14,17 @@ main :-
         !,
         parse_args(Args,Opts_1),
         flatten(Opts_1,Opts),
+	add_assignments(Opts),
 	consult_makefile(Opts),
         forall(member(goal(G),Opts),
                G),
         forall(member(rest(T),Opts),
                build(T,Opts)),
         halt.
+
+add_assignments(Opts) :-
+        forall(member(assignment(Var,Val),Opts),
+	       add_assignment((Var = Val))).
 
 consult_makefile(Opts) :-
 	DefaultMakeprog = 'makespec.pro',
@@ -86,17 +91,21 @@ parse_arg(['-l',F|L],L,
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
-
+parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
+    string_codes(VarEqualsVal,C),
+    phrase(makefile_assign(Var,Val),C).
+arg_info('Var=Val','','Assign Makefile variables from command line').
 
 show_help :-
-        Fake=[X|_],
-        freeze(X,(show_help(X),fail)),
-        parse_args(Fake,_).
+    forall(arg_info(X,Args,Info),
+	   format("~w ~w~n    ~w~n",[X,Args,Info])).
 
-show_help(X) :-
-        format('~w',[X]),
-        (   arg_info(X,Args,Info)
-        ->  format(' ~w~n    ~w~n',[Args,Info])
-        ;   nl).
-
-
+makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
+makefile_var(A) --> {string_codes(":= \t\n",XL)}, atom_toks(A,XL).
+makefile_val(S) --> "\"", {string_codes("\"",XL)}, string_toks(S,XL), "\"".
+makefile_val(S) --> {string_codes(" ",XL)}, string_toks(S,XL).
+atom_toks(A,XL) --> clist(C,XL), {C\=[], atom_chars(A,C)}.
+string_toks(S,XL) --> clist(C,XL), {C\=[], string_chars(S,C)}.
+clist([C|Cs],XL) --> [C], {forall(member(X,XL),C\=X)}, !, clist(Cs,XL).
+clist([C|Cs],XL) --> ['\\'], [C], !, clist(Cs,XL).
+clist([],_) --> [].

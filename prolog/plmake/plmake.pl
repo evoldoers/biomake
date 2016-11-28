@@ -5,9 +5,12 @@
            build/1,
            build/2,
 
+	   test/0,
+	   
            consult_makeprog/1,
            consult_gnu_makefile/1,
-
+	   add_assignment/1,
+	   
            target_bindrule/2,
            rule_dependencies/3,
            is_rebuild_required/4
@@ -171,9 +174,9 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         Goal,
         debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
         maplist(pattern_target,DPs,Ds),
-        maplist(toks_exec,ExecPs,Execs).
+        maplist(pattern_eval,ExecPs,Execs).
 
-        
+
 
 % semidet
 uniq_pattern_match(TL,A) :-
@@ -187,8 +190,13 @@ uniq_pattern_match(TL,A) :-
 
 
 pattern_target(t(TL),A) :- atomic_list_concat(TL,A).
-toks_exec(t(TL),A) :- flatten(TL,TL2),atomic_list_concat(TL2,A).
-%toks_exec(c(TL),A) :- atomic_list_concat(TL,A).
+pattern_eval(t(TL),A) :-
+    flatten(TL,TL2),
+    include(var,TL2,TL2_unbound),
+    (TL2_unbound = [] -> true; debug(pattern,"Warning: unbound variables in ~w~n",[TL2])),
+    include(nonvar,TL2,TL2_bound),
+    atomic_list_concat(TL2_bound,A).
+%pattern_eval(c(TL),A) :- atomic_list_concat(TL,A).
 
 
 pattern_match(A,B) :- var(A),!,B=A.
@@ -216,16 +224,23 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 % READING
 % ----------------------------------------
 
-:- dynamic global_binding/2.
+:- dynamic global_simple_binding/2.
+:- dynamic global_lazy_binding/2.
 
 :- user:op(1100,xfy,<--).
+:- user:op(1101,xfy,?=).
+:- user:op(1102,xfy,:=).
 
 consult_gnu_makefile(F) :-
         ensure_loaded(library(plmake/gnumake_parser)),
         parse_gnu_makefile(F,M),
         forall(member(L,M),
 	       ((L = rule(Ts,Ds,Es)) -> add_spec_clause((Ts <-- Ds,Es),[]);
-		((L = assignment(Var,Val)) -> add_spec_clause((Var = Val),[Var=Var]);
+		((L = assignment(Var,Op,Val)) ->
+		     (Op = "=" -> add_assignment((Var = Val));
+		      (Op = "?=" -> add_assignment((Var ?= Val));
+		       (Op = ":=" -> add_assignment((Var := Val));
+			true)));
 		 true))).
 
 consult_makeprog(F) :-
@@ -243,19 +258,45 @@ consult_makeprog(F) :-
         debug(makeprog,'read: ~w',[F]),
         close(IO).
 
-add_spec_clause( (Var = X) ,VNs) :-
-        !,
-        add_spec_clause( (Var = X,{true}) ,VNs).
 
-add_spec_clause( (Var = X,{Goal}) ,VNs) :-
+add_assignment((Var = X)) :-
+        !,
+        add_spec_clause((Var = X), [Var=Var]).
+
+add_assignment((Var ?= X)) :-
+        global_binding(Var,Oldval),
+        !,
+        debug(makeprog,"Ignoring ~w = ~w since ~w is already bound to ~w",[Var,X,Var,Oldval]).
+
+add_assignment((Var ?= X)) :-
+        add_assignment((Var = X)).
+
+add_assignment((Var := X)) :-
+        !,
+        add_spec_clause( (Var := X,{true}), [Var=Var]).
+
+
+add_spec_clause( (Var = X) ,VNs) :-
+        global_unbind(Var),
+	!,
+        member(Var=Var,VNs),
+        assert(global_lazy_binding(Var,X)),
+        debug(makeprog,'assign: ~w = ~w',[Var,X]).
+
+add_spec_clause( (Var := X,{Goal}) ,VNs) :-
+        global_unbind(Var),
         !,
         normalize_pattern(X,Y,v(_,_,_,VNs)),
         findall(Y,Goal,Ys),
 	unwrap_t(Ys,Yflat),  % hack; parser adds too many t(...)'s
 	!,
         member(Var=Var,VNs),
-        assert(global_binding(Var,Yflat)),
-        debug(makeprog,'assign: ~w = ~w',[Var,Yflat]).
+        assert(global_simple_binding(Var,Yflat)),
+        debug(makeprog,'assign: ~w := ~w',[Var,Yflat]).
+
+add_spec_clause( (Var := X) ,VNs) :-
+        !,
+        add_spec_clause( (Var := X,{true}) ,VNs).
 
 add_spec_clause( (Head <-- Deps,{Goal},Exec) ,VNs) :-
         !,
@@ -279,9 +320,13 @@ add_spec_clause(Rule,VNs) :-
 add_spec_clause(Term,_) :-
         assert(Term).
 
-show_global_bindings :-
-    forall(global_binding(Var,Val),
-	   format("global binding: ~w = ~w\n",[Var,Val])).
+
+global_unbind(Var) :-
+	retractall(global_simple_binding(Var,_)),
+	retractall(global_lazy_binding(Var,_)).
+
+global_binding(Var,Val) :- global_simple_binding(Var,Val).
+global_binding(Var,Val) :- global_lazy_binding(Var,Val).
 
 % ----------------------------------------
 % PATTERN SYNTAX AND API
@@ -328,8 +373,11 @@ wrap_t(t([L]),L) :- member(t(_),L).
 wrap_t(L,[L]).
 
 unwrap_t([t([Flat])],Flat).
+unwrap_t([t(L)],Flat) :- concat_string_list(L,Flat).
 unwrap_t(L,L).
-    
+
+concat_string_list([],"").
+concat_string_list([L|Ls],F) :- concat_string_list(Ls,R), string_concat(L,R,F).
 
 normalize_pattern(X,X,_) :- var(X),!.
 normalize_pattern(t(X),t(X),_) :- !.
@@ -344,15 +392,16 @@ normalize_pattern(X,t(Toks),V) :-
 
 toks([],_) --> [].
 toks([Tok|Toks],V) --> tok(Tok,V),!,toks(Toks,V).
-tok(Var,V) --> ['%'],!,{bindvar('%',V,Var)}.
-tok(Var,V) --> ['$'],varlabel(VL),!,{bindvar(VL,V,Var)}.
+tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
+tok(Var,V) --> ['$'],varlabel(VL),!,{bindvar_debug(VL,V,Var)}.
 tok(Tok,_) --> tok_a(Cs),{atom_chars(Tok,Cs)}.
 tok_a([C|Cs]) --> [C],{C\='$',C\='%'},!,tok_a(Cs).
 tok_a([]) --> [].
 varlabel('<') --> ['<'],!.
 varlabel('*') --> ['*'],!.
 varlabel('@') --> ['@'],!.
-varlabel(A) --> alphanum(C),alphanums(Cs),{atom_chars(A,[C|Cs])}.
+varlabel(A) --> alphanum(C),{atom_chars(A,[C])}.
+varlabel(A) --> ['('],alphanum(C),alphanums(Cs),[')'],{atom_chars(A,[C|Cs])}.
 alphanums([X|Xs]) --> alphanum(X),!,alphanums(Xs).
 alphanums([]) --> [].
 alphanum(X) --> [X],{X@>='a',X@=<'z'},!.
@@ -360,15 +409,23 @@ alphanum(X) --> [X],{X@>='A',X@=<'Z'},!.
 alphanum(X) --> [X],{X@>='0',X@=<'9'},!.    % foo('0') %
 alphanum('_') --> ['_'].
 
-bindvar_debug(V,VL,Var) :-
-    debug(pattern,"binding ~w",[V]),
-    %show_global_bindings,
-    bindvar(V,VL,Var),
-    debug(pattern,"bound ~w= ~w",[V,Var]).
-
 bindvar('%',v(X,_,_,_),X) :- !.
 bindvar('*',v(X,_,_,_),X) :- !.
 bindvar('@',v(_,X,_,_),X) :- !.
 bindvar('<',v(_,_,X,_),X) :- !.
-bindvar(VL,v(_,_,_,_),X) :- global_binding(VL,X),!.
+bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
+bindvar(VL,v(_,_,_,_),X) :- global_lazy_binding(VL,Y),normalize_pattern(Y,Z,v(_,_,_,[VL=VL])),unwrap_t([Z],X),!.
 bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
+bindvar(_,_,'') :- !.
+
+% debugging variable binding
+bindvar_debug(VL,V,Var) :-
+    debug(pattern,"binding ~w",[VL]),
+    %show_global_bindings,
+    bindvar(VL,V,Var),
+    debug(pattern,"bound ~w= ~w",[VL,Var]).
+
+show_global_bindings :-
+    forall(global_binding(Var,Val),
+	   format("global binding: ~w = ~w\n",[Var,Val])).
+    

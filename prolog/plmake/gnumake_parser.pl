@@ -18,8 +18,8 @@ makefile_rules([],_,_) --> call(eos), !.
 makefile_rules(Rules,Line,File) --> comment, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> blank_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> include_line(Included), !, {Lnext is Line + 1, append(Included,Next,Rules)}, makefile_rules(Next,Lnext,File).
-makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
 makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment), !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
+makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
 makefile_rules(_,Line,File) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),syntax_error(Err)}.
 
 eos([], []).
@@ -33,12 +33,11 @@ include_line(Rules) -->
 include_makefiles(Rules) --> makefile_filename_string(F), opt_whitespace, "\n", !, {parse_gnu_makefile(F,Rules)}.
 include_makefiles(Rules) --> makefile_filename_string(F), whitespace, !, {parse_gnu_makefile(F,R)}, include_makefiles(Next), {append(R,Next,Rules)}.
 
-makefile_assignment(assignment(Var,Val)) -->
+makefile_assignment(assignment(Var,Op,Val)) -->
     opt_whitespace,
     makefile_var_atom(Var),
-%    "FOO",
     opt_whitespace,
-    "=",
+    op_string(Op),
     opt_whitespace,
     line_as_string(Val).
 
@@ -60,6 +59,10 @@ makefile_targets([T]) --> opt_whitespace, makefile_target_string(T), opt_whitesp
 makefile_filename_string(S) --> {string_codes(" \t\n",XL)}, string_toks(S,XL).
 makefile_target_string(S) --> {string_codes(": \t\n",XL)}, string_toks(S,XL).
 makefile_var_atom(S) --> {string_codes(":= \t\n",XL)}, atom_toks(S,XL).
+
+op_string("=") --> "=".
+op_string(":=") --> ":=".
+op_string("?=") --> "?=".
 
 string_toks(S,XL) --> clist(C,XL), {C\=[], string_chars(S,C)}.
 atom_toks(S,XL) --> clist(C,XL), {C\=[], atom_chars(S,C)}.
