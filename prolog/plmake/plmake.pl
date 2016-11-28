@@ -37,6 +37,7 @@ build(T,Opts) :-
         build(T,[],Opts).
 
 build(T,SL,Opts) :-
+        %show_global_bindings,
         %report('Target: ~w',[T]),
         debug_report(build,'  Target: ~w',[T],SL),
         target_bindrule(T,Rule),
@@ -221,9 +222,11 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 
 consult_gnu_makefile(F) :-
         ensure_loaded(library(plmake/gnumake_parser)),
-        parse_gnu_makefile(F,RL),
-        forall(member( rule(Targets,Deps,Execs), RL),
-               add_spec_clause( mkrule(Targets,Deps,Execs), [] ) ).
+        parse_gnu_makefile(F,M),
+        forall(member(L,M),
+	       ((L = rule(Ts,Ds,Es)) -> add_spec_clause((Ts <-- Ds,Es),[]);
+		((L = assignment(Var,Val)) -> add_spec_clause((Var = Val),[Var=Var]);
+		 true))).
 
 consult_makeprog(F) :-
         debug(makeprog,'reading: ~w',[F]),
@@ -240,12 +243,20 @@ consult_makeprog(F) :-
         debug(makeprog,'read: ~w',[F]),
         close(IO).
 
+add_spec_clause( (Var = X) ,VNs) :-
+        !,
+        add_spec_clause( (Var = X,{true}) ,VNs).
+
 add_spec_clause( (Var = X,{Goal}) ,VNs) :-
         !,
         normalize_pattern(X,Y,v(_,_,_,VNs)),
         findall(Y,Goal,Ys),
+	unwrap_t(Ys,Yflat),  % hack; parser adds too many t(...)'s
+	!,
         member(Var=Var,VNs),
-        assert(global_binding(Var,Ys)).
+        assert(global_binding(Var,Yflat)),
+        debug(makeprog,'assign: ~w = ~w',[Var,Yflat]).
+
 add_spec_clause( (Head <-- Deps,{Goal},Exec) ,VNs) :-
         !,
         add_spec_clause(mkrule(Head,Deps,Exec,Goal),VNs).
@@ -258,13 +269,19 @@ add_spec_clause( (Head <-- Deps, Exec) ,VNs) :-
 add_spec_clause( (Head <-- Deps) ,VNs) :-
         !,
         add_spec_clause(mkrule(Head,Deps,[]),VNs).
+
 add_spec_clause(Rule,VNs) :-
         Rule =.. [mkrule|_],
         !,
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
         assert(with(Rule,VNs)).
+
 add_spec_clause(Term,_) :-
         assert(Term).
+
+show_global_bindings :-
+    forall(global_binding(Var,Val),
+	   format("global binding: ~w = ~w\n",[Var,Val])).
 
 % ----------------------------------------
 % PATTERN SYNTAX AND API
@@ -305,11 +322,14 @@ normalize_patterns([P|Ps],[N|Ns],V) :-
         normalize_patterns(Ps,Ns,V).
 normalize_patterns(P,Ns,V) :-
         normalize_pattern(P,N,V),
-        % this is a bit hacky - parsing is too eager to add t(...)
-        % wrapper
-        (   N=t([L]),member(t(_),L)
-        ->  Ns=L
-        ;   Ns=[N]).
+	wrap_t(N,Ns). % this is a bit hacky - parsing is too eager to add t(...) wrapper
+
+wrap_t(t([L]),L) :- member(t(_),L).
+wrap_t(L,[L]).
+
+unwrap_t([t([Flat])],Flat).
+unwrap_t(L,L).
+    
 
 normalize_pattern(X,X,_) :- var(X),!.
 normalize_pattern(t(X),t(X),_) :- !.
@@ -340,13 +360,15 @@ alphanum(X) --> [X],{X@>='A',X@=<'Z'},!.
 alphanum(X) --> [X],{X@>='0',X@=<'9'},!.    % foo('0') %
 alphanum('_') --> ['_'].
 
+bindvar_debug(V,VL,Var) :-
+    debug(pattern,"binding ~w",[V]),
+    %show_global_bindings,
+    bindvar(V,VL,Var),
+    debug(pattern,"bound ~w= ~w",[V,Var]).
 
 bindvar('%',v(X,_,_,_),X) :- !.
 bindvar('*',v(X,_,_,_),X) :- !.
 bindvar('@',v(_,X,_,_),X) :- !.
 bindvar('<',v(_,_,X,_),X) :- !.
 bindvar(VL,v(_,_,_,_),X) :- global_binding(VL,X),!.
-bindvar(VL,v(_,_,_,BL),X) :- debug(pattern,'binding ~w= ~w // ~w',[VL,X,BL]),member(VL=X,BL),debug(pattern,'bound ~w= ~w',[VL,X]),!.
-
-
-
+bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.

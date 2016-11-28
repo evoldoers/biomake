@@ -1,0 +1,13 @@
+
+ # to test: plmake -f examples/Makefile.foo hello.world.baz
+
+FOO = .foo
+
+%.bar: %$FOO
+	perl -pe 'tr/a-z/A-Z/' $< > $@
+
+$A.baz: $A.bar
+	(echo "Baz!"; cat $<; echo "I said Baz!") > $@
+
+$A.$B.foo:
+	echo b= $B a= $A >$@
