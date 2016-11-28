@@ -142,14 +142,14 @@ run_execs([E|Es],Opts) :-
 run_exec(Exec,Opts) :-
         member(dry_run(true),Opts),
         !,
-        report('Command (not executing): ~w',[Exec],Opts).
+        report('~w',[Exec],Opts).
 run_exec(Exec,Opts) :-
-        report('Command: ~w',[Exec],Opts),
+        report('~w',[Exec],Opts),
         get_time(T1),
         shell(Exec,Err),
         get_time(T2),
         DT is T2-T1,
-        report('  Return: ~w Time: ~w',[Err,DT],Opts),
+        debug_report(build,'  Return: ~w Time: ~w',[Err,DT],Opts),
         Err=0,
         !.
 run_exec(Exec,_Opts) :-
