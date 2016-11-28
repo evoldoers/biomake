@@ -171,9 +171,13 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         debug(bindrule,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
         Goal,
         debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
-        maplist(pattern_target,DPs,Ds),
+        maplist(pattern_target,DPs,SpacedDeps),
+        maplist(split_spaces,SpacedDeps,DepLists),
+	flatten(DepLists,Ds),
         maplist(pattern_eval,ExecPs,Execs).
 
+split_spaces(S,L) :-
+	split_string(S," "," ",L).
 
 
 % semidet

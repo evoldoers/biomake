@@ -20,18 +20,24 @@ user:prolog_exception_hook(_,
         fail.
 
 test :-
-	nb_setval(tests,0),
-	nb_setval(passed,0),
+	init_counts,
 	run_test("hello.world.baz"),
 	run_test("test1"),
 	run_test("DEF=def","test2"),
 	run_test("ABC=123","test3"),
-	!,
+	run_test("parallels"),
+	report_counts,
+	halt.
+
+init_counts :-
+	nb_setval(tests,0),
+	nb_setval(passed,0).
+
+report_counts :-
 	nb_getval(tests,T),
 	nb_getval(passed,P),
 	(P = T -> format("ok: passed ~d/~d tests~n",[P,T]);
-	    format("not ok: passed ~d/~d tests~n",[P,T])),
-	halt.
+	    format("not ok: passed ~d/~d tests~n",[P,T])).
 
 run_test(Target) :-
 	default_ref_dir(RefDir),
@@ -90,11 +96,11 @@ compare_files(TestPath,RefPath) :-
 	shell(Diff,_),
 	fail.
 
-compare_files(TestPath,RefPath) :-
+compare_files(TestPath,_) :-
 	file_missing(TestPath),
 	fail.
 
-compare_files(TestPath,RefPath) :-
+compare_files(_,RefPath) :-
 	file_missing(RefPath),
 	fail.
 

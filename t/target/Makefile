@@ -37,3 +37,7 @@ ABC = abc
 
 test%:
 	echo ABC=$(ABC) DEF=$(DEF) XYZ=$(XYZ) >$@
+
+DEPS := yorks.lancasters.foo starks.lannisters.foo
+parallels: $(DEPS)
+	cat $(DEPS) >$@
