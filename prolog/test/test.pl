@@ -26,6 +26,7 @@ test :-
 	run_test("DEF=def","test2"),
 	run_test("ABC=123","test3"),
 	run_test("parallels"),
+	run_test("hw.test"),
 	report_counts,
 	halt.
 
@@ -53,6 +54,7 @@ run_test(RefDir,TestDir,Args,Target) :-
 	report_test(RefDir,TestDir,Args,Target,"[~s,~s,~s ~s]",[RefDir,TestDir,Args,Target]).
 
 report_test(RefDir,TestDir,Args,Target,Fmt,Vars) :-
+	working_directory(CWD,CWD),
 	format(string(Desc),Fmt,Vars),
 	inc(tests),
 	nb_getval(tests,T),
@@ -60,7 +62,8 @@ report_test(RefDir,TestDir,Args,Target,Fmt,Vars) :-
 	(exec_test(RefDir,TestDir,Args,Target)
          -> (format("ok: passed test #~d: ~s~n~n",[T,Desc]),
 	 inc(passed));
-         format("not ok: failed test #~d: ~s~n~n",[T,Desc])).
+         format("not ok: failed test #~d: ~s~n~n",[T,Desc])),
+	working_directory(_,CWD).
 
 inc(Counter) :-
 	nb_getval(Counter, C),

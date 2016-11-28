@@ -41,3 +41,8 @@ test%:
 DEPS := yorks.lancasters.foo starks.lannisters.foo
 parallels: $(DEPS)
 	cat $(DEPS) >$@
+
+S := hello
+S += world
+hw.test:
+	echo $S >$@

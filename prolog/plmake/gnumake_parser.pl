@@ -38,7 +38,6 @@ makefile_assignment(assignment(Var,Op,Val)) -->
     makefile_var_atom(Var),
     opt_whitespace,
     op_string(Op),
-    opt_whitespace,
     line_as_string(Val).
 
 makefile_rule(rule(Head,Deps,Exec),Lines) -->
@@ -58,11 +57,12 @@ makefile_targets([T]) --> opt_whitespace, makefile_target_string(T), opt_whitesp
 
 makefile_filename_string(S) --> {string_codes(" \t\n",XL)}, string_toks(S,XL).
 makefile_target_string(S) --> {string_codes(": \t\n",XL)}, string_toks(S,XL).
-makefile_var_atom(S) --> {string_codes(":= \t\n",XL)}, atom_toks(S,XL).
+makefile_var_atom(S) --> {string_codes(":?+= \t\n",XL)}, atom_toks(S,XL).
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".
 op_string("?=") --> "?=".
+op_string("+=") --> "+=".
 
 string_toks(S,XL) --> clist(C,XL), {C\=[], string_chars(S,C)}.
 atom_toks(S,XL) --> clist(C,XL), {C\=[], atom_chars(S,C)}.

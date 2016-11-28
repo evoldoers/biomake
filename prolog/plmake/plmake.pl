@@ -230,8 +230,10 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 :- dynamic global_lazy_binding/2.
 
 :- user:op(1100,xfy,<--).
+
 :- user:op(1101,xfy,?=).
 :- user:op(1102,xfy,:=).
+:- user:op(1103,xfy,+=).
 
 consult_gnu_makefile(F) :-
         ensure_loaded(library(plmake/gnumake_parser)),
@@ -239,10 +241,11 @@ consult_gnu_makefile(F) :-
         forall(member(L,M),
 	       ((L = rule(Ts,Ds,Es)) -> add_spec_clause((Ts <-- Ds,Es),[]);
 		((L = assignment(Var,Op,Val)) ->
-		     (Op = "=" -> add_assignment((Var = Val));
-		      (Op = "?=" -> add_assignment((Var ?= Val));
-		       (Op = ":=" -> add_assignment((Var := Val));
-			true)));
+		     (Op = "=" -> add_spec_clause((Var = Val));
+		      (Op = "?=" -> add_spec_clause((Var ?= Val));
+		       (Op = ":=" -> add_spec_clause((Var := Val));
+			(Op = "+=" -> add_spec_clause((Var += Val));
+			    true))));
 		 true))).
 
 consult_makeprog(F) :-
@@ -262,43 +265,60 @@ consult_makeprog(F) :-
 
 
 add_assignment((Var = X)) :-
-        !,
-        add_spec_clause((Var = X), [Var=Var]).
+        add_spec_clause((Var = X)).
 
-add_assignment((Var ?= X)) :-
+
+add_spec_clause((Var = X)) :-
+	add_spec_clause((Var = X), [Var=Var]).
+add_spec_clause((Var ?= X)) :-
+	add_spec_clause((Var ?= X), [Var=Var]).
+add_spec_clause((Var := X)) :-
+	add_spec_clause((Var := X), [Var=Var]).
+add_spec_clause((Var += X)) :-
+	add_spec_clause((Var += X), [Var=Var]).
+
+
+add_spec_clause( (Var ?= X) ,VNs) :-
         global_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w = ~w since ~w is already bound to ~w",[Var,X,Var,Oldval]).
 
-add_assignment((Var ?= X)) :-
-        add_assignment((Var = X)).
-
-add_assignment((Var := X)) :-
-        !,
-        add_spec_clause( (Var := X,{true}), [Var=Var]).
-
+add_spec_clause( (Var ?= X) ,VNs) :-
+        add_spec_clause((Var = X),VNs).
 
 add_spec_clause( (Var = X) ,VNs) :-
-        global_unbind(Var),
 	!,
         member(Var=Var,VNs),
+        global_unbind(Var),
         assert(global_lazy_binding(Var,X)),
         debug(makeprog,'assign: ~w = ~w',[Var,X]).
 
 add_spec_clause( (Var := X,{Goal}) ,VNs) :-
-        global_unbind(Var),
         !,
+        member(Var=Var,VNs),
         normalize_pattern(X,Y,v(_,_,_,VNs)),
         findall(Y,Goal,Ys),
 	unwrap_t(Ys,Yflat),  % hack; parser adds too many t(...)'s
 	!,
-        member(Var=Var,VNs),
+        global_unbind(Var),
         assert(global_simple_binding(Var,Yflat)),
         debug(makeprog,'assign: ~w := ~w',[Var,Yflat]).
 
 add_spec_clause( (Var := X) ,VNs) :-
         !,
         add_spec_clause( (Var := X,{true}) ,VNs).
+
+add_spec_clause( (Var += X) ,VNs) :-
+        !,
+        member(Var=Var,VNs),
+        normalize_pattern(X,Y,v(_,_,_,VNs)),
+	unwrap_t([Y],Yflat),  % hack; parser adds too many t(...)'s
+	!,
+	(global_binding(Var,Old); Old = ""),
+	string_concat(Old,Yflat,New),
+        global_unbind(Var),
+        assert(global_simple_binding(Var,New)),
+        debug(makeprog,'assign: ~w := ~w',[Var,New]).
 
 add_spec_clause( (Head <-- Deps,{Goal},Exec) ,VNs) :-
         !,
