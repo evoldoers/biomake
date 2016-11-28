@@ -51,6 +51,8 @@ makefile_atom(T) --> makefile_token_chars(Tc), {atom_chars(T,Tc)}.
 makefile_token_chars([C]) --> makefile_token_char(C).
 makefile_token_chars([C|Rest]) --> makefile_token_char(C), makefile_token_chars(Rest).
 
+% I think the following is mixing up codes (C\=10) with chars (C\=':')
+% ...probably not safe
 makefile_token_char(C) --> [C],{C\='$',C\='%',C\=':',C\=' ',C\='\n',C\='\r',C\='\t',C\=10},!.
 
 whitespace --> " ", !, opt_whitespace.
