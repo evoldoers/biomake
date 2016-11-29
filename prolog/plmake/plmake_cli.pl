@@ -18,9 +18,17 @@ main :-
 	consult_makefile(Opts),
         forall(member(goal(G),Opts),
                G),
-        forall(member(rest(T),Opts),
-               build(T,Opts)),
+	build_toplevel(Opts),
         halt.
+
+build_toplevel(Opts) :-
+	member(toplevel(_),Opts),
+	!,
+	forall(member(toplevel(T),Opts),
+               build(T,Opts)).
+
+build_toplevel(Opts) :-
+	build_default(Opts).
 
 add_assignments(Opts) :-
         forall(member(assignment(Var,Val),Opts),
@@ -46,7 +54,7 @@ parse_args(Args,[Opt|Opts]) :-
         parse_arg(Args,Rest,Opt),
         !,
         parse_args(Rest,Opts).
-parse_args([A|Args],[rest(A)|Opts]) :-
+parse_args([A|Args],[toplevel(A)|Opts]) :-
         parse_args(Args,Opts).
 
 :- discontiguous parse_arg/3.

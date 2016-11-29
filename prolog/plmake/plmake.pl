@@ -2,11 +2,17 @@
 
 :- module(plmake,
           [
+           build_default/0,
+           build_default/1,
+
            build/1,
            build/2,
 	   
            consult_makeprog/1,
            consult_gnu_makefile/1,
+
+	   add_spec_clause/1,
+	   add_spec_clause/2,
 	   add_assignment/1,
 	   
            target_bindrule/2,
@@ -30,11 +36,24 @@
 % TOP-LEVEL
 % ----------------------------------------
 
+%% build_default()
+%% build_default(+Opts:list)
+
 %% build(+Target)
 %% build(+Target, +Opts:list)
 %% build(+Target, +Stack:list,+Opts:list)
 %
 % builds Target using rules
+
+build_default :-
+	build_default([]).
+
+build_default(Opts) :-
+	default_target(T),
+	build(T,Opts).
+
+build :-
+	format("No targets. Stop.~n").
 
 build(T) :-
         build(T,[]).
@@ -234,6 +253,8 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 :- dynamic global_simple_binding/2.
 :- dynamic global_lazy_binding/2.
 
+:- dynamic default_target/1.
+
 :- user:op(1100,xfy,<--).
 
 :- user:op(1101,xfy,?=).
@@ -315,7 +336,7 @@ add_spec_clause( (Var := X,{Goal}) ,VNs) :-
         member(Var=Var,VNs),
         normalize_pattern(X,Y,v(_,_,_,VNs)),
         findall(Y,Goal,Ys),
-	unwrap_t(Ys,Yflat),  % hack; parser adds too many t(...)'s
+	unwrap_t(Ys,Yflat),  % hack; parser adds unwanted t(...) wrapper
 	!,
         global_unbind(Var),
         assert(global_simple_binding(Var,Yflat)),
@@ -334,7 +355,7 @@ add_spec_clause( (Var += X) ,VNs) :-
         !,
         member(Var=Var,VNs),
         normalize_pattern(X,Y,v(_,_,_,VNs)),
-	unwrap_t([Y],Yflat),  % hack; parser adds too many t(...)'s
+	unwrap_t(Y,Yflat),  % hack; parser adds too many t(...)'s
 	!,
 	(global_binding(Var,Old),
 	 concat_string_list([Old," ",Yflat],New);
@@ -357,14 +378,24 @@ add_spec_clause( (Head <-- Deps) ,VNs) :-
         add_spec_clause(mkrule(Head,Deps,[]),VNs).
 
 add_spec_clause(Rule,VNs) :-
-        Rule =.. [mkrule|_],
+        Rule =.. [mkrule,T|_],
         !,
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
+	set_default_target(T),
         assert(with(Rule,VNs)).
 
 add_spec_clause(Term,_) :-
         assert(Term).
 
+set_default_target(_) :-
+	default_target(_),
+	!.
+set_default_target([T|_]) :-
+	!,
+	expand_vars(T,Tx),
+	debug(makeprog,"Setting default target to ~s",[Tx]),
+	assert(default_target(Tx)).
+set_default_target(_).
 
 global_unbind(Var) :-
 	retractall(global_cmdline_binding(Var,_)),
@@ -407,7 +438,7 @@ mkrule_normalized(TPs,DPs,ExecPs,Goal) :-
 
 expand_vars(X,Y) :-
 	normalize_pattern(X,Yt,v("","","",[])),
-	unwrap_t([Yt],Y).
+	unwrap_t(Yt,Y).
 
 normalize_patterns(X,X,_) :- var(X),!.
 normalize_patterns([],[],_) :- !.
@@ -425,6 +456,7 @@ wrap_t(L,[L]).
 
 unwrap_t([t([Flat])],Flat).
 unwrap_t([t(L)],Flat) :- concat_string_list(L,Flat).
+unwrap_t(X,Flat) :- unwrap_t([X],Flat).
 unwrap_t(L,L).
 
 concat_string_list([],"").
@@ -467,7 +499,7 @@ bindvar('@',v(_,X,_,_),X) :- !.
 bindvar('<',v(_,_,X,_),X) :- !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
-bindvar(VL,v(_,_,_,_),X) :- global_lazy_binding(VL,Y),normalize_pattern(Y,Z,v(_,_,_,[VL=VL])),unwrap_t([Z],X),!.
+bindvar(VL,v(_,_,_,_),X) :- global_lazy_binding(VL,Y),normalize_pattern(Y,Z,v(_,_,_,[VL=VL])),unwrap_t(Z,X),!.
 bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
 bindvar(_,_,'') :- !.
 
