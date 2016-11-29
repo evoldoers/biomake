@@ -56,3 +56,20 @@ patsubst:
 substref:
 	echo $(FEAR:killer=thriller) >$@
 
+strip:
+	echo $(strip this   string    has    lots      of redundant      space) >$@
+
+findstring1:
+	echo $(findstring rabbit,fox cow rabbit duck) >$@
+
+findstring2:
+	echo $(findstring rabbit,fox cow duck) >$@
+
+filter:
+	echo $(filter %.c,rabbit.c fox.h cow.c duck.cpp) >$@
+
+filter_out:
+	echo $(filter-out %.c,rabbit.c fox.h cow.c duck.cpp) >$@
+
+sort:
+	echo $(sort rabbit cow duck fox duck elephant) >$@

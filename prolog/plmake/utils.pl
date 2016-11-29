@@ -2,6 +2,8 @@
 
 :- module(parser_utils,
           [
+           show_type/1,
+           type_of/2,
 	   string_from_codes/4,
 	   atom_from_codes/4,
 	   code_list/4,
@@ -69,3 +71,14 @@ nth_element(N,[_|Ls],X) :- Np is N - 1, nth_element(Np,Ls,X).
 slice(_S,_E,[],[]).
 slice(1,E,[L|Ls],[L|Rs]) :- E > 0, En is E - 1, slice(1,En,Ls,Rs).
 slice(S,E,[_L|Ls],R) :- Sn is S - 1, En is E - 1, slice(Sn,En,Ls,R).
+
+show_type(X) :- type_of(X,T), format("Type of ~w is ~w.~n",[X,T]).
+type_of(X,"var") :- var(X), !.
+type_of(X,"integer") :- integer(X), !.
+type_of(X,"float") :- float(X), !.
+type_of(X,"rational") :- rational(X), !.
+type_of(X,"number") :- number(X), !.  % should never be reached
+type_of(X,"string") :- string(X), !.
+type_of(X,"compound") :- compound(X), !.
+type_of(X,"ground") :- ground(X), !.
+type_of(_,"unknown").

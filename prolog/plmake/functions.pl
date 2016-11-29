@@ -19,6 +19,27 @@ makefile_function(Result) --> lb("patsubst"), chr_arg(From), comma, chr_arg(To),
 	  patsubst_all(FL,FR,TL,TR,Src,R),
 	  concat_string_list(R,Result," ") }.
 
+makefile_function(Result) --> lb("strip"), xlst_arg(L), rb, !,
+	{ concat_string_list(L,Result," ") }.
+
+makefile_function(Result) --> lb("findstring"), xstr_arg(S), comma, xlst_arg(L), rb, !,
+	{ findstring(S,L,Result) }.
+
+makefile_function(Result) --> lb("filter"), chr_arg(P), comma, xlst_arg(L), rb, !,
+	{ phrase(patsubst_lr(PL,PR),P),
+	  filter(PL,PR,L,R),
+	  concat_string_list(R,Result," ") }.
+
+makefile_function(Result) --> lb("filter-out"), chr_arg(P), comma, xlst_arg(L), rb, !,
+	{ phrase(patsubst_lr(PL,PR),P),
+	  filter_out(PL,PR,L,R),
+	  concat_string_list(R,Result," ") }.
+
+makefile_function(Result) --> lb("sort"), xlst_arg(L), rb, !,
+	{ sort(L,S),
+	  remove_dups(S,R),
+	  concat_string_list(R,Result," ") }.
+
 makefile_function(Result) --> lb("word"), num_arg(N), comma, xlst_arg(L), rb, !,
 	{ nth_element(N,L,Result) }.
 
@@ -88,7 +109,7 @@ patsubst(FL,FR,TL,TR,S,D) :-
 	append(DL,TR,D).
 patsubst(_,_,_,_,S,S).
 
-patsubst_lr(_,[]) --> [].
+patsubst_lr([],[]) --> [].
 patsubst_lr([C|L],R) --> [C], {C\='%'}, !, patsubst_lr(L,R).
 patsubst_lr([],R) --> ['%'], patsubst_lr_r(R).
 patsubst_lr_r([]) --> [].
@@ -97,3 +118,29 @@ patsubst_lr_r([C|R]) --> [C], !, patsubst_lr_r(R).
 patsubst_match(L,R,Match) --> L, patsubst_match_m(R,Match).
 patsubst_match_m(R,[C|Match]) --> [C], patsubst_match_m(R,Match).
 patsubst_match_m(R,[]) --> R.
+
+findstring(S,[L|_],S) :- string_codes(S,Sc), string_codes(L,Lc), Sc = Lc, !.  % this seems a bit contrived, but a straight test for string equality doesn't seem to work
+findstring(S,[_|L],R) :- findstring(S,L,R).
+findstring(_,[],"").
+
+filter(_,_,[],[]).
+filter(L,R,[Src|Srest],[Src|Drest]) :-
+	string_chars(Src,Sc),
+	phrase(patsubst_match(L,R,_),Sc),
+	!,
+	filter(L,R,Srest,Drest).
+filter(L,R,[_|Srest],Dest) :- filter(L,R,Srest,Dest).
+
+filter_out(_,_,[],[]).
+filter_out(L,R,[Src|Srest],Dest) :-
+	string_chars(Src,Sc),
+	phrase(patsubst_match(L,R,_),Sc),
+	!,
+	filter_out(L,R,Srest,Dest).
+filter_out(L,R,[Src|Srest],[Src|Drest]) :- filter_out(L,R,Srest,Drest).
+
+% remove_dups assumes list is sorted
+remove_dups([],[]).
+remove_dups([X,X|Xs],Y) :- !, remove_dups([X|Xs],Y).
+remove_dups([X|Xs],[X|Ys]) :- remove_dups(Xs,Ys).
+
