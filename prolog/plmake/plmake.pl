@@ -278,7 +278,7 @@ add_spec_clause((Var += X)) :-
 	add_spec_clause((Var += X), [Var=Var]).
 
 
-add_spec_clause( (Var ?= X) ,VNs) :-
+add_spec_clause( (Var ?= X) ,_VNs) :-
         global_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w = ~w since ~w is already bound to ~w",[Var,X,Var,Oldval]).
@@ -315,7 +315,7 @@ add_spec_clause( (Var += X) ,VNs) :-
 	unwrap_t([Y],Yflat),  % hack; parser adds too many t(...)'s
 	!,
 	(global_binding(Var,Old); Old = ""),
-	string_concat(Old,Yflat,New),
+	concat_string_list([Old," ",Yflat],New),
         global_unbind(Var),
         assert(global_simple_binding(Var,New)),
         debug(makeprog,'assign: ~w := ~w',[Var,New]).

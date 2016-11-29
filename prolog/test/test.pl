@@ -72,7 +72,7 @@ inc(Counter) :-
 
 exec_test(RefDir,TestDir,Args,Target) :-
 	plmake_path(Make),
-	format(string(Exec),"~s ~s ~s",[Make,Args,Target]),
+	format(string(Exec),"~s -B ~s ~s",[Make,Args,Target]),
 	working_directory(CWD,TestDir),
 	format("Running '~s' in ~s~n",[Exec,TestDir]),
 	shell(Exec,Err),

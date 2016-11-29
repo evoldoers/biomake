@@ -38,6 +38,7 @@ makefile_assignment(assignment(Var,Op,Val)) -->
     makefile_var_atom(Var),
     opt_whitespace,
     op_string(Op),
+    opt_whitespace,
     line_as_string(Val).
 
 makefile_rule(rule(Head,Deps,Exec),Lines) -->
