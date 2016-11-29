@@ -77,6 +77,9 @@ inc(Counter) :-
 	nb_setval(Counter, CNew).
 
 exec_test(RefDir,TestDir,Args,Target) :-
+	format(string(TestPath),"~s/~s",[TestDir,Target]),
+	format(string(RefPath),"~s/~s",[RefDir,Target]),
+	(exists_file(TestPath) -> delete_file(TestPath); true),
 	plmake_path(Make),
 	format(string(Exec),"~s -B ~s ~s",[Make,Args,Target]),
 	working_directory(CWD,TestDir),
@@ -85,9 +88,8 @@ exec_test(RefDir,TestDir,Args,Target) :-
 	!,
 	(Err = 0 -> true; format("Error ~w~n",Err), fail),
 	working_directory(_,CWD),
-	format(string(TestPath),"~s/~s",[TestDir,Target]),
-	format(string(RefPath),"~s/~s",[RefDir,Target]),
-	compare_files(TestPath,RefPath).
+	compare_files(TestPath,RefPath),
+	delete_file(TestPath).
 
 compare_files(TestPath,RefPath) :-
 	format("Comparing ~s to ~s~n",[TestPath,RefPath]),

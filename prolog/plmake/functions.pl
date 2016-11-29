@@ -8,14 +8,9 @@
 :- use_module(library(plmake/plmake)).
 
 makefile_function(Result) --> lb("firstword"), str_arg(A), rb, !,
-	{ debug(function,"$(firstword ~w)", [A]),
-	  !,
-	  expand_vars(A,Ax),
-	  !,
-          debug(function,"Ax=~w", [Ax]),
+	{ expand_vars(A,Ax),
 	  split_spaces(Ax,L),
-          debug(function,"L=~w", [L]),
-	  L = [Result|_] }.
+          L = [Result|_] }.
 
 makefile_function(Result) --> lb("lastword"), str_arg(A), rb, !,
 	{ expand_vars(A,Ax),
