@@ -8,41 +8,30 @@
 :- use_module(library(plmake/utils)).
 :- use_module(library(plmake/plmake)).
 
-makefile_function(Result) --> lb("subst"), str_arg(From), comma, str_arg(To), comma, str_arg(Src), rb, !,
-	{ expand_vars(Src,Sx),
-	  expand_vars(From,Fx),
-	  expand_vars(To,Tx),
-	  string_chars(Sx,Sc),
-	  string_chars(Fx,Fc),
-	  string_chars(Tx,Tc),
-	  phrase(subst(Fc,Tc,Rc),Sc),
+makefile_function(Result) --> lb("subst"), xchr_arg(From), comma, xchr_arg(To), comma, xchr_arg(Src), rb, !,
+	{ phrase(subst(From,To,Rc),Src),
 	  string_chars(Result,Rc) }.
 
-makefile_function(Result) --> lb("word"), num_arg(N), comma, str_arg(A), rb, !,
-	{ expand_vars(A,Ax),
-          split_spaces(Ax,L),
-	  nth_element(N,L,Result) }.
+makefile_function(Result) --> lb("patsubst"), chr_arg(From), comma, chr_arg(To), comma, xlst_arg(Src), rb, !,
+	{ phrase(patsubst_lr(FL,FR),From),
+	  phrase(patsubst_lr(TL,TR),To),
+	  patsubst_all(FL,FR,TL,TR,Src,R),
+	  concat_string_list(R,Result," ") }.
 
-makefile_function(Result) --> lb("wordlist"), num_arg(S), comma, num_arg(E), comma, str_arg(A), rb, !,
-	{ expand_vars(A,Ax),
-          split_spaces(Ax,L),
-	  slice(S,E,L,Sliced),
+makefile_function(Result) --> lb("word"), num_arg(N), comma, xlst_arg(L), rb, !,
+	{ nth_element(N,L,Result) }.
+
+makefile_function(Result) --> lb("wordlist"), num_arg(S), comma, num_arg(E), comma, xlst_arg(L), rb, !,
+	{ slice(S,E,L,Sliced),
 	  concat_string_list(Sliced,Result," ") }.
 
-makefile_function(Result) --> lb("words"), str_arg(A), rb, !,
-	{ expand_vars(A,Ax),
-          split_spaces(Ax,L),
-	  length(L,Result) }.
+makefile_function(Result) --> lb("words"), xlst_arg(L), rb, !,
+	{ length(L,Result) }.
 
-makefile_function(Result) --> lb("firstword"), str_arg(A), rb, !,
-	{ expand_vars(A,Ax),
-	  split_spaces(Ax,L),
-          L = [Result|_] }.
+makefile_function(Result) --> lb("firstword"), xlst_arg([Result|_]), rb, !.
 
-makefile_function(Result) --> lb("lastword"), str_arg(A), rb, !,
-	{ expand_vars(A,Ax),
-          split_spaces(Ax,L),
-	  last_element(L,Result) }.
+makefile_function(Result) --> lb("lastword"), xlst_arg(L), rb, !,
+	{ last_element(L,Result) }.
 
 makefile_function("") --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("") --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
@@ -51,6 +40,10 @@ lb(Func) --> ['('], {string_chars(Func,Cs)}, opt_whitespace, Cs, [' '], !.
 rb --> opt_whitespace, [')'].
 
 comma --> opt_whitespace, [','].
+xlst_arg(L) --> xstr_arg(S), !, {split_spaces(S,L)}.
+xchr_arg(C) --> xstr_arg(S), !, {string_chars(S,C)}.
+xstr_arg(Sx) --> str_arg(S), !, {expand_vars(S,Sx)}.
+chr_arg(C) --> str_arg(S), !, {string_chars(S,C)}.
 str_arg(S) --> opt_whitespace, str_arg_outer(S).
 str_arg_outer(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(",Si,")"],S)}.
 str_arg_outer(S) --> string_from_chars(Start,"(),"), !, str_arg_outer(Rest), {string_concat(Start,Rest,S)}.
@@ -67,3 +60,27 @@ num_char(X) --> [X],{X@>='0',X@=<'9'},!.    % foo('0') %
 subst(Cs,Ds,Result) --> Cs, !, subst(Cs,Ds,Rest), {append(Ds,Rest,Result)}.
 subst(Cs,Ds,[C|Rest]) --> [C], !, subst(Cs,Ds,Rest).
 subst(_Cs,_Ds,[]) --> !.
+
+patsubst_all(_,_,_,_,[],[]).
+patsubst_all(FL,FR,TL,TR,[Src|Srest],[Dest|Drest]) :-
+	string_chars(Src,Sc),
+	patsubst(FL,FR,TL,TR,Sc,Dc),
+	string_chars(Dest,Dc),
+	!,
+	patsubst_all(FL,FR,TL,TR,Srest,Drest).
+
+patsubst(FL,FR,TL,TR,S,D) :-
+	phrase(patsubst_match(FL,FR,Match),S),
+	append(TL,Match,DL),
+	append(DL,TR,D).
+patsubst(_,_,_,_,S,S).
+
+patsubst_lr(_,[]) --> [].
+patsubst_lr([C|L],R) --> [C], {C\='%'}, !, patsubst_lr(L,R).
+patsubst_lr([],R) --> ['%'], patsubst_lr_r(R).
+patsubst_lr_r([]) --> [].
+patsubst_lr_r([C|R]) --> [C], !, patsubst_lr_r(R).
+
+patsubst_match(L,R,Match) --> L, patsubst_match_m(R,Match).
+patsubst_match_m(R,[C|Match]) --> [C], patsubst_match_m(R,Match).
+patsubst_match_m(R,[]) --> R.

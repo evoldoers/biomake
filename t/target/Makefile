@@ -49,3 +49,6 @@ wordlist:
 
 subst:
 	echo $(subst bcd,xyz,abcdefg bcd) >$@
+
+patsubst:
+	echo $(patsubst %.c,%.o,a.c b.d e.c f.c) >$@

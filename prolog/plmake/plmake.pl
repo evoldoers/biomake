@@ -170,13 +170,12 @@ run_exec(Exec,Opts) :-
         report('~w',[Exec],Opts).
 run_exec(Exec,Opts) :-
 	string_chars(Exec,['@'|SilentChars]),
+	!,
 	string_chars(Silent,SilentChars),
 	silent_run_exec(Silent,Opts).
 run_exec(Exec,Opts) :-
         report('~w',[Exec],Opts),
 	silent_run_exec(Exec,Opts).
-run_exec(Exec,_Opts) :-
-        throw(error(run(Exec))).
 
 silent_run_exec(Exec,Opts) :-
         get_time(T1),
@@ -186,6 +185,9 @@ silent_run_exec(Exec,Opts) :-
         debug_report(build,'  Return: ~w Time: ~w',[Err,DT],Opts),
         Err=0,
         !.
+
+silent_run_exec(Exec,_Opts) :-
+        throw(error(run(Exec))).
 
 % ----------------------------------------
 % RULES AND PATTERN MATCHING
