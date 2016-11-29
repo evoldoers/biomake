@@ -226,6 +226,7 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 % READING
 % ----------------------------------------
 
+:- dynamic global_cmdline_binding/2.
 :- dynamic global_simple_binding/2.
 :- dynamic global_lazy_binding/2.
 
@@ -265,7 +266,9 @@ consult_makeprog(F) :-
 
 
 add_assignment((Var = X)) :-
-        add_spec_clause((Var = X)).
+        global_unbind(Var),
+        assert(global_cmdline_binding(Var,X)),
+        debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
 
 
 add_spec_clause((Var = X)) :-
@@ -286,12 +289,22 @@ add_spec_clause( (Var ?= X) ,_VNs) :-
 add_spec_clause( (Var ?= X) ,VNs) :-
         add_spec_clause((Var = X),VNs).
 
+add_spec_clause( (Var = X) ,_VNs) :-
+        global_cmdline_binding(Var,Oldval),
+        !,
+        debug(makeprog,"Ignoring ~w = ~w since ~w was bound to ~w on the command-line",[Var,X,Var,Oldval]).
+
 add_spec_clause( (Var = X) ,VNs) :-
 	!,
         member(Var=Var,VNs),
         global_unbind(Var),
         assert(global_lazy_binding(Var,X)),
         debug(makeprog,'assign: ~w = ~w',[Var,X]).
+
+add_spec_clause( (Var := X) ,_VNs) :-
+        global_cmdline_binding(Var,Oldval),
+        !,
+        debug(makeprog,"Ignoring ~w := ~w since ~w was bound to ~w on the command-line",[Var,X,Var,Oldval]).
 
 add_spec_clause( (Var := X,{Goal}) ,VNs) :-
         !,
@@ -307,6 +320,11 @@ add_spec_clause( (Var := X,{Goal}) ,VNs) :-
 add_spec_clause( (Var := X) ,VNs) :-
         !,
         add_spec_clause( (Var := X,{true}) ,VNs).
+
+add_spec_clause( (Var += X) ,_VNs) :-
+        global_cmdline_binding(Var,Oldval),
+        !,
+        debug(makeprog,"Ignoring ~w += ~w since ~w was bound to ~w on the command-line",[Var,X,Var,Oldval]).
 
 add_spec_clause( (Var += X) ,VNs) :-
         !,
@@ -344,9 +362,11 @@ add_spec_clause(Term,_) :-
 
 
 global_unbind(Var) :-
+	retractall(global_cmdline_binding(Var,_)),
 	retractall(global_simple_binding(Var,_)),
 	retractall(global_lazy_binding(Var,_)).
 
+global_binding(Var,Val) :- global_cmdline_binding(Var,Val).
 global_binding(Var,Val) :- global_simple_binding(Var,Val).
 global_binding(Var,Val) :- global_lazy_binding(Var,Val).
 
@@ -435,6 +455,7 @@ bindvar('%',v(X,_,_,_),X) :- !.
 bindvar('*',v(X,_,_,_),X) :- !.
 bindvar('@',v(_,X,_,_),X) :- !.
 bindvar('<',v(_,_,X,_),X) :- !.
+bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_lazy_binding(VL,Y),normalize_pattern(Y,Z,v(_,_,_,[VL=VL])),unwrap_t([Z],X),!.
 bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
