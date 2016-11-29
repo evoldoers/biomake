@@ -27,6 +27,12 @@ test :-
 	run_test("ABC=123","test3"),
 	run_test("parallels"),
 	run_test("hw.test"),
+	run_test("-f Makefile.include","inc2.test"),
+	run_test("-f Makefile.include","makefile_list"),
+	run_test("firstword"),
+	run_test("lastword"),
+	run_test("word2"),
+	run_test("words"),
 	report_counts,
 	halt.
 

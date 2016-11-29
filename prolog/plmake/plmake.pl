@@ -11,8 +11,12 @@
 	   
            target_bindrule/2,
            rule_dependencies/3,
-           is_rebuild_required/4
+           is_rebuild_required/4,
+
+	   expand_vars/2
            ]).
+
+:- use_module(library(plmake/functions)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -332,8 +336,9 @@ add_spec_clause( (Var += X) ,VNs) :-
         normalize_pattern(X,Y,v(_,_,_,VNs)),
 	unwrap_t([Y],Yflat),  % hack; parser adds too many t(...)'s
 	!,
-	(global_binding(Var,Old); Old = ""),
-	concat_string_list([Old," ",Yflat],New),
+	(global_binding(Var,Old),
+	 concat_string_list([Old," ",Yflat],New);
+	 New = Yflat),
         global_unbind(Var),
         assert(global_simple_binding(Var,New)),
         debug(makeprog,'assign: ~w := ~w',[Var,New]).
@@ -400,6 +405,10 @@ mkrule_normalized(TPs,DPs,ExecPs,Goal) :-
         ;   true),
         normalize_patterns(Exec1,ExecPs,V).
 
+expand_vars(X,Y) :-
+	normalize_pattern(X,Yt,v("","","",[])),
+	unwrap_t([Yt],Y).
+
 normalize_patterns(X,X,_) :- var(X),!.
 normalize_patterns([],[],_) :- !.
 normalize_patterns([P|Ps],[N|Ns],V) :-
@@ -434,6 +443,7 @@ normalize_pattern(X,t(Toks),V) :-
 
 toks([],_) --> [].
 toks([Tok|Toks],V) --> tok(Tok,V),!,toks(Toks,V).
+tok(Var,_V) --> makefile_function(Var), !.
 tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
 tok(Var,V) --> ['$'],varlabel(VL),!,{bindvar_debug(VL,V,Var)}.
 tok(Tok,_) --> tok_a(Cs),{atom_chars(Tok,Cs)}.

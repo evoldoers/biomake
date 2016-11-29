@@ -10,19 +10,46 @@
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M) :-
     debug(makefile,'reading: ~w\n',[F]),
-    phrase_from_file(makefile_rules(M,1,F),F),
+    phrase_from_file(makefile_rules(Mf,1,F),F),
+    atom_string(MAKEFILE_LIST,"MAKEFILE_LIST"),
+    M = [assignment(MAKEFILE_LIST,"+=",F)|Mf],
     debug(makefile,"rules: ~w\n",[M]).
 
 % Grammar for reading GNU Makefile
 makefile_rules([],_,_) --> call(eos), !.
 makefile_rules(Rules,Line,File) --> comment, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> blank_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
+makefile_rules(Rules,Line,File) --> info_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
+makefile_rules(Rules,Line,File) --> warning_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> include_line(Included), !, {Lnext is Line + 1, append(Included,Next,Rules)}, makefile_rules(Next,Lnext,File).
 makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment), !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
 makefile_rules(_,Line,File) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),syntax_error(Err)}.
 
 eos([], []).
+
+warning_line -->
+    opt_whitespace,
+    "$(warning",
+    whitespace,
+    makefile_warning_text(W),
+    ")",
+    opt_whitespace,
+    "\n",
+    !,
+    {format(string(Warning),"~w~n",[W]),
+     write(user_error,Warning)}.
+
+info_line -->
+    opt_whitespace,
+    "$(info",
+    whitespace,
+    makefile_warning_text(W),
+    ")",
+    opt_whitespace,
+    "\n",
+    !,
+    {format("~w~n",[W])}.
 
 include_line(Rules) -->
     opt_whitespace,
@@ -56,6 +83,7 @@ opt_makefile_targets([]) --> !.
 makefile_targets([T|Ts]) --> opt_whitespace, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
 makefile_targets([T]) --> opt_whitespace, makefile_target_string(T), opt_whitespace.
 
+makefile_warning_text(S) --> {string_codes(")",XL)}, string_toks(S,XL).
 makefile_filename_string(S) --> {string_codes(" \t\n",XL)}, string_toks(S,XL).
 makefile_target_string(S) --> {string_codes(": \t\n",XL)}, string_toks(S,XL).
 makefile_var_atom(S) --> {string_codes(":?+= \t\n",XL)}, atom_toks(S,XL).

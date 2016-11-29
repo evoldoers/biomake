@@ -27,3 +27,15 @@ S := hello
 S += world
 hw.test:
 	echo $S >$@
+
+firstword:
+	echo $(firstword $S) >$@
+
+lastword:
+	echo $(lastword $S) >$@
+
+word2:
+	echo $(word 2,$S) >$@
+
+words:
+	echo $(words $S) >$@
