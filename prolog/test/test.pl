@@ -25,6 +25,7 @@ test :-
 	run_test("test1"),
 	run_test("DEF=def","test2"),
 	run_test("ABC=123","test3"),
+	run_test("silent"),
 	run_test("parallels"),
 	run_test("hw.test"),
 	run_test("-f Makefile.include","inc2.test"),
@@ -34,6 +35,7 @@ test :-
 	run_test("word2"),
 	run_test("words"),
 	run_test("wordlist"),
+	run_test("subst"),
 	report_counts,
 	halt.
 

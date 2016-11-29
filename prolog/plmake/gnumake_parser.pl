@@ -6,6 +6,7 @@
 	  ]).
 
 :- use_module(library(pio)).
+:- use_module(library(plmake/utils)).
 
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M) :-
@@ -97,30 +98,15 @@ opt_makefile_targets([]) --> !.
 makefile_targets([T|Ts]) --> opt_whitespace, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
 makefile_targets([T]) --> opt_whitespace, makefile_target_string(T), opt_whitespace.
 
-makefile_warning_text(S) --> {string_codes(")",XL)}, string_toks(S,XL).
-makefile_filename_string(S) --> {string_codes(" \t\n",XL)}, string_toks(S,XL).
-makefile_target_string(S) --> {string_codes(": \t\n",XL)}, string_toks(S,XL).
-makefile_var_atom(S) --> {string_codes(":?+= \t\n",XL)}, atom_toks(S,XL).
+makefile_warning_text(S) --> string_from_codes(S,")").
+makefile_filename_string(S) --> string_from_codes(S," \t\n").
+makefile_target_string(S) --> string_from_codes(S,": \t\n").
+makefile_var_atom(S) --> atom_from_codes(S,":?+= \t\n").
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".
 op_string("?=") --> "?=".
 op_string("+=") --> "+=".
-
-string_toks(S,XL) --> clist(C,XL), {C\=[], string_chars(S,C)}.
-atom_toks(S,XL) --> clist(C,XL), {C\=[], atom_chars(S,C)}.
-
-clist([C|Cs],XL) --> [C], {forall(member(X,XL),C\=X)}, !, clist(Cs,XL).
-clist([C|Cs],XL) --> ['\\'], [C], !, clist(Cs,XL).
-clist([],_) --> [].
-
-whitespace --> " ", !, opt_whitespace.
-whitespace --> "\t", !, opt_whitespace.
-
-opt_whitespace --> whitespace.
-opt_whitespace --> !.
-
-blank_line --> opt_whitespace, "\n", !.
 
 makefile_execs([E|Es],Lines) --> makefile_exec(E), !, {Lines = Lrest + 1}, makefile_execs(Es,Lrest).
 makefile_execs(Es,Lines) --> comment, !, {Lines = Lrest + 1}, makefile_execs(Es,Lrest).

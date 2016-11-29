@@ -1,6 +1,7 @@
 % * -*- Mode: Prolog -*- */
 
 :- use_module(library(plmake/plmake)).
+:- use_module(library(plmake/utils)).
 
 user:prolog_exception_hook(_,
                            _, _, _) :-
@@ -114,16 +115,10 @@ show_help :-
 	   format("~w ~w~n    ~w~n",[X,Args,Info])).
 
 makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
-makefile_var(A) --> {string_codes(":= \t\n",XL)}, atom_toks(A,XL).
-makefile_val(S) --> "\"", {string_codes("\"",XL)}, string_toks(S,XL), "\"".
-makefile_val(S) --> {string_codes(" ",XL)}, string_toks(S,XL).
+makefile_var(A) --> atom_from_codes(A,":= \t\n").
+makefile_val(S) --> "\"", string_from_codes(S,"\""), "\"".
+makefile_val(S) --> string_from_codes(S," ").
 
 multi_args(Opts) --> "-", multi_arg(Opts).
-multi_arg([Opt|Rest]) --> [C], {string_codes("-",[H]),C\=H,atom_chars(Arg,[H,C]),parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
+multi_arg([Opt|Rest]) --> [C], {string_codes("-",[H]),C\=H,atom_codes(Arg,[H,C]),parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
 multi_arg([]) --> !.
-
-atom_toks(A,XL) --> clist(C,XL), {C\=[], atom_chars(A,C)}.
-string_toks(S,XL) --> clist(C,XL), {C\=[], string_chars(S,C)}.
-clist([C|Cs],XL) --> [C], {forall(member(X,XL),C\=X)}, !, clist(Cs,XL).
-clist([C|Cs],XL) --> ['\\'], [C], !, clist(Cs,XL).
-clist([],_) --> [].

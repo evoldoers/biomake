@@ -23,6 +23,9 @@ DEPS := yorks.lancasters.foo starks.lannisters.foo
 parallels: $(DEPS)
 	cat $(DEPS) >$@
 
+silent:
+	@echo silent >$@
+
 S := hello
 S += world
 hw.test:
@@ -43,3 +46,6 @@ words:
 FEAR = Fear is the mind killer
 wordlist:
 	echo $(wordlist 3,4,$(FEAR)) >$@
+
+subst:
+	echo $(subst bcd,xyz,abcdefg bcd) >$@

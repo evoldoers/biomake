@@ -22,6 +22,7 @@
 	   expand_vars/2
            ]).
 
+:- use_module(library(plmake/utils)).
 :- use_module(library(plmake/functions)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
@@ -168,7 +169,16 @@ run_exec(Exec,Opts) :-
         !,
         report('~w',[Exec],Opts).
 run_exec(Exec,Opts) :-
+	string_chars(Exec,['@'|SilentChars]),
+	string_chars(Silent,SilentChars),
+	silent_run_exec(Silent,Opts).
+run_exec(Exec,Opts) :-
         report('~w',[Exec],Opts),
+	silent_run_exec(Exec,Opts).
+run_exec(Exec,_Opts) :-
+        throw(error(run(Exec))).
+
+silent_run_exec(Exec,Opts) :-
         get_time(T1),
         shell(Exec,Err),
         get_time(T2),
@@ -176,8 +186,6 @@ run_exec(Exec,Opts) :-
         debug_report(build,'  Return: ~w Time: ~w',[Err,DT],Opts),
         Err=0,
         !.
-run_exec(Exec,_Opts) :-
-        throw(error(run(Exec))).
 
 % ----------------------------------------
 % RULES AND PATTERN MATCHING
@@ -199,9 +207,6 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         maplist(split_spaces,SpacedDeps,DepLists),
 	flatten(DepLists,Ds),
         maplist(pattern_eval,ExecPs,Execs).
-
-split_spaces(S,L) :-
-	split_string(S," "," ",L).
 
 
 % semidet
@@ -460,9 +465,6 @@ unwrap_t([t(L)],Flat) :- concat_string_list(L,Flat).
 unwrap_t(X,Flat) :- unwrap_t([X],Flat).
 unwrap_t(L,L).
 
-concat_string_list([],"").
-concat_string_list([L|Ls],F) :- concat_string_list(Ls,R), string_concat(L,R,F).
-
 normalize_pattern(X,X,_) :- var(X),!.
 normalize_pattern(t(X),t(X),_) :- !.
 normalize_pattern(Term,t(Args),_) :-
@@ -488,12 +490,6 @@ varlabel('*') --> ['*'],!.
 varlabel('@') --> ['@'],!.
 varlabel(A) --> alphanum(C),{atom_chars(A,[C])}.
 varlabel(A) --> ['('],alphanum(C),alphanums(Cs),[')'],{atom_chars(A,[C|Cs])}.
-alphanums([X|Xs]) --> alphanum(X),!,alphanums(Xs).
-alphanums([]) --> [].
-alphanum(X) --> [X],{X@>='a',X@=<'z'},!.
-alphanum(X) --> [X],{X@>='A',X@=<'Z'},!.
-alphanum(X) --> [X],{X@>='0',X@=<'9'},!.    % foo('0') %
-alphanum('_') --> ['_'].
 
 bindvar('%',v(X,_,_,_),X) :- !.
 bindvar('*',v(X,_,_,_),X) :- !.
