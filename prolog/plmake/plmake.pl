@@ -74,7 +74,8 @@ build(T,SL,Opts) :-
         ->  rule_execs(Rule,Execs,Opts),
             run_execs(Execs,Opts)
         ;   true),
-        report('~w is up to date',[T],SL,Opts).
+        (member(dry_run(true),Opts) -> true;
+         report('~w is up to date',[T],SL,Opts)).
 build(T,SL,Opts) :-
         debug_report(build,'  checking if rebuild required for ~w',[T],SL),
         \+ is_rebuild_required(T,[],SL,Opts),
