@@ -33,6 +33,7 @@ test :-
 	run_test("lastword"),
 	run_test("word2"),
 	run_test("words"),
+	run_test("wordlist"),
 	report_counts,
 	halt.
 

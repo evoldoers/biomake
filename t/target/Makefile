@@ -39,3 +39,7 @@ word2:
 
 words:
 	echo $(words $S) >$@
+
+FEAR = Fear is the mind killer
+wordlist:
+	echo $(wordlist 3,4,$(FEAR)) >$@

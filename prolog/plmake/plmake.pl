@@ -266,14 +266,14 @@ consult_gnu_makefile(F) :-
         ensure_loaded(library(plmake/gnumake_parser)),
         parse_gnu_makefile(F,M),
         forall(member(L,M),
-	       ((L = rule(Ts,Ds,Es)) -> add_spec_clause((Ts <-- Ds,Es),[]);
-		((L = assignment(Var,Op,Val)) ->
-		     (Op = "=" -> add_spec_clause((Var = Val));
-		      (Op = "?=" -> add_spec_clause((Var ?= Val));
-		       (Op = ":=" -> add_spec_clause((Var := Val));
-			(Op = "+=" -> add_spec_clause((Var += Val));
-			    true))));
-		 true))).
+	       (((L = rule(Ts,Ds,Es)) -> add_spec_clause((Ts <-- Ds,Es),[]);
+	 	 ((L = assignment(Var,Op,Val)) ->
+	 	      (Op = "=" -> add_spec_clause((Var = Val));
+		       (Op = "?=" -> add_spec_clause((Var ?= Val));
+		        (Op = ":=" -> add_spec_clause((Var := Val));
+			 (Op = "+=" -> add_spec_clause((Var += Val));
+			     true))));
+		  true)); format("Error translating ~w~n",[L]))).
 
 consult_makeprog(F) :-
         debug(makeprog,'reading: ~w',[F]),
@@ -476,9 +476,10 @@ normalize_pattern(X,t(Toks),V) :-
 
 toks([],_) --> [].
 toks([Tok|Toks],V) --> tok(Tok,V),!,toks(Toks,V).
-tok(Var,_V) --> makefile_function(Var), !.
 tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
-tok(Var,V) --> ['$'],varlabel(VL),!,{bindvar_debug(VL,V,Var)}.
+tok(Var,_V) --> ['$'], makefile_function(Var), !.
+tok(Var,V) --> ['$'], varlabel(VL),{bindvar_debug(VL,V,Var)}.
+tok('$',_V) --> ['$'], !.  % if we don't recognize the function syntax, just treat as plaintext
 tok(Tok,_) --> tok_a(Cs),{atom_chars(Tok,Cs)}.
 tok_a([C|Cs]) --> [C],{C\='$',C\='%'},!,tok_a(Cs).
 tok_a([]) --> [].

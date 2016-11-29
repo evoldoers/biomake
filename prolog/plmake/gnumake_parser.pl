@@ -9,7 +9,7 @@
 
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M) :-
-    debug(makefile,'reading: ~w\n',[F]),
+    debug(makefile,'reading: ~w~n',[F]),
     phrase_from_file(makefile_rules(Mf,1,F),F),
     atom_string(MAKEFILE_LIST,"MAKEFILE_LIST"),
     M = [assignment(MAKEFILE_LIST,"+=",F)|Mf],
