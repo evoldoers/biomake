@@ -19,6 +19,7 @@
            rule_dependencies/3,
            is_rebuild_required/4,
 
+	   global_binding/2,
 	   expand_vars/2
            ]).
 
@@ -481,8 +482,9 @@ normalize_pattern(X,t(Toks),V) :-
 toks([],_) --> [].
 toks([Tok|Toks],V) --> tok(Tok,V),!,toks(Toks,V).
 tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
-tok(Var,_V) --> ['$'], makefile_function(Var), !.
 tok(Var,V) --> ['$'], varlabel(VL),{bindvar_debug(VL,V,Var)}.
+tok(Var,_V) --> ['$'], makefile_function(Var), !.
+tok(Var,_V) --> ['$'], makefile_subst_ref(Var), !.
 tok('$',_V) --> ['$'], !.  % if we don't recognize the function syntax, just treat as plaintext
 tok(Tok,_) --> tok_a(Cs),{atom_chars(Tok,Cs)}.
 tok_a([C|Cs]) --> [C],{C\='$',C\='%'},!,tok_a(Cs).

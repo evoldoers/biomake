@@ -2,7 +2,8 @@
 
 :- module(functions,
           [
-           makefile_function/3
+           makefile_function/3,
+           makefile_subst_ref/3
            ]).
 
 :- use_module(library(plmake/utils)).
@@ -36,6 +37,15 @@ makefile_function(Result) --> lb("lastword"), xlst_arg(L), rb, !,
 makefile_function("") --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("") --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 
+makefile_subst_ref(Result) --> ['('], var_arg(Var), [':'], suffix_arg(From), ['='], suffix_arg(To), [')'], !,
+	{ concat_string_list(["$(",Var,")"],VarExpr),
+	  expand_vars(VarExpr,Val),
+	  string_chars(Val,Vc),
+	  phrase(patsubst_lr(FL,FR),['%'|From]),
+	  phrase(patsubst_lr(TL,TR),['%'|To]),
+	  patsubst(FL,FR,TL,TR,Vc,Rc),
+	  string_chars(Result,Rc) }.
+
 lb(Func) --> ['('], {string_chars(Func,Cs)}, opt_whitespace, Cs, [' '], !.
 rb --> opt_whitespace, [')'].
 
@@ -51,6 +61,9 @@ str_arg_outer("") --> !.
 str_arg_inner(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(",Si,")"],S)}.
 str_arg_inner(S) --> string_from_chars(Start,"()"), !, str_arg_inner(Rest), {string_concat(Start,Rest,S)}.
 str_arg_inner("") --> !.
+
+var_arg(S) --> alphanum(C), alphanums(Cs), !, {string_chars(S,[C|Cs])}.
+suffix_arg(C) --> char_list(C,['=',')',' ']).
 
 num_arg(N) --> opt_whitespace, num_chars(C), {C\=[],number_chars(N,C)}.
 num_chars([]) --> [].

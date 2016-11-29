@@ -37,6 +37,7 @@ test :-
 	run_test("wordlist"),
 	run_test("subst"),
 	run_test("patsubst"),
+	run_test("substref"),
 	report_counts,
 	halt.
 

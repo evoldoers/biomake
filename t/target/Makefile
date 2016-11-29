@@ -52,3 +52,7 @@ subst:
 
 patsubst:
 	echo $(patsubst %.c,%.o,a.c b.d e.c f.c) >$@
+
+substref:
+	echo $(FEAR:killer=thriller) >$@
+
