@@ -21,12 +21,26 @@ makefile_rules(Rules,Line,File) --> comment, !, {Lnext is Line + 1}, makefile_ru
 makefile_rules(Rules,Line,File) --> blank_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> info_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> warning_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
+makefile_rules(Rules,Line,File) --> error_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> include_line(Included), !, {Lnext is Line + 1, append(Included,Next,Rules)}, makefile_rules(Next,Lnext,File).
 makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment), !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
 makefile_rules(_,Line,File) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),syntax_error(Err)}.
 
 eos([], []).
+
+error_line -->
+    opt_whitespace,
+    "$(error",
+    whitespace,
+    makefile_warning_text(W),
+    ")",
+    opt_whitespace,
+    "\n",
+    !,
+    {format(string(Warning),"~w~n",[W]),
+     write(user_error,Warning),
+     throw(Warning)}.
 
 warning_line -->
     opt_whitespace,
