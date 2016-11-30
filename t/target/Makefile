@@ -1,6 +1,9 @@
 
 # Tests
 
+simple:
+	echo Simple test >simple
+
 FOO = .foo
 
 %.bar: %$(FOO)

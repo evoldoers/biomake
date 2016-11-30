@@ -21,6 +21,8 @@ user:prolog_exception_hook(_,
 
 test :-
 	init_counts,
+	run_test("-p Prolog.makespec","simple_prolog"),
+	run_test("simple"),
 	run_test("multiple.wildcards.baz"),
 	run_test("silent"),
 	run_test("one_line"),
