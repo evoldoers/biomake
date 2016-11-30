@@ -21,6 +21,9 @@ ABC = abc
 vars%:
 	echo ABC=$(ABC) DEF=$(DEF) XYZ=$(XYZ) >$@
 
+escape_dollar:
+	echo $$ >$@
+
 DEPS := yorks.lancasters.foo starks.lannisters.foo
 multi_targets_from_var: $(DEPS)
 	cat $(DEPS) >$@

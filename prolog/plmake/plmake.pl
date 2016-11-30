@@ -485,6 +485,7 @@ normalize_pattern(X,t(Toks),V) :-
 toks([],_) --> [].
 toks([Tok|Toks],V) --> tok(Tok,V),!,toks(Toks,V).
 tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
+tok('$',_V) --> ['$','$'], !.  % escape $'s
 tok(Var,V) --> ['$'], varlabel(VL),{bindvar_debug(VL,V,Var)}.
 tok(Var,V) --> ['$'], makefile_function(Var,V), !.
 tok(Var,V) --> ['$'], makefile_subst_ref(Var,V), !.
