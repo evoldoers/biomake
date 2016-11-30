@@ -21,7 +21,8 @@
 	   split_newlines/2,
 	   last_element/2,
 	   nth_element/3,
-	   slice/4
+	   slice/4,
+	   shell_eval/2
 	  ]).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
@@ -87,3 +88,8 @@ type_of(X,"string") :- string(X), !.
 type_of(X,"compound") :- compound(X), !.
 type_of(X,"ground") :- ground(X), !.
 type_of(_,"unknown").
+
+shell_eval(Exec,CodeList) :-
+	process_create(path(sh),['-c',Exec],[stdout(pipe(Stream))]),
+        read_stream_to_codes(Stream,CodeList),
+        close(Stream).
