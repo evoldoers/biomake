@@ -20,7 +20,7 @@
            is_rebuild_required/4,
 
 	   global_binding/2,
-	   expand_vars/2
+	   expand_vars/3
            ]).
 
 :- use_module(library(plmake/utils)).
@@ -446,7 +446,10 @@ mkrule_normalized(TPs,DPs,ExecPs,Goal) :-
         normalize_patterns(Exec1,ExecPs,V).
 
 expand_vars(X,Y) :-
-	normalize_pattern(X,Yt,v("","","",[])),
+	expand_vars(X,Y,v("","","",[])).
+
+expand_vars(X,Y,V) :-
+	normalize_pattern(X,Yt,V),
 	unwrap_t(Yt,Y).
 
 normalize_patterns(X,X,_) :- var(X),!.
@@ -483,8 +486,9 @@ toks([],_) --> [].
 toks([Tok|Toks],V) --> tok(Tok,V),!,toks(Toks,V).
 tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
 tok(Var,V) --> ['$'], varlabel(VL),{bindvar_debug(VL,V,Var)}.
-tok(Var,_V) --> ['$'], makefile_function(Var), !.
-tok(Var,_V) --> ['$'], makefile_subst_ref(Var), !.
+tok(Var,V) --> ['$'], makefile_function(Var,V), !.
+tok(Var,V) --> ['$'], makefile_subst_ref(Var,V), !.
+tok(Var,V) --> ['$'], makefile_computed_var(Var,V), !.
 tok('$',_V) --> ['$'], !.  % if we don't recognize the function syntax, just treat as plaintext
 tok(Tok,_) --> tok_a(Cs),{atom_chars(Tok,Cs)}.
 tok_a([C|Cs]) --> [C],{C\='$',C\='%'},!,tok_a(Cs).

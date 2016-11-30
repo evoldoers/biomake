@@ -113,3 +113,24 @@ abspath:
 
 realpath:
 	echo $(realpath /this/file/does/not/exist) >$@
+
+x1 = y1
+y1 = z
+a1 := $($(x1))
+computed_var1:
+	echo $(a1) >$@
+
+x2 = y2
+y2 = z2
+z2 = u
+a2 := $($($(x2)))
+computed_var2:
+	echo $(a2) >$@
+
+x3 = $(y3)
+y3 = z3
+z3 = Hello
+a3 := $($(x3))
+computed_var3:
+	echo $(a3) >$@
+

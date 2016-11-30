@@ -56,6 +56,9 @@ test :-
 	run_test("wildcard"),
 	run_test("abspath"),
 	run_test("realpath"),
+	run_test("computed_var1"),
+	run_test("computed_var2"),
+	run_test("computed_var3"),
 	report_counts,
 	halt.
 
