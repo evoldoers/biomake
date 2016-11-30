@@ -96,9 +96,6 @@ makefile_function(Result,V) --> lb("abspath"), xstr_arg(Path,V), rb, !,
 makefile_function(Result,V) --> lb("realpath"), xstr_arg(Path,V), rb, !,
         { (absolute_file_name(Path,Result), (exists_file(Result); exists_directory(Result))); Result = "" }.
 
-makefile_function(Result,V) --> lb("realpath"), xstr_arg(Path,V), rb, !,
-        { (absolute_file_name(Path,Result), (exists_file(Result); exists_directory(Result))); Result = "" }.
-
 makefile_function(Result,V) --> lb("call"), xvar_arg(UserFunc,V), opt_whitespace, call_param_list(L,V), rb, !,
         { V = v(V1,V2,V3,BLold),
 	  call_bindings(L,1,BLnew),
