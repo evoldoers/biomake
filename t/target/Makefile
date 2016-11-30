@@ -26,6 +26,10 @@ parallels: $(DEPS)
 silent:
 	@echo silent >$@
 
+one_line: ; echo Recipe on one line >$@
+
+one_line_with_deps: one_line; cp $< $@
+
 S := hello
 S += world
 hw.test:

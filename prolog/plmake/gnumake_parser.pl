@@ -92,15 +92,26 @@ makefile_rule(rule(Head,Deps,Exec),Lines) -->
     makefile_execs(Exec,Lexecs),
     {Lines is 1 + Lexecs}.
 
+makefile_rule(rule(Head,Deps,[Efirst|Erest]),Lines) -->
+    makefile_targets(Head),
+    ":",
+    opt_makefile_targets(Deps),
+    ";",
+    line_as_string(Efirst),
+    "\n",
+    !,
+    makefile_execs(Erest,Lexecs),
+    {Lines is 1 + Lexecs}.
+
 opt_makefile_targets(T) --> makefile_targets(T).
-opt_makefile_targets([]) --> !.
+opt_makefile_targets([]) --> opt_whitespace.
 
 makefile_targets([T|Ts]) --> opt_whitespace, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
 makefile_targets([T]) --> opt_whitespace, makefile_target_string(T), opt_whitespace.
 
 makefile_warning_text(S) --> string_from_codes(S,")").
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
-makefile_target_string(S) --> string_from_codes(S,": \t\n").
+makefile_target_string(S) --> string_from_codes(S,":; \t\n").
 makefile_var_atom(S) --> atom_from_codes(S,":?+= \t\n").
 
 op_string("=") --> "=".
@@ -112,7 +123,7 @@ makefile_execs([E|Es],Lines) --> makefile_exec(E), !, {Lines = Lrest + 1}, makef
 makefile_execs(Es,Lines) --> comment, !, {Lines = Lrest + 1}, makefile_execs(Es,Lrest).
 makefile_execs([],0) --> !.
 
-makefile_exec(E) --> "\t", !, line(Ec), {string_chars(E,Ec)}.
+makefile_exec(E) --> "\t", !, line_as_string(E).
 
 line([]) --> ( "\n" ; call(eos) ), !.
 line([]) --> comment.
