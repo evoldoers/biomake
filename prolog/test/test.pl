@@ -46,6 +46,10 @@ test :-
 	run_test("wordlist"),
 	run_test("firstword"),
 	run_test("lastword"),
+	run_test("dir"),
+	run_test("notdir"),
+	run_test("basename"),
+	run_test("suffix"),
 	report_counts,
 	halt.
 

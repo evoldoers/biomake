@@ -51,6 +51,8 @@ words:
 
 FEAR = Fear is the mind killer
 wordlist:
+# note this also tests a variable nested inside a command
+# and a comment in a rule block (i.e. this comment)
 	echo $(wordlist 3,4,$(FEAR)) >$@
 
 subst:
@@ -79,3 +81,15 @@ filter_out:
 
 sort:
 	echo $(sort rabbit cow duck fox duck elephant) >$@
+
+dir:
+	echo $(dir a/bc/def/g) >$@
+
+notdir:
+	echo $(notdir a/bc/def/g) >$@
+
+basename:
+	echo $(basename punk.rock classical.music thrash.metal) >$@
+
+suffix:
+	echo $(suffix punk.rock classical.music thrash.metal) >$@

@@ -55,6 +55,21 @@ makefile_function(Result) --> lb("firstword"), xlst_arg([Result|_]), rb, !.
 makefile_function(Result) --> lb("lastword"), xlst_arg(L), rb, !,
 	{ last_element(L,Result) }.
 
+makefile_function(Result) --> lb("dir"), xstr_arg(Path), rb, !,
+	{ file_directory_name(Path,D),
+	  string_concat(D,"/",Result) }.  % GNU make adds the trailing '/'
+
+makefile_function(Result) --> lb("notdir"), xstr_arg(Path), rb, !,
+	{ file_base_name(Path,Result) }.
+
+makefile_function(Result) --> lb("basename"), xlst_arg(Paths), rb, !,
+	{ maplist(basename,Paths,R),
+	  concat_string_list(R,Result," ") }.
+
+makefile_function(Result) --> lb("suffix"), xlst_arg(Paths), rb, !,
+	{ maplist(suffix,Paths,R),
+	  concat_string_list(R,Result," ") }.
+
 makefile_function("") --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("") --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 
@@ -144,3 +159,9 @@ remove_dups([],[]).
 remove_dups([X,X|Xs],Y) :- !, remove_dups([X|Xs],Y).
 remove_dups([X|Xs],[X|Ys]) :- remove_dups(Xs,Ys).
 
+basename_suffix(B,S) --> string_from_chars(B," "), ['.'], string_from_chars(Srest," ."), {string_concat(".",Srest,S)}, !.
+basename_suffix("",S) --> ['.'], string_from_chars(Srest," ."), {string_concat(".",Srest,S)}, !.
+basename_suffix(B,"") --> string_from_chars(B," .").
+
+basename(P,B) :- string_chars(P,Pc), phrase(basename_suffix(B,_),Pc).
+suffix(P,S) :- string_chars(P,Pc), phrase(basename_suffix(_,S),Pc).
