@@ -13,8 +13,6 @@
 :- use_module(library(plmake/plmake)).
 :- use_module(library(plmake/gnumake_parser)).
 
-shell_command_arg("-c").
-
 makefile_function(Result,V) --> lb("subst"), xchr_arg(From,V), comma, xchr_arg(To,V), comma, xchr_arg(Src,V), rb, !,
 	{ phrase(subst(From,To,Rc),Src),
 	  string_chars(Result,Rc) }.
@@ -108,9 +106,7 @@ makefile_function(Result,V) --> lb("call"), xvar_arg(UserFunc,V), opt_whitespace
 	  eval_var(UserFunc,Result,v(V1,V2,V3,BL)) }.
 
 makefile_function(Result,V) --> lb("shell"), xstr_arg(Exec,V), rb, !,
-        { shell_eval(Exec,Rnl),
-	  newlines_to_spaces(Rnl,Rspc),
-	  string_codes(Result,Rspc) }.
+        { shell_eval_str(Exec,Result) }.
 
 makefile_function("",_V) --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("",_V) --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
@@ -159,10 +155,6 @@ call_bindings([Param|Params],Num,[NumAtom=Param|Vars]) :-
 	atom_number(NumAtom,Num),
 	NextNum is Num + 1,
 	call_bindings(Params,NextNum,Vars).
-
-newlines_to_spaces([],[]).
-newlines_to_spaces([10|N],[32|S]) :- newlines_to_spaces(N,S).
-newlines_to_spaces([C|N],[C|S]) :- newlines_to_spaces(N,S).
 
 num_arg(N) --> opt_whitespace, num_chars(C), {C\=[],number_chars(N,C)}.
 num_chars([]) --> [].

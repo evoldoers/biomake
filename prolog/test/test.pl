@@ -63,6 +63,7 @@ test :-
 	run_test("two_lines"),
 	run_test("call"),
 	run_test("shell"),
+	run_test("shell_assign"),
 	report_counts,
 	halt.
 

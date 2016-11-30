@@ -22,7 +22,9 @@
 	   last_element/2,
 	   nth_element/3,
 	   slice/4,
-	   shell_eval/2
+	   shell_eval/2,
+	   shell_eval_str/2,
+	   newlines_to_spaces/2
 	  ]).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
@@ -93,3 +95,12 @@ shell_eval(Exec,CodeList) :-
 	process_create(path(sh),['-c',Exec],[stdout(pipe(Stream))]),
         read_stream_to_codes(Stream,CodeList),
         close(Stream).
+
+shell_eval_str(Exec,Result) :-
+        shell_eval(Exec,Rnl),
+	newlines_to_spaces(Rnl,Rspc),
+	string_codes(Result,Rspc).
+
+newlines_to_spaces([],[]).
+newlines_to_spaces([10|N],[32|S]) :- newlines_to_spaces(N,S).
+newlines_to_spaces([C|N],[C|S]) :- newlines_to_spaces(N,S).

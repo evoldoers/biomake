@@ -267,6 +267,7 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 :- user:op(1101,xfy,?=).
 :- user:op(1102,xfy,:=).
 :- user:op(1103,xfy,+=).
+:- user:op(1104,xfy,=*).
 
 consult_gnu_makefile(F) :-
         ensure_loaded(library(plmake/gnumake_parser)),
@@ -278,7 +279,8 @@ consult_gnu_makefile(F) :-
 		       (Op = "?=" -> add_spec_clause((Var ?= Val));
 		        (Op = ":=" -> add_spec_clause((Var := Val));
 			 (Op = "+=" -> add_spec_clause((Var += Val));
-			     true))));
+			  (Op = "!=" -> add_spec_clause((Var =* Val));
+			     true)))));
 		  true)); format("Error translating ~w~n",[L]))).
 
 consult_makeprog(F) :-
@@ -302,16 +304,16 @@ add_assignment((Var = X)) :-
         assert(global_cmdline_binding(Var,X)),
         debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
 
+is_assignment_op(=).
+is_assignment_op(?=).
+is_assignment_op(:=).
+is_assignment_op(+=).
+is_assignment_op(=*).
 
-add_spec_clause((Var = X)) :-
-	add_spec_clause((Var = X), [Var=Var]).
-add_spec_clause((Var ?= X)) :-
-	add_spec_clause((Var ?= X), [Var=Var]).
-add_spec_clause((Var := X)) :-
-	add_spec_clause((Var := X), [Var=Var]).
-add_spec_clause((Var += X)) :-
-	add_spec_clause((Var += X), [Var=Var]).
-
+add_spec_clause(Ass) :-
+	Ass =.. [Op,Var,_],
+	is_assignment_op(Op),
+	add_spec_clause(Ass, [Var=Var]).
 
 add_spec_clause( (Var ?= X) ,_VNs) :-
         global_binding(Var,Oldval),
@@ -321,10 +323,12 @@ add_spec_clause( (Var ?= X) ,_VNs) :-
 add_spec_clause( (Var ?= X) ,VNs) :-
         add_spec_clause((Var = X),VNs).
 
-add_spec_clause( (Var = X) ,_VNs) :-
+add_spec_clause( Ass ,_VNs) :-
+	Ass =.. [Op,Var,X],
+	is_assignment_op(Op),
         global_cmdline_binding(Var,Oldval),
         !,
-        debug(makeprog,"Ignoring ~w = ~w since ~w was bound to ~w on the command-line",[Var,X,Var,Oldval]).
+        debug(makeprog,"Ignoring ~w ~w ~w since ~w was bound to ~w on the command-line",[Var,Op,X,Var,Oldval]).
 
 add_spec_clause( (Var = X) ,VNs) :-
 	!,
@@ -332,11 +336,6 @@ add_spec_clause( (Var = X) ,VNs) :-
         global_unbind(Var),
         assert(global_lazy_binding(Var,X)),
         debug(makeprog,'assign: ~w = ~w',[Var,X]).
-
-add_spec_clause( (Var := X) ,_VNs) :-
-        global_cmdline_binding(Var,Oldval),
-        !,
-        debug(makeprog,"Ignoring ~w := ~w since ~w was bound to ~w on the command-line",[Var,X,Var,Oldval]).
 
 add_spec_clause( (Var := X,{Goal}) ,VNs) :-
         !,
@@ -353,11 +352,6 @@ add_spec_clause( (Var := X) ,VNs) :-
         !,
         add_spec_clause( (Var := X,{true}) ,VNs).
 
-add_spec_clause( (Var += X) ,_VNs) :-
-        global_cmdline_binding(Var,Oldval),
-        !,
-        debug(makeprog,"Ignoring ~w += ~w since ~w was bound to ~w on the command-line",[Var,X,Var,Oldval]).
-
 add_spec_clause( (Var += X) ,VNs) :-
         !,
         member(Var=Var,VNs),
@@ -370,6 +364,15 @@ add_spec_clause( (Var += X) ,VNs) :-
         global_unbind(Var),
         assert(global_simple_binding(Var,New)),
         debug(makeprog,'assign: ~w := ~w',[Var,New]).
+
+add_spec_clause( (Var =* X) ,VNs) :-
+        !,
+        member(Var=Var,VNs),
+	shell_eval_str(X,Y),
+	!,
+        global_unbind(Var),
+        assert(global_lazy_binding(Var,Y)),
+        debug(makeprog,'assign: ~w =* ~w  ==>  ~w',[Var,X,Y]).
 
 add_spec_clause( (Head <-- Deps,{Goal},Exec) ,VNs) :-
         !,

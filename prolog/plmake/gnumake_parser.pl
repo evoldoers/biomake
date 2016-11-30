@@ -170,6 +170,7 @@ op_string("=") --> "=".
 op_string(":=") --> ":=".
 op_string("?=") --> "?=".
 op_string("+=") --> "+=".
+op_string("!=") --> "!=".
 
 makefile_execs([E|Es],Lines) --> makefile_exec(E), !, {Lines = Lrest + 1}, makefile_execs(Es,Lrest).
 makefile_execs(Es,Lines) --> comment, !, {Lines = Lrest + 1}, makefile_execs(Es,Lrest).

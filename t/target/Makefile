@@ -157,3 +157,7 @@ call:
 
 shell:
 	echo $(shell echo hello world) >$@
+
+shell_assign != echo hello there
+shell_assign:
+	echo $(shell_assign) >$@
