@@ -154,3 +154,6 @@ FUNC = echo $1 is $2
 call:
 	$(call FUNC,chris,reekin) >$@
 	$(call FUNC,ian,tidy) >>$@
+
+shell:
+	echo $(shell echo hello world) >$@
