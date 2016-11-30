@@ -149,3 +149,8 @@ test_at:
 
 two_lines:
 	$(two-lines)
+
+FUNC = echo $1 is $2
+call:
+	$(call FUNC,chris,reekin) >$@
+	$(call FUNC,ian,tidy) >>$@

@@ -61,6 +61,7 @@ test :-
 	run_test("computed_var2"),
 	run_test("computed_var3"),
 	run_test("two_lines"),
+	run_test("call"),
 	report_counts,
 	halt.
 

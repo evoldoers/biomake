@@ -94,12 +94,20 @@ makefile_function(Result,V) --> lb("abspath"), xstr_arg(Path,V), rb, !,
 makefile_function(Result,V) --> lb("realpath"), xstr_arg(Path,V), rb, !,
         { (absolute_file_name(Path,Result), (exists_file(Result); exists_directory(Result))); Result = "" }.
 
+makefile_function(Result,V) --> lb("realpath"), xstr_arg(Path,V), rb, !,
+        { (absolute_file_name(Path,Result), (exists_file(Result); exists_directory(Result))); Result = "" }.
+
+makefile_function(Result,V) --> lb("call"), xvar_arg(UserFunc,V), opt_whitespace, call_param_list(L,V), rb, !,
+        { V = v(V1,V2,V3,BLold),
+	  call_bindings(L,1,BLnew),
+	  append(BLold,BLnew,BL),
+	  eval_var(UserFunc,Result,v(V1,V2,V3,BL)) }.
+
 makefile_function("",_V) --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("",_V) --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 
-makefile_subst_ref(Result,V) --> ['('], var_arg(Var), [':'], suffix_arg(From), ['='], suffix_arg(To), [')'], !,
-	{ concat_string_list(["$(",Var,")"],VarExpr),
-	  expand_vars(VarExpr,Val,V),
+makefile_subst_ref(Result,V) --> ['('], xvar_arg(Var,V), [':'], suffix_arg(From), ['='], suffix_arg(To), [')'], !,
+	{ eval_var(Var,Val,V),
 	  string_chars(Val,Vc),
 	  phrase(patsubst_lr(FL,FR),['%'|From]),
 	  phrase(patsubst_lr(TL,TR),['%'|To]),
@@ -107,8 +115,7 @@ makefile_subst_ref(Result,V) --> ['('], var_arg(Var), [':'], suffix_arg(From), [
 	  string_chars(Result,Rc) }.
 
 makefile_computed_var(Result,V) --> ['('], xstr_arg(Var,V), [')'], !,
-	{ concat_string_list(["$(",Var,")"],Expr),
-	  expand_vars(Expr,Result,V) }.
+	{ eval_var(Var,Result,V) }.
 
 lb(Func) --> ['('], {string_chars(Func,Cs)}, opt_whitespace, Cs, [' '], !.
 rb --> opt_whitespace, [')'].
@@ -126,8 +133,23 @@ str_arg_inner(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(
 str_arg_inner(S) --> string_from_chars(Start,"()"), !, str_arg_inner(Rest), {string_concat(Start,Rest,S)}.
 str_arg_inner("") --> !.
 
-var_arg(S) --> makefile_var_string_from_chars(S).
+xvar_arg(S,_V) --> makefile_var_string_from_chars(S).
+xvar_arg(S,V) --> ['$','('], !, xstr_arg(X,V), [')'], {eval_var(X,S,V)}.
+
 suffix_arg(C) --> char_list(C,['=',')',' ']).
+
+eval_var(VarName,Val,V) :-
+	concat_string_list(["$(",VarName,")"],Expr),
+	expand_vars(Expr,Val,V).
+
+call_param_list([],_V) --> [].
+call_param_list([P|Ps],V) --> comma, !, xstr_arg(P,V), call_param_list(Ps,V).
+
+call_bindings([],_,[]).
+call_bindings([Param|Params],Num,[NumAtom=Param|Vars]) :-
+	atom_number(NumAtom,Num),
+	NextNum is Num + 1,
+	call_bindings(Params,NextNum,Vars).
 
 num_arg(N) --> opt_whitespace, num_chars(C), {C\=[],number_chars(N,C)}.
 num_chars([]) --> [].
