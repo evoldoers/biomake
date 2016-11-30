@@ -93,3 +93,13 @@ basename:
 
 suffix:
 	echo $(suffix punk.rock classical.music thrash.metal) >$@
+
+addprefix:
+	echo $(addprefix soap ,dish opera bar) >$@
+
+addsuffix:
+	echo $(addsuffix cake,fruit pan pat-a-) >$@
+
+join:
+	echo $(join inter super D,national star J) >$@
+

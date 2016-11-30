@@ -50,6 +50,9 @@ test :-
 	run_test("notdir"),
 	run_test("basename"),
 	run_test("suffix"),
+	run_test("addsuffix"),
+	run_test("addprefix"),
+	run_test("join"),
 	report_counts,
 	halt.
 

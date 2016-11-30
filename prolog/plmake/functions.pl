@@ -70,6 +70,18 @@ makefile_function(Result) --> lb("suffix"), xlst_arg(Paths), rb, !,
 	{ maplist(suffix,Paths,R),
 	  concat_string_list(R,Result," ") }.
 
+makefile_function(Result) --> lb("addsuffix"), xstr_arg(Suffix), comma, xlst_arg(Prefixes), rb, !,
+	{ addsuffix(Suffix,Prefixes,R),
+	  concat_string_list(R,Result," ") }.
+
+makefile_function(Result) --> lb("addprefix"), xstr_arg(Prefix), comma, xlst_arg(Suffixes), rb, !,
+	{ addprefix(Prefix,Suffixes,R),
+	  concat_string_list(R,Result," ") }.
+
+makefile_function(Result) --> lb("join"), xlst_arg(Prefixes), comma, xlst_arg(Suffixes), rb, !,
+	{ maplist(string_concat,Prefixes,Suffixes,R),
+	  concat_string_list(R,Result," ") }.
+
 makefile_function("") --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("") --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 
@@ -165,3 +177,10 @@ basename_suffix(B,"") --> string_from_chars(B," .").
 
 basename(P,B) :- string_chars(P,Pc), phrase(basename_suffix(B,_),Pc).
 suffix(P,S) :- string_chars(P,Pc), phrase(basename_suffix(_,S),Pc).
+
+addsuffix(_,[],[]).
+addsuffix(S,[N|Ns],[R|Rs]) :- string_concat(N,S,R), addsuffix(S,Ns,Rs).
+
+addprefix(_,[],[]).
+addprefix(P,[N|Ns],[R|Rs]) :- string_concat(P,N,R), addprefix(P,Ns,Rs).
+
