@@ -13,11 +13,12 @@
 	   whitespace/2,
 	   opt_whitespace/2,
 	   blank_line/2,
-	   alphanums/3,
-	   alphanum/3,
+	   alphanum_char/3,
+	   alphanum_code/3,
 	   concat_string_list/2,
 	   concat_string_list/3,
 	   split_spaces/2,
+	   split_newlines/2,
 	   last_element/2,
 	   nth_element/3,
 	   slice/4
@@ -45,12 +46,13 @@ opt_whitespace --> !.
 
 blank_line --> opt_whitespace, "\n", !.
 
-alphanums([X|Xs]) --> alphanum(X),!,alphanums(Xs).
-alphanums([]) --> [].
-alphanum(X) --> [X],{X@>='a',X@=<'z'},!.
-alphanum(X) --> [X],{X@>='A',X@=<'Z'},!.
-alphanum(X) --> [X],{X@>='0',X@=<'9'},!.    % foo('0') %
-alphanum('_') --> ['_'].
+alphanum_char(X) --> [X],{X@>='A',X@=<'Z'},!.
+alphanum_char(X) --> [X],{X@>='a',X@=<'z'},!.
+alphanum_char(X) --> [X],{X@>='0',X@=<'9'},!.
+
+alphanum_code(X) --> [X],{X@>=65,X@=<90},!.  % A through Z
+alphanum_code(X) --> [X],{X@>=97,X@=<122},!.  % a through z
+alphanum_code(X) --> [X],{X@>=48,X@=<57},!.  % 0 through 9
 
 concat_string_list(L,S) :- concat_string_list(L,S,"").
 concat_string_list([],"",_).
@@ -59,6 +61,9 @@ concat_string_list([L|Ls],F,Sep) :- concat_string_list(Ls,R,Sep), string_concat(
 
 split_spaces(S,L) :-
 	split_string(S," "," ",L).
+
+split_newlines(S,L) :-
+	split_string(S,"\n","\n",L).
 
 last_element([],"").
 last_element([X],X).

@@ -137,3 +137,15 @@ a3 := $($(x3))
 computed_var3:
 	echo $(a3) >$@
 
+bar2lines = Bar
+define two-lines =
+echo foo >$@
+echo $(bar2lines) >$@
+endef
+
+test_at = echo hello >$@
+test_at:
+	$(test_at)
+
+two_lines:
+	$(two-lines)

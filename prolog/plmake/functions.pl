@@ -9,6 +9,7 @@
 
 :- use_module(library(plmake/utils)).
 :- use_module(library(plmake/plmake)).
+:- use_module(library(plmake/gnumake_parser)).
 
 makefile_function(Result,V) --> lb("subst"), xchr_arg(From,V), comma, xchr_arg(To,V), comma, xchr_arg(Src,V), rb, !,
 	{ phrase(subst(From,To,Rc),Src),
@@ -125,7 +126,7 @@ str_arg_inner(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(
 str_arg_inner(S) --> string_from_chars(Start,"()"), !, str_arg_inner(Rest), {string_concat(Start,Rest,S)}.
 str_arg_inner("") --> !.
 
-var_arg(S) --> alphanum(C), alphanums(Cs), !, {string_chars(S,[C|Cs])}.
+var_arg(S) --> makefile_var_string_from_chars(S).
 suffix_arg(C) --> char_list(C,['=',')',' ']).
 
 num_arg(N) --> opt_whitespace, num_chars(C), {C\=[],number_chars(N,C)}.

@@ -206,10 +206,12 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         debug(bindrule,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
         Goal,
         debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
-        maplist(pattern_target,DPs,SpacedDeps),
-        maplist(split_spaces,SpacedDeps,DepLists),
+        maplist(pattern_target,DPs,DepsWithSpaces),
+        maplist(split_spaces,DepsWithSpaces,DepLists),
 	flatten(DepLists,Ds),
-        maplist(pattern_eval,ExecPs,Execs).
+        maplist(pattern_exec,ExecPs,ExecsWithNewlines),
+        maplist(split_newlines,ExecsWithNewlines,ExecLists),
+	flatten(ExecLists,Execs).
 
 
 % semidet
@@ -224,13 +226,9 @@ uniq_pattern_match(TL,A) :-
 
 
 pattern_target(t(TL),A) :- atomic_list_concat(TL,A).
-pattern_eval(t(TL),A) :-
+pattern_exec(t(TL),A) :-
     flatten(TL,TL2),
-    include(var,TL2,TL2_unbound),
-    (TL2_unbound = [] -> true; debug(pattern,"Warning: unbound variables in ~w~n",[TL2])),
-    include(nonvar,TL2,TL2_bound),
-    atomic_list_concat(TL2_bound,A).
-%pattern_eval(c(TL),A) :- atomic_list_concat(TL,A).
+    atomic_list_concat(TL2,A).
 
 
 pattern_match(A,B) :- var(A),!,B=A.
@@ -497,8 +495,8 @@ tok_a([]) --> [].
 varlabel('<') --> ['<'],!.
 varlabel('*') --> ['*'],!.
 varlabel('@') --> ['@'],!.
-varlabel(A) --> alphanum(C),{atom_chars(A,[C])}.
-varlabel(A) --> ['('],alphanum(C),alphanums(Cs),[')'],{atom_chars(A,[C|Cs])}.
+varlabel(A) --> makefile_var_char(C), {atom_chars(A,[C])}.
+varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
 
 bindvar('%',v(X,_,_,_),X) :- !.
 bindvar('*',v(X,_,_,_),X) :- !.
@@ -506,7 +504,12 @@ bindvar('@',v(_,X,_,_),X) :- !.
 bindvar('<',v(_,_,X,_),X) :- !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
-bindvar(VL,v(_,_,_,_),X) :- global_lazy_binding(VL,Y),normalize_pattern(Y,Z,v(_,_,_,[VL=VL])),unwrap_t(Z,X),!.
+bindvar(VL,v(V1,V2,V3,BL),X) :-
+	global_lazy_binding(VL,Y),
+	append(BL,[VL=VL],BL2),
+	normalize_pattern(Y,Z,v(V1,V2,V3,BL2)),
+	unwrap_t(Z,X),
+	!.
 bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
 bindvar(_,_,'') :- !.
 

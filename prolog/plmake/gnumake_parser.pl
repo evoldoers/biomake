@@ -2,7 +2,11 @@
 
 :- module(gnumake_parser,
           [
-              parse_gnu_makefile/2
+              parse_gnu_makefile/2,
+	      makefile_var_char/3,
+	      makefile_var_chars/3,
+	      makefile_var_atom_from_chars/3,
+	      makefile_var_string_from_chars/3
 	  ]).
 
 :- use_module(library(pio)).
@@ -24,7 +28,7 @@ makefile_rules(Rules,Line,File) --> info_line, !, {Lnext is Line + 1}, makefile_
 makefile_rules(Rules,Line,File) --> warning_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> error_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> include_line(Included), !, {Lnext is Line + 1, append(Included,Next,Rules)}, makefile_rules(Next,Lnext,File).
-makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment), !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
+makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment,Lass), !, {Lnext is Line + Lass}, makefile_rules(Rules,Lnext,File).
 makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
 makefile_rules(_,Line,File) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),syntax_error(Err)}.
 
@@ -75,9 +79,33 @@ include_line(Rules) -->
 include_makefiles(Rules) --> makefile_filename_string(F), opt_whitespace, "\n", !, {parse_gnu_makefile(F,Rules)}.
 include_makefiles(Rules) --> makefile_filename_string(F), whitespace, !, {parse_gnu_makefile(F,R)}, include_makefiles(Next), {append(R,Next,Rules)}.
 
-makefile_assignment(assignment(Var,Op,Val)) -->
+makefile_assignment(assignment(Var,Op,Val),Lines) -->
     opt_whitespace,
-    makefile_var_atom(Var),
+    "define",
+    whitespace,
+    makefile_var_atom_from_codes(Var),
+    opt_whitespace,
+    op_string(Op),
+    opt_whitespace,
+    "\n",
+    makefile_def_body(Cs,BodyLines),
+    {string_chars(Val,Cs),
+     Lines is BodyLines + 1}.
+
+makefile_assignment(assignment(Var,"=",Val),Lines) -->
+    opt_whitespace,
+    "define",
+    whitespace,
+    makefile_var_atom_from_codes(Var),
+    opt_whitespace,
+    "\n",
+    makefile_def_body(Cs,BodyLines),
+    {string_chars(Val,Cs),
+     Lines is BodyLines + 1}.
+
+makefile_assignment(assignment(Var,Op,Val),1) -->
+    opt_whitespace,
+    makefile_var_atom_from_codes(Var),
     opt_whitespace,
     op_string(Op),
     opt_whitespace,
@@ -112,7 +140,31 @@ makefile_targets([T]) --> opt_whitespace, makefile_target_string(T), opt_whitesp
 makefile_warning_text(S) --> string_from_codes(S,")").
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
 makefile_target_string(S) --> string_from_codes(S,":; \t\n").
-makefile_var_atom(S) --> atom_from_codes(S,":?+= \t\n").
+
+% We allow only a restricted subset of characters in variable names,
+% compared to the GNU make specification.
+% (seriously, does anyone use makefile variable names containing brackets, commas, colons, etc?)
+makefile_var_char(C) --> alphanum_char(C).
+makefile_var_char('_') --> ['_'].
+makefile_var_char('-') --> ['-'].
+
+makefile_var_chars([]) --> [].
+makefile_var_chars([C|Cs]) --> makefile_var_char(C), makefile_var_chars(Cs).
+
+makefile_var_atom_from_chars(A) --> makefile_var_chars(Cs), {atom_chars(A,Cs)}.
+makefile_var_string_from_chars(S) --> makefile_var_chars(Cs), {string_chars(S,Cs)}.
+
+% define these again as character codes, because Prolog is so annoying
+makefile_var_code(C) --> alphanum_code(C).
+makefile_var_code(95) --> [95].  % underscore '_'
+makefile_var_code(45) --> [45].  % hyphen '-'
+
+makefile_var_codes([]) --> [].
+makefile_var_codes([C|Cs]) --> makefile_var_code(C), makefile_var_codes(Cs).
+
+makefile_var_atom_from_codes(A) --> makefile_var_codes(Cs), {atom_codes(A,Cs)}.
+makefile_var_string_from_codes(S) --> makefile_var_codes(Cs), {string_codes(S,Cs)}.
+
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".
@@ -129,6 +181,10 @@ line([]) --> ( "\n" ; call(eos) ), !.
 line([]) --> comment.
 line([L|Ls]) --> [L], line(Ls).
 
-line_as_string(L) --> line(Lc), {string_chars(L,Lc)}.
+line_as_string(S) --> line(Sc), {string_chars(S,Sc)}.
+
+makefile_def_body([],1) --> opt_whitespace, "endef", !, opt_whitespace, "\n".
+makefile_def_body(['\n'|Cs],Lplus1) --> ['\n'], !, makefile_def_body(Cs,L), {Lplus1 is L + 1}.
+makefile_def_body([C|Cs],Lines) --> [C], makefile_def_body(Cs,Lines).
 
 comment --> opt_whitespace, "#", line(_).
