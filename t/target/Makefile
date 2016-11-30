@@ -18,11 +18,11 @@ XYZ := $(ABC) xyz
 DEF ?= $(ABC)
 ABC = abc
 
-test%:
+vars%:
 	echo ABC=$(ABC) DEF=$(DEF) XYZ=$(XYZ) >$@
 
 DEPS := yorks.lancasters.foo starks.lannisters.foo
-parallels: $(DEPS)
+multi_targets_from_var: $(DEPS)
 	cat $(DEPS) >$@
 
 silent:
@@ -34,7 +34,7 @@ one_line_with_deps: one_line; cp $< $@
 
 S := hello
 S += world
-hw.test:
+append_var:
 	echo $S >$@
 
 firstword:
