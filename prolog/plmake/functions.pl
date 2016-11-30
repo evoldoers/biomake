@@ -82,6 +82,10 @@ makefile_function(Result) --> lb("join"), xlst_arg(Prefixes), comma, xlst_arg(Su
 	{ maplist(string_concat,Prefixes,Suffixes,R),
 	  concat_string_list(R,Result," ") }.
 
+makefile_function(Result) --> lb("wildcard"), xstr_arg(W), rb, !,
+	{ expand_file_name(W,R),
+	  concat_string_list(R,Result," ") }.
+
 makefile_function("") --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("") --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 

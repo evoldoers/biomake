@@ -103,3 +103,6 @@ addsuffix:
 join:
 	echo $(join inter super D,national star J) >$@
 
+wildcard:
+	echo $(wildcard ../dir/*) >$@
+

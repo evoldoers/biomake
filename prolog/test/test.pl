@@ -53,6 +53,7 @@ test :-
 	run_test("addsuffix"),
 	run_test("addprefix"),
 	run_test("join"),
+	run_test("wildcard"),
 	report_counts,
 	halt.
 
