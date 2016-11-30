@@ -60,6 +60,7 @@ test :-
 	run_test("computed_var1"),
 	run_test("computed_var2"),
 	run_test("computed_var3"),
+	run_test("two_lines"),
 	report_counts,
 	halt.
 

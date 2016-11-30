@@ -459,15 +459,23 @@ normalize_patterns([P|Ps],[N|Ns],V) :-
         normalize_patterns(Ps,Ns,V).
 normalize_patterns(P,Ns,V) :-
         normalize_pattern(P,N,V),
-	wrap_t(N,Ns). % this is a bit hacky - parsing is too eager to add t(...) wrapper
+	wrap_t(N,Ns).
 
-wrap_t(t([L]),L) :- member(t(_),L).
-wrap_t(L,[L]).
+% this is a bit hacky - parsing is too eager to add t(...) wrapper (original comment by cmungall)
+% Comment by ihh: not entirely sure what all this wrapping evaluated patterns in t(...) is about.
+% Mostly it is a royal pain in the butt, but it seems to be some kind of a marker for pattern evaluation.
+% Anyway...
+% wrap_t is a construct from cmungall's original code, abstracted into a separate term by me (ihh).
+%  Beyond the definition here, I really don't know the original intent here.
+% unwrap_t flattens a list into a string, removing any t(...) wrappers in the process.
+wrap_t(t([L]),L) :- member(t(_),L), !.
+wrap_t(X,[X]).
 
-unwrap_t([t([Flat])],Flat).
-unwrap_t([t(L)],Flat) :- concat_string_list(L,Flat).
-unwrap_t(X,Flat) :- unwrap_t([X],Flat).
-unwrap_t(L,L).
+unwrap_t(t(X),Flat) :- unwrap_t(X,Flat).
+unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), string_concat(F,Fs,Flat).
+unwrap_t([],"").
+unwrap_t(A,F) :- atom(A), atom_string(A,F).
+unwrap_t(S,S) :- string(S).
 
 normalize_pattern(X,X,_) :- var(X),!.
 normalize_pattern(t(X),t(X),_) :- !.
