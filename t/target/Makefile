@@ -7,7 +7,9 @@ FOO = .foo
 	perl -pe 'tr/a-z/A-Z/' $< > $@
 
 $A.baz: $A.bar
-	(echo "Baz!"; cat $<; echo "I said Baz!") > $@
+	echo "Baz!" >$@
+	cat $< >>$@
+	echo "I said Baz!" >> $@
 
 $A.$B.foo:
 	echo b= $B a= $A >$@
