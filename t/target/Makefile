@@ -106,3 +106,10 @@ join:
 wildcard:
 	echo $(wildcard ../dir/*) >$@
 
+abspath:
+	echo $(abspath /usr/share/../lib) >$@
+	echo $(abspath /etc//hosts) >>$@
+	echo $(abspath /this/file/does/not/exist) >>$@
+
+realpath:
+	echo $(realpath /this/file/does/not/exist) >$@

@@ -86,6 +86,12 @@ makefile_function(Result) --> lb("wildcard"), xstr_arg(W), rb, !,
 	{ expand_file_name(W,R),
 	  concat_string_list(R,Result," ") }.
 
+makefile_function(Result) --> lb("abspath"), xstr_arg(Path), rb, !,
+        { absolute_file_name(Path,Result); Result = "" }.
+
+makefile_function(Result) --> lb("realpath"), xstr_arg(Path), rb, !,
+        { (absolute_file_name(Path,Result), (exists_file(Result); exists_directory(Result))); Result = "" }.
+
 makefile_function("") --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("") --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 
