@@ -73,11 +73,11 @@ makefile_function(Result,V) --> lb("suffix"), xlst_arg(Paths,V), rb, !,
 	{ maplist(suffix,Paths,R),
 	  concat_string_list_spaced(R,Result) }.
 
-makefile_function(Result,V) --> lb("addsuffix"), xstr_arg(Suffix,V), comma, xlst_arg(Prefixes,V), rb, !,
+makefile_function(Result,V) --> lb("addsuffix"), str_arg(Suffix), comma, xlst_arg(Prefixes,V), rb, !,
 	{ addsuffix(Suffix,Prefixes,R),
 	  concat_string_list_spaced(R,Result) }.
 
-makefile_function(Result,V) --> lb("addprefix"), xstr_arg(Prefix,V), comma, xlst_arg(Suffixes,V), rb, !,
+makefile_function(Result,V) --> lb("addprefix"), str_arg(Prefix), comma, xlst_arg(Suffixes,V), rb, !,
 	{ addprefix(Prefix,Suffixes,R),
 	  concat_string_list_spaced(R,Result) }.
 
