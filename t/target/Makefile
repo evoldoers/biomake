@@ -232,3 +232,18 @@ if3:
 
 if4:
 	echo $(if ,abc) >$@
+
+or1:
+	echo $(or abc,def,ghi) >$@
+
+or2:
+	echo $(or ,def,) >$@
+
+or3:
+	echo $(or ,,) >$@
+
+and1:
+	echo $(and abc,def,ghi) >$@
+
+and2:
+	echo $(and abc,,ghi) >$@

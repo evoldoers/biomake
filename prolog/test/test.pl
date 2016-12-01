@@ -21,6 +21,8 @@ user:prolog_exception_hook(_,
 
 test :-
 	init_counts,
+	run_failure_test("-q -f Makefile.err","dummy"),
+	run_failure_test("-q","missing_target"),
 	run_test("-p Prolog.makespec","simple_prolog"),
 	run_test("simple"),
 	run_test("target1"),
@@ -88,8 +90,11 @@ test :-
 	run_test("if2"),
 	run_test("if3"),
 	run_test("if4"),
-	run_failure_test("-q -f Makefile.err","dummy"),
-	run_failure_test("-q","missing_target"),
+	run_test("or1"),
+	run_test("or2"),
+	run_test("or3"),
+	run_test("and1"),
+	run_test("and2"),
 	report_counts,
 	halt.
 

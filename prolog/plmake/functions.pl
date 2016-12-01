@@ -114,6 +114,12 @@ makefile_function(Result,V) --> lb("if"), xstr_arg(Condition,V), opt_whitespace,
 makefile_function(Result,V) --> lb("if"), xstr_arg(Condition,V), opt_whitespace, comma, str_arg(Then), rb, !,
         { Condition = "" -> Result = ""; expand_vars(Then,Result,V) }.
 
+makefile_function(Result,V) --> lb("or"), opt_whitespace, cond_param_list(L), rb, !,
+        { makefile_or(L,Result,V) }.
+
+makefile_function(Result,V) --> lb("and"), opt_whitespace, cond_param_list(L), rb, !,
+        { makefile_and(L,Result,V) }.
+
 makefile_function("",_V) --> ['('], str_arg(S), [')'], !, {format("Warning: unknown function $(~w)~n",[S])}.
 
 makefile_subst_ref(Result,V) --> ['('], xvar_arg(Var,V), [':'], suffix_arg(From), ['='], suffix_arg(To), [')'], !,
@@ -170,6 +176,17 @@ makefile_foreach(Var,[L|Ls],Text,[R|Rs],V) :-
     append(BLold,[VarAtom=L],BL),
     expand_vars(Text,R,v(V1,V2,V3,BL)),
     makefile_foreach(Var,Ls,Text,Rs,V).
+
+cond_param_list([P|Ps]) --> str_arg(P), comma, !, cond_param_list(Ps).
+cond_param_list([P]) --> str_arg(P), !.
+
+makefile_or([],"",_) :- !.
+makefile_or([C|_],Result,V) :- expand_vars(C,Result,V), Result \= "", !.
+makefile_or([_|Cs],Result,V) :- makefile_or(Cs,Result,V).
+
+makefile_and([C],Result,V) :- expand_vars(C,Result,V), !.
+makefile_and([C|Cs],Result,V) :- expand_vars(C,X,V), X \= "", !, makefile_and(Cs,Result,V).
+makefile_and(_,"",_).
 
 num_arg(N) --> opt_whitespace, num_chars(C), {C\=[],number_chars(N,C)}.
 num_chars([]) --> [].
