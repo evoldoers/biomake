@@ -470,7 +470,7 @@ normalize_patterns(P,Ns,V) :-
 wrap_t(t([L]),L) :- member(t(_),L), !.
 wrap_t(X,[X]).
 
-unwrap_t(call(X,Y),Flat) :- call(X,Y,Z), unwrap_t(Z,Flat), !.
+unwrap_t(Call,Flat) :- Call =.. [call,_|_], !, format("Matched call~n"),unwrap_t_call(Call,F), unwrap_t(F,Flat).
 unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
 unwrap_t([],"") :- !.
 unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), string_concat(F,Fs,Flat), !.
@@ -479,6 +479,10 @@ unwrap_t(A,F) :- atom(A), atom_string(A,F), !.
 unwrap_t(S,S) :- string(S), !.
 unwrap_t(S,S) :- ground(S), !.
 unwrap_t(X,_) :- type_of(X,T), format("Can't unwrap ~w ~w~n",[T,X]), fail.
+
+unwrap_t_call(call(X,Y),Result) :- !, unwrap_t_call(Y,Yret), call(X,Yret,Result).
+unwrap_t_call(call(X,Y,Z),Result) :- !, unwrap_t_call(Z,Zret), call(X,Y,Zret,Result).
+unwrap_t_call(R,R).
 
 normalize_pattern(X,X,_) :- var(X),!.
 normalize_pattern(t(X),t(X),_) :- !.
@@ -508,8 +512,26 @@ varlabel('<') --> ['<'],!.
 varlabel('*') --> ['*'],!.
 varlabel('@') --> ['@'],!.
 varlabel('^') --> ['^'],!.
+varlabel('+') --> ['^'],!.  % $+ is not quite the same as $^, but we fudge it
+varlabel('?') --> ['^'],!.  % $? is not quite the same as $^, but we fudge it
+varlabel('<') --> ['(','<',')'],!.
+varlabel('*') --> ['(','*',')'],!.
+varlabel('@') --> ['(','@',')'],!.
+varlabel('^') --> ['(','^',')'],!.
+varlabel('^') --> ['(','+',')'],!.
+varlabel('^') --> ['(','?',')'],!.
+varlabel('*F') --> ['(','*','F',')'],!.
+varlabel('*D') --> ['(','*','D',')'],!.
 varlabel('@F') --> ['(','@','F',')'],!.
 varlabel('@D') --> ['(','@','D',')'],!.
+varlabel('<F') --> ['(','<','F',')'],!.
+varlabel('<D') --> ['(','<','D',')'],!.
+varlabel('^F') --> ['(','^','F',')'],!.
+varlabel('^D') --> ['(','^','D',')'],!.
+varlabel('^F') --> ['(','+','F',')'],!.
+varlabel('^D') --> ['(','+','D',')'],!.
+varlabel('^F') --> ['(','?','F',')'],!.
+varlabel('^D') --> ['(','?','D',')'],!.
 varlabel(A) --> makefile_var_char(C), {atom_chars(A,[C])}.
 varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
 
@@ -518,8 +540,14 @@ bindvar('*',v(X,_,_,_),X) :- !.
 bindvar('@',v(_,X,_,_),X) :- !.
 bindvar('<',v(_,_,[X|_],_),X) :- !.
 bindvar('^',v(_,_,X,_),call(concat_string_list_spaced,X)) :- !.
+bindvar('*F',v(X,_,_,_),call(file_base_name,X)) :- !.
+bindvar('*D',v(X,_,_,_),call(file_directory_name,X)) :- !.
 bindvar('@F',v(_,X,_,_),call(file_base_name,X)) :- !.
 bindvar('@D',v(_,X,_,_),call(file_directory_name,X)) :- !.
+bindvar('<F',v(_,_,[X|_],_),call(file_base_name,X)) :- !.
+bindvar('<D',v(_,_,[X|_],_),call(file_directory_name,X)) :- !.
+bindvar('^F',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_base_name,X))) :- !.
+bindvar('^D',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_directory_name,X))) :- !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
 bindvar(VL,v(V1,V2,V3,BL),X) :-

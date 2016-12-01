@@ -183,3 +183,20 @@ subdir/target_file:
 subdir/target_dir:
 	echo $(@D) >$@
 
+%_file.txt:
+	echo $(*F) >$@
+
+%_dir.txt:
+	echo $(*D) >$@
+
+dep_file: subdir/foo
+	echo $(<F) >$@
+
+dep_dir: subdir/foo
+	echo $(<D) >$@
+
+deps_file: subdir/foo subdir/bar/empty
+	echo $(^F) >$@
+
+deps_dir: subdir/foo subdir/bar/empty
+	echo $(^D) >$@

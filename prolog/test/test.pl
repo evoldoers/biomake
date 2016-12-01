@@ -73,6 +73,12 @@ test :-
 	run_test("shell_assign"),
 	run_test("subdir/target_file"),
 	run_test("subdir/target_dir"),
+	run_test("subdir/stem_file.txt"),
+	run_test("subdir/stem_dir.txt"),
+	run_test("dep_file"),
+	run_test("dep_dir"),
+	run_test("deps_file"),
+	run_test("deps_dir"),
 	report_counts,
 	halt.
 
