@@ -28,10 +28,6 @@ md5_hash_up_to_date(T,DL,_Opts) :-
     forall(member(D,DL),get_md5(D)),
     md5_valid(T).
 
-%md5_hash("test","b6d67020403c5706e7a98dea76560aac").
-%md5_hash("dep","04bb3c2de35b0af7091aebceedcf98e9").
-%md5_valid("test") :- md5_hash("dep","04bb3c2de35b0af7091aebceedcf98e9").
-
 % get_md5 attempts to find the MD5 hash of a target and (if known) the conditions under which this target is still valid.
 % It does this by first trying to read the file .biomake/md5/{targetName}, then trying to lookup the hash in its database,
 % and finally (if all else fails) computing the hash on-the-fly, using the md5 program.
@@ -40,8 +36,8 @@ get_md5(T) :-
     exists_file(F),
     !,
     debug(md5,'Reading MD5 hash file: ~w',[F]),
-%    (md5_hash(T,_) -> retractall(md5_hash(T,_)); true),
-%    (md5_valid(T) -> retract(md5_valid(T)); true),
+    (md5_hash(T,_) -> retractall(md5_hash(T,_)); true),
+    (md5_valid(T) -> retract(md5_valid(T)); true),
     open(F,read,IO,[]),
     repeat,
     (   at_end_of_stream(IO)
@@ -66,7 +62,7 @@ compute_md5(T,Hash) :-
     shell_eval(Exec,HashCodes),
     phrase(chomp(Hash),HashCodes),
     debug(md5,'MD5 hash of ~w is ~w',[T,Hash]),
-%    (md5_hash(T,_) -> retractall(md5_hash(T,_)); true),
+    (md5_hash(T,_) -> retractall(md5_hash(T,_)); true),
     assert(md5_hash(T,Hash)).
 
 chomp(S) --> string_from_codes(S,"\n"), [10].
@@ -104,6 +100,8 @@ make_md5_valid_goal_list([Dep|Deps],[Goal|Goals]) :-
 make_md5_valid_goal_list([_|Deps],Goals) :- make_md5_valid_goal_list(Deps,Goals), !.
 make_md5_valid_goal_list([],[]).
 
+% this next bit is a little messy: I think there is a more elegant way of constructing the terms
+% and then writing them to the file, rather than doing a formatted write
 update_md5_file(T,DL) :-
     debug(md5,'updating MD5 hash file for ~w <-- ~w',[T,DL]),
     delete_md5_file(T),
