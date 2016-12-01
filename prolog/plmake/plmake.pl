@@ -620,6 +620,7 @@ varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
 bindvar(VL,v(S,T,D,BL),X) :- bindauto(VL,v(S,T,D,BL),X), !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
+bindvar(VL,v(_,_,_,_),X) :- getenv(VL,X).
 bindvar(VL,v(V1,V2,V3,BL),X) :-
 	global_lazy_binding(VL,Y),
 	append(BL,[VL=VL],BL2),
