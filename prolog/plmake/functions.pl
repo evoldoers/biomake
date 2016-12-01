@@ -21,10 +21,10 @@ makefile_function(Result,V) --> lb("patsubst"), chr_arg(From), comma, chr_arg(To
 	{ phrase(patsubst_lr(FL,FR),From),
 	  phrase(patsubst_lr(TL,TR),To),
 	  patsubst_all(FL,FR,TL,TR,Src,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("strip"), xlst_arg(L,V), rb, !,
-	{ concat_string_list(L,Result," ") }.
+	{ concat_string_list_spaced(L,Result) }.
 
 makefile_function(Result,V) --> lb("findstring"), xstr_arg(S,V), comma, xlst_arg(L,V), rb, !,
 	{ findstring(S,L,Result) }.
@@ -32,17 +32,17 @@ makefile_function(Result,V) --> lb("findstring"), xstr_arg(S,V), comma, xlst_arg
 makefile_function(Result,V) --> lb("filter"), chr_arg(P), comma, xlst_arg(L,V), rb, !,
 	{ phrase(patsubst_lr(PL,PR),P),
 	  filter(PL,PR,L,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("filter-out"), chr_arg(P), comma, xlst_arg(L,V), rb, !,
 	{ phrase(patsubst_lr(PL,PR),P),
 	  filter_out(PL,PR,L,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("sort"), xlst_arg(L,V), rb, !,
 	{ sort(L,S),
 	  remove_dups(S,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("word"), num_arg(N), comma, xlst_arg(L,V), rb, !,
 	{ nth_element(N,L,Result) }.
@@ -60,35 +60,34 @@ makefile_function(Result,V) --> lb("lastword"), xlst_arg(L,V), rb, !,
 	{ last_element(L,Result) }.
 
 makefile_function(Result,V) --> lb("dir"), xstr_arg(Path,V), rb, !,
-	{ file_directory_name(Path,D),
-	  string_concat(D,"/",Result) }.  % GNU make adds the trailing '/'
+	{ file_directory_slash(Path,Result) }.
 
 makefile_function(Result,V) --> lb("notdir"), xstr_arg(Path,V), rb, !,
 	{ file_base_name(Path,Result) }.
 
 makefile_function(Result,V) --> lb("basename"), xlst_arg(Paths,V), rb, !,
 	{ maplist(basename,Paths,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("suffix"), xlst_arg(Paths,V), rb, !,
 	{ maplist(suffix,Paths,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("addsuffix"), xstr_arg(Suffix,V), comma, xlst_arg(Prefixes,V), rb, !,
 	{ addsuffix(Suffix,Prefixes,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("addprefix"), xstr_arg(Prefix,V), comma, xlst_arg(Suffixes,V), rb, !,
 	{ addprefix(Prefix,Suffixes,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("join"), xlst_arg(Prefixes,V), comma, xlst_arg(Suffixes,V), rb, !,
 	{ maplist(string_concat,Prefixes,Suffixes,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("wildcard"), xstr_arg(W,V), rb, !,
 	{ expand_file_name(W,R),
-	  concat_string_list(R,Result," ") }.
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("abspath"), xstr_arg(Path,V), rb, !,
         { absolute_file_name(Path,Result); Result = "" }.
@@ -116,7 +115,7 @@ makefile_subst_ref(Result,V) --> ['('], xvar_arg(Var,V), [':'], suffix_arg(From)
 	  patsubst(FL,FR,TL,TR,Vc,Rc),
 	  string_chars(Result,Rc) }.
 
-makefile_computed_var(Result,V) --> ['('], xstr_arg(Var,V), [')'], !,
+makefile_computed_var(Result,V) --> ['('], xvar_arg(Var,V), [')'], !,
 	{ eval_var(Var,Result,V) }.
 
 lb(Func) --> ['('], {string_chars(Func,Cs)}, opt_whitespace, Cs, [' '], !.
@@ -223,4 +222,3 @@ addsuffix(S,[N|Ns],[R|Rs]) :- string_concat(N,S,R), addsuffix(S,Ns,Rs).
 
 addprefix(_,[],[]).
 addprefix(P,[N|Ns],[R|Rs]) :- string_concat(P,N,R), addprefix(P,Ns,Rs).
-

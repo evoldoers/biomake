@@ -17,6 +17,7 @@
 	   alphanum_code/3,
 	   concat_string_list/2,
 	   concat_string_list/3,
+	   concat_string_list_spaced/2,
 	   split_spaces/2,
 	   split_newlines/2,
 	   last_element/2,
@@ -24,6 +25,7 @@
 	   slice/4,
 	   shell_eval/2,
 	   shell_eval_str/2,
+	   file_directory_slash/2,
 	   newlines_to_spaces/2
 	  ]).
 
@@ -57,6 +59,7 @@ alphanum_code(X) --> [X],{X@>=65,X@=<90},!.  % A through Z
 alphanum_code(X) --> [X],{X@>=97,X@=<122},!.  % a through z
 alphanum_code(X) --> [X],{X@>=48,X@=<57},!.  % 0 through 9
 
+concat_string_list_spaced(L,S) :- concat_string_list(L,S," ").
 concat_string_list(L,S) :- concat_string_list(L,S,"").
 concat_string_list([],"",_).
 concat_string_list([S],S,_).
@@ -104,3 +107,7 @@ shell_eval_str(Exec,Result) :-
 newlines_to_spaces([],[]).
 newlines_to_spaces([10|N],[32|S]) :- newlines_to_spaces(N,S).
 newlines_to_spaces([C|N],[C|S]) :- newlines_to_spaces(N,S).
+
+file_directory_slash(Path,Result) :-
+	file_directory_name(Path,D),
+	string_concat(D,"/",Result).  % GNU make adds the trailing '/'

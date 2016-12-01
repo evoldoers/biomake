@@ -4,6 +4,18 @@
 simple:
 	echo Simple test >simple
 
+target1 target2:
+	echo $@ >$@
+
+%.echo:
+	echo $* >$@
+
+first_dep: a.echo b.echo c.echo
+	echo $< >$@
+
+all_deps: a.echo b.echo c.echo
+	echo $^ >$@
+
 FOO = .foo
 
 %.bar: %$(FOO)
@@ -164,3 +176,10 @@ shell:
 shell_assign != echo hello there
 shell_assign:
 	echo $(shell_assign) >$@
+
+subdir/target_file:
+	echo $(@F) >$@
+
+subdir/target_dir:
+	echo $(@D) >$@
+

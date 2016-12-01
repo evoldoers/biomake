@@ -23,6 +23,11 @@ test :-
 	init_counts,
 	run_test("-p Prolog.makespec","simple_prolog"),
 	run_test("simple"),
+	run_test("target1"),
+	run_test("target2"),
+	run_test("stem.echo"),
+	run_test("first_dep"),
+	run_test("all_deps"),
 	run_test("multiple.wildcards.baz"),
 	run_test("silent"),
 	run_test("one_line"),
@@ -66,6 +71,8 @@ test :-
 	run_test("call"),
 	run_test("shell"),
 	run_test("shell_assign"),
+	run_test("subdir/target_file"),
+	run_test("subdir/target_dir"),
 	report_counts,
 	halt.
 

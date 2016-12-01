@@ -197,7 +197,14 @@ silent_run_exec(Exec,_Opts) :-
 
 
 target_bindrule(T,rb(T,Ds,Execs)) :-
-        mkrule_normalized(TPs,DPs,ExecPs,Goal),
+        mkrule_default(TP1,DP1,Exec1,Goal,Bindings),
+        append(Bindings,_,Bindings_Open),
+%        V=v(_Base,T,SpacedDs,Bindings_Open),
+        V=v(_Base,T,Ds,Bindings_Open),
+        normalize_patterns(TP1,TPs,V),
+        normalize_patterns(DP1,DPs,V),
+        normalize_patterns(Exec1,ExecPs,V),
+
         % we allow multiple heads;
         % only one of the specified targets has to match
         member(TP,TPs),
@@ -206,12 +213,18 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         debug(bindrule,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
         Goal,
         debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
-        maplist(pattern_target,DPs,DepsWithSpaces),
-        maplist(split_spaces,DepsWithSpaces,DepLists),
+
+        maplist(pattern_target,DPs,ExpandedDeps),
+        maplist(split_spaces,ExpandedDeps,DepLists),
 	flatten(DepLists,Ds),
-        maplist(pattern_exec,ExecPs,ExecsWithNewlines),
-        maplist(split_newlines,ExecsWithNewlines,ExecLists),
+%	interleave_spaces(Ds,SpacedDs),
+
+        maplist(pattern_exec,ExecPs,ExpandedExecs),
+        maplist(split_newlines,ExpandedExecs,ExecLists),
 	flatten(ExecLists,Execs).
+
+interleave_spaces([D1|[D2|Ds]],[D1,' '|Result]) :- interleave_spaces([D2|Ds],Result), !.
+interleave_spaces(L,L).
 
 
 % semidet
@@ -224,12 +237,8 @@ uniq_pattern_match(TL,A) :-
         debug(bindrule,' NO_MATCH: ~w to ~w',[TL,A]),
         fail.
 
-
-pattern_target(t(TL),A) :- atomic_list_concat(TL,A).
-pattern_exec(t(TL),A) :-
-    flatten(TL,TL2),
-    atomic_list_concat(TL2,A).
-
+pattern_target(TL,A) :- unwrap_t(TL,A).
+pattern_exec(TL,A) :- unwrap_t(TL,A).
 
 pattern_match(A,B) :- var(A),!,B=A.
 pattern_match(t(TL),A) :- !, pattern_match(TL,A).
@@ -432,20 +441,6 @@ global_binding(Var,Val) :- global_lazy_binding(Var,Val).
 mkrule_default(T,D,E,true,VNs) :- with(mkrule(T,D,E),VNs).
 mkrule_default(T,D,E,G,VNs) :- with(mkrule(T,D,E,G),VNs).
 
-mkrule_normalized(TPs,DPs,ExecPs,Goal) :-
-        mkrule_default(TP1,DP1,Exec1,Goal,Bindings),
-        append(Bindings,_,Bindings_Open),
-        V=v(_Base,InitT,InitD,Bindings_Open),
-        normalize_patterns(TP1,TPs,V),
-        normalize_patterns(DP1,DPs,V),
-        (   TPs=[t(InitT)|_]
-        ->  true
-        ;   true),
-        (   DPs=[t(InitD)|_]
-        ->  true
-        ;   true),
-        normalize_patterns(Exec1,ExecPs,V).
-
 expand_vars(X,Y) :-
 	expand_vars(X,Y,v("","","",[])).
 
@@ -470,15 +465,20 @@ normalize_patterns(P,Ns,V) :-
 % Anyway...
 % wrap_t is a construct from cmungall's original code, abstracted into a separate term by me (ihh).
 %  Beyond the definition here, I really don't know the original intent here.
-% unwrap_t flattens a list into a string, removing any t(...) wrappers in the process.
+% unwrap_t flattens a list into a string, removing any t(...) wrappers in the process,
+% and evaluating any postponed functions wrapped with a call(...) compound clause.
 wrap_t(t([L]),L) :- member(t(_),L), !.
 wrap_t(X,[X]).
 
-unwrap_t(t(X),Flat) :- unwrap_t(X,Flat).
-unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), string_concat(F,Fs,Flat).
-unwrap_t([],"").
-unwrap_t(A,F) :- atom(A), atom_string(A,F).
-unwrap_t(S,S) :- string(S).
+unwrap_t(call(X,Y),Flat) :- call(X,Y,Z), unwrap_t(Z,Flat), !.
+unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
+unwrap_t([],"") :- !.
+unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), string_concat(F,Fs,Flat), !.
+unwrap_t(N,A) :- number(A), atom_number(A,N), !.
+unwrap_t(A,F) :- atom(A), atom_string(A,F), !.
+unwrap_t(S,S) :- string(S), !.
+unwrap_t(S,S) :- ground(S), !.
+unwrap_t(X,_) :- type_of(X,T), format("Can't unwrap ~w ~w~n",[T,X]), fail.
 
 normalize_pattern(X,X,_) :- var(X),!.
 normalize_pattern(t(X),t(X),_) :- !.
@@ -489,6 +489,7 @@ normalize_pattern(X,t(Toks),V) :-
         atom_chars(X,Chars),
         phrase(toks(Toks,V),Chars),
         debug(pattern,'PARSED: ~w ==> ~w',[X,Toks]),
+%	backtrace(20),
         !.
 
 toks([],_) --> [].
@@ -506,13 +507,19 @@ tok_a([]) --> [].
 varlabel('<') --> ['<'],!.
 varlabel('*') --> ['*'],!.
 varlabel('@') --> ['@'],!.
+varlabel('^') --> ['^'],!.
+varlabel('@F') --> ['(','@','F',')'],!.
+varlabel('@D') --> ['(','@','D',')'],!.
 varlabel(A) --> makefile_var_char(C), {atom_chars(A,[C])}.
 varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
 
 bindvar('%',v(X,_,_,_),X) :- !.
 bindvar('*',v(X,_,_,_),X) :- !.
 bindvar('@',v(_,X,_,_),X) :- !.
-bindvar('<',v(_,_,X,_),X) :- !.
+bindvar('<',v(_,_,[X|_],_),X) :- !.
+bindvar('^',v(_,_,X,_),call(concat_string_list_spaced,X)) :- !.
+bindvar('@F',v(_,X,_,_),call(file_base_name,X)) :- !.
+bindvar('@D',v(_,X,_,_),call(file_directory_name,X)) :- !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
 bindvar(VL,v(V1,V2,V3,BL),X) :-
