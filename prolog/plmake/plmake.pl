@@ -241,9 +241,11 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         member(TP,TPs),
         debug(bindrule,'  pre TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
         uniq_pattern_match(TP,T),
+
         normalize_patterns(DP1,DPs,V),
         normalize_patterns(Exec1,ExecPs,V),
         debug(bindrule,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
+
         Goal,
         debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
 
@@ -254,9 +256,6 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         maplist(pattern_exec,ExecPs,ExpandedExecs),
         maplist(split_newlines,ExpandedExecs,ExecLists),
 	flatten(ExecLists,Execs).
-
-interleave_spaces([D1|[D2|Ds]],[D1,' '|Result]) :- interleave_spaces([D2|Ds],Result), !.
-interleave_spaces(L,L).
 
 
 % semidet
