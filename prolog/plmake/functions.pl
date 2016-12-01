@@ -108,6 +108,12 @@ makefile_function(Result,V) --> lb("foreach"), var_arg(Var), opt_whitespace, com
         { makefile_foreach(Var,List,Text,R,V),
 	  concat_string_list_spaced(R,Result) }.
 
+makefile_function(Result,V) --> lb("if"), xstr_arg(Condition,V), opt_whitespace, comma, str_arg(Then), comma, str_arg(Else), rb, !,
+        { Condition = "" -> expand_vars(Else,Result,V); expand_vars(Then,Result,V) }.
+
+makefile_function(Result,V) --> lb("if"), xstr_arg(Condition,V), opt_whitespace, comma, str_arg(Then), rb, !,
+        { Condition = "" -> Result = ""; expand_vars(Then,Result,V) }.
+
 makefile_function("",_V) --> ['('], str_arg(S), [')'], !, {format("Warning: unknown function $(~w)~n",[S])}.
 
 makefile_subst_ref(Result,V) --> ['('], xvar_arg(Var,V), [':'], suffix_arg(From), ['='], suffix_arg(To), [')'], !,

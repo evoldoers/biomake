@@ -220,3 +220,15 @@ foreach:
 
 bad_function_syntax:
 	echo $(non sense) >$@
+
+if1:
+	echo $(if xyz,abc,def) >$@
+
+if2:
+	echo $(if ,abc,def) >$@
+
+if3:
+	echo $(if xyz,abc) >$@
+
+if4:
+	echo $(if ,abc) >$@
