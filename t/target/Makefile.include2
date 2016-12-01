@@ -1,0 +1,5 @@
+$(warning Included Makefile.include2)
+
+inc2.test: inc1.test
+	cat $< >$@
+	echo inc2 >>$@

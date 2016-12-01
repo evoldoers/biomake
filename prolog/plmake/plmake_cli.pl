@@ -1,10 +1,13 @@
 % * -*- Mode: Prolog -*- */
 
 :- use_module(library(plmake/plmake)).
+:- use_module(library(plmake/utils)).
+
+:- dynamic no_backtrace/0.
 
 user:prolog_exception_hook(_,
                            _, _, _) :-
-        backtrace(99),
+        no_backtrace; backtrace(99),
         !,
         fail.
 
@@ -18,9 +21,17 @@ main :-
 	consult_makefile(Opts),
         forall(member(goal(G),Opts),
                G),
-        forall(member(rest(T),Opts),
-               build(T,Opts)),
+	build_toplevel(Opts),
         halt.
+
+build_toplevel(Opts) :-
+	member(toplevel(_),Opts),
+	!,
+	forall(member(toplevel(T),Opts),
+               build(T,Opts)).
+
+build_toplevel(Opts) :-
+	build_default(Opts).
 
 add_assignments(Opts) :-
         forall(member(assignment(Var,Val),Opts),
@@ -46,7 +57,12 @@ parse_args(Args,[Opt|Opts]) :-
         parse_arg(Args,Rest,Opt),
         !,
         parse_args(Rest,Opts).
-parse_args([A|Args],[rest(A)|Opts]) :-
+parse_args([MultiArgs|Args],Opts) :-
+    string_codes(MultiArgs,C),
+    phrase(multi_args(MultiOpts),C),
+    append(MultiOpts,RestOpts,Opts),
+    parse_args(Args,RestOpts).
+parse_args([A|Args],[toplevel(A)|Opts]) :-
         parse_args(Args,Opts).
 
 :- discontiguous parse_arg/3.
@@ -91,6 +107,9 @@ parse_arg(['-l',F|L],L,
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
+parse_arg(['-q'|L],L,quiet(true)) :- assert(no_backtrace), !.
+arg_info('-q','','Be quiet').
+
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
@@ -101,11 +120,10 @@ show_help :-
 	   format("~w ~w~n    ~w~n",[X,Args,Info])).
 
 makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
-makefile_var(A) --> {string_codes(":= \t\n",XL)}, atom_toks(A,XL).
-makefile_val(S) --> "\"", {string_codes("\"",XL)}, string_toks(S,XL), "\"".
-makefile_val(S) --> {string_codes(" ",XL)}, string_toks(S,XL).
-atom_toks(A,XL) --> clist(C,XL), {C\=[], atom_chars(A,C)}.
-string_toks(S,XL) --> clist(C,XL), {C\=[], string_chars(S,C)}.
-clist([C|Cs],XL) --> [C], {forall(member(X,XL),C\=X)}, !, clist(Cs,XL).
-clist([C|Cs],XL) --> ['\\'], [C], !, clist(Cs,XL).
-clist([],_) --> [].
+makefile_var(A) --> atom_from_codes(A,":= \t\n").
+makefile_val(S) --> "\"", string_from_codes(S,"\""), "\"".
+makefile_val(S) --> string_from_codes(S," ").
+
+multi_args(Opts) --> "-", multi_arg(Opts).
+multi_arg([Opt|Rest]) --> [C], {string_codes("-",[H]),C\=H,atom_codes(Arg,[H,C]),parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
+multi_arg([]) --> !.

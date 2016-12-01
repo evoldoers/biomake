@@ -1,0 +1,9 @@
+$(info In Makefile.include)
+
+include Makefile.include2
+
+inc1.test:
+	echo inc1 >$@
+
+makefile_list:
+	echo $(MAKEFILE_LIST) >$@
