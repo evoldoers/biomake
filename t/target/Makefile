@@ -40,6 +40,9 @@ hyphenated-var = This variable is hyphenated
 hyphenated_var:
 	echo $(hyphenated-var) >$@
 
+unbound_var:
+	echo $(nonexistent_variable) >$@
+
 escape_dollar:
 	echo $$ >$@
 

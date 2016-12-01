@@ -504,8 +504,8 @@ normalize_patterns(P,Ns,V) :-
 wrap_t(t([L]),L) :- member(t(_),L), !.
 wrap_t(X,[X]).
 
-unwrap_t(X,_) :- var(X), !, format("Can't unwrap unbound var~n"), backtrace(20), halt.
 %unwrap_t(_,_) :- backtrace(20), fail.
+unwrap_t(X,"") :- var(X), !.
 unwrap_t(Call,Flat) :- nonvar(Call), Call =.. [call,_|_], !, unwrap_t_call(Call,F), unwrap_t(F,Flat).
 unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
 unwrap_t([],"") :- !.

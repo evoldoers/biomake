@@ -36,6 +36,7 @@ test :-
 	run_test("DEF=def","vars2"),
 	run_test("ABC=123","vars3"),
 	run_test("hyphenated_var"),
+	run_test("unbound_var"),
 	run_test("escape_dollar"),
 	run_test("multi_targets_from_var"),
 	run_test("append_var"),
@@ -173,3 +174,18 @@ read_string_from_file(Path,String) :-
 	open(Path,read,IO,[]),
 	read_string(IO,"","",_,String),
 	close(IO).
+
+fail_test(RefDir,TestDir,Args,Target) :-
+	format(string(TestPath),"~s/~s",[TestDir,Target]),
+	\+ exists_file(TestPath),
+	plmake_path(Make),
+	format(string(Exec),"~s -B ~s ~s",[Make,Args,Target]),
+	working_directory(CWD,TestDir),
+	format("Running '~s' in ~s~n",[Exec,TestDir]),
+	shell(Exec,Err),
+	!,
+	working_directory(_,CWD),
+	(\+ exists_file(TestPath),
+	 Err = 0)
+	-> (format("Expected an error!~n"), fail);
+	true.
