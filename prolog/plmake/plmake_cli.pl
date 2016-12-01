@@ -3,9 +3,11 @@
 :- use_module(library(plmake/plmake)).
 :- use_module(library(plmake/utils)).
 
+:- dynamic no_backtrace/0.
+
 user:prolog_exception_hook(_,
                            _, _, _) :-
-        backtrace(99),
+        no_backtrace; backtrace(99),
         !,
         fail.
 
@@ -104,6 +106,9 @@ parse_arg(['-l',F|L],L,
         ensure_loaded(library(plmake/plmake_db)),
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
+
+parse_arg(['-q'|L],L,quiet(true)) :- assert(no_backtrace), !.
+arg_info('-q','','Be quiet').
 
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),

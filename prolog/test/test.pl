@@ -84,7 +84,8 @@ test :-
 	run_test("forced_rebuild"),
 	run_test("foreach"),
 	run_test("bad_function_syntax"),
-	run_failure_test("-f Makefile.err","dummy"),
+	run_failure_test("-q -f Makefile.err","dummy"),
+	run_failure_test("-q","missing_target"),
 	report_counts,
 	halt.
 
@@ -148,7 +149,7 @@ exec_test(RefDir,TestDir,Args,Target) :-
 	format("Running '~s' in ~s~n",[Exec,TestDir]),
 	shell(Exec,Err),
 	!,
-	(Err = 0 -> true; format("Error ~w~n",Err), fail),
+	(Err = 0 -> true; format("Error code ~w~n",Err), fail),
 	working_directory(_,CWD),
 	compare_files(TestPath,RefPath),
 	delete_file(TestPath).
