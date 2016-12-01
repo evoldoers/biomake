@@ -79,6 +79,8 @@ test :-
 	run_test("dep_dir"),
 	run_test("deps_file"),
 	run_test("deps_dir"),
+	run_test("forced_rebuild_setup"),
+	run_test("forced_rebuild"),
 	report_counts,
 	halt.
 

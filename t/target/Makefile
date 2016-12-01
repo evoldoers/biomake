@@ -200,3 +200,12 @@ deps_file: subdir/foo subdir/bar/empty
 
 deps_dir: subdir/foo subdir/bar/empty
 	echo $(^D) >$@
+
+forced_rebuild_setup:
+	echo test1 >forced_rebuild
+	echo dummy >$@
+
+forced_rebuild: FORCE
+	echo test2 >$@
+
+FORCE:

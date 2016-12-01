@@ -129,6 +129,11 @@ is_rebuild_required(T,_,SL,Opts) :-
         !,
         report('Target ~w not materialized - will rebuild if required',[T],SL,Opts).
 is_rebuild_required(T,DL,SL,Opts) :-
+        member(D,DL),
+        \+ exists_target(D,Opts),
+        !,
+        report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+is_rebuild_required(T,DL,SL,Opts) :-
         \+ exists_directory(T),
         member(D,DL),
         is_built_after(D,T,Opts),
