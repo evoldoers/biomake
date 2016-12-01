@@ -11,6 +11,7 @@
 
 :- use_module(library(pio)).
 :- use_module(library(plmake/utils)).
+:- use_module(library(plmake/functions)).
 
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M) :-
@@ -189,3 +190,17 @@ makefile_def_body(['\n'|Cs],Lplus1) --> ['\n'], !, makefile_def_body(Cs,L), {Lpl
 makefile_def_body([C|Cs],Lines) --> [C], makefile_def_body(Cs,Lines).
 
 comment --> opt_whitespace, "#", line(_).
+
+
+
+lex([],_) --> [].
+lex(Toks,Line) --> lexstr(Str), !, {string_chars(Str,StrToks),append(StrToks,Rest,Toks)}, lex(Rest,Line).
+lex(['$'|Rest],Line) --> ['$'], !, lex(Rest,Line).
+lex(Toks,Line) --> ['\n'], !, {format(chars(Marker),"% line ~d~n",[Line]), append(Marker,Rest,Toks), Next is Line + 1}, lex(Rest,Next).
+lex([C|Rest],Line) --> [C], !, lex(Rest,Line).
+lexstr("$$") --> ['$','$'], !.  % preserve escaped $'s in lexer
+lexstr(S) --> ['$'], makefile_var_char(V), {atom_char(Var,V), global_binding(Var,S)}, !.
+lexstr(S) --> ['$','('], makefile_var_atom_from_chars(Var), ')', {global_binding(Var,S)}, !.
+lexstr(S) --> ['$'], makefile_subst_ref(S), !.
+lexstr(S) --> ['$'], makefile_computed_var(S), !.
+lexstr(S) --> ['$'], makefile_function(S), !.

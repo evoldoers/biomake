@@ -14,6 +14,7 @@
 	   add_spec_clause/1,
 	   add_spec_clause/2,
 	   add_cmdline_assignment/1,
+	   add_gnumake_clause/1,
 	   
            target_bindrule/2,
            rule_dependencies/3,
@@ -581,19 +582,7 @@ varlabel('^D') --> ['(','?','D',')'],!.
 varlabel(A) --> makefile_var_char(C), {atom_chars(A,[C])}.
 varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
 
-bindvar('%',v(X,_,_,_),X) :- !.
-bindvar('*',v(X,_,_,_),X) :- !.
-bindvar('@',v(_,X,_,_),X) :- !.
-bindvar('<',v(_,_,[X|_],_),X) :- !.
-bindvar('^',v(_,_,X,_),call(concat_string_list_spaced,X)) :- !.
-bindvar('*F',v(X,_,_,_),call(file_base_name,X)) :- !.
-bindvar('*D',v(X,_,_,_),call(file_directory_name,X)) :- !.
-bindvar('@F',v(_,X,_,_),call(file_base_name,X)) :- !.
-bindvar('@D',v(_,X,_,_),call(file_directory_name,X)) :- !.
-bindvar('<F',v(_,_,[X|_],_),call(file_base_name,X)) :- !.
-bindvar('<D',v(_,_,[X|_],_),call(file_directory_name,X)) :- !.
-bindvar('^F',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_base_name,X))) :- !.
-bindvar('^D',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_directory_name,X))) :- !.
+bindvar(VL,v(S,T,D,BL),X) :- (var(T); T \= ""), bindauto(VL,v(S,T,D,BL),X), !.  % don't use bindauto when target is bound to null (i.e. first pass through GNU Makefile)
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
 bindvar(VL,v(V1,V2,V3,BL),X) :-
@@ -603,7 +592,21 @@ bindvar(VL,v(V1,V2,V3,BL),X) :-
 	unwrap_t(Z,X),
 	!.
 bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
-bindvar(_,_,'') :- !.
+bindvar(_,v(_,T,_,_),'') :- (var(T); T \= null), !.  % default: bind to empty string, but only if target is bound to null (i.e. not on first pass through GNU Makefile)
+
+bindauto('%',v(X,_,_,_),X) :- !.
+bindauto('*',v(X,_,_,_),X) :- !.
+bindauto('@',v(_,X,_,_),X) :- !.
+bindauto('<',v(_,_,[X|_],_),X) :- !.
+bindauto('^',v(_,_,X,_),call(concat_string_list_spaced,X)) :- !.
+bindauto('*F',v(X,_,_,_),call(file_base_name,X)) :- !.
+bindauto('*D',v(X,_,_,_),call(file_directory_name,X)) :- !.
+bindauto('@F',v(_,X,_,_),call(file_base_name,X)) :- !.
+bindauto('@D',v(_,X,_,_),call(file_directory_name,X)) :- !.
+bindauto('<F',v(_,_,[X|_],_),call(file_base_name,X)) :- !.
+bindauto('<D',v(_,_,[X|_],_),call(file_directory_name,X)) :- !.
+bindauto('^F',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_base_name,X))) :- !.
+bindauto('^D',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_directory_name,X))) :- !.
 
 % debugging variable binding
 bindvar_debug(VL,V,Var) :-
