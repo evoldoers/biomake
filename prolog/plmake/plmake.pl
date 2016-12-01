@@ -240,24 +240,18 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         % we allow multiple heads;
         % only one of the specified targets has to match
         member(TP,TPs),
-        debug(bindrule,'  pre TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
         uniq_pattern_match(TP,T),
-
-        normalize_patterns(DP1,DPs,V),
-        normalize_patterns(Exec1,ExecPs,V),
-        debug(bindrule,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
-
         Goal,
-        debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
 
-        maplist(pattern_target,DPs,ExpandedDeps),
-        maplist(split_spaces,ExpandedDeps,DepLists),
-	flatten(DepLists,Ds),
+	% Two-pass expansion of dependency list.
+	% This is ultra-hacky but allows for variable-expanded dependency lists that contain %'s.
+	% A more rigorous solution would be a two-pass expansion of the entire GNU Makefile,
+	% which would allow currently impossible things like variable-expanded rules.
+	expand_deps(DP1,DP2,V),
+	expand_deps(DP2,Ds,V),
 
-        maplist(pattern_exec,ExecPs,ExpandedExecs),
-        maplist(split_newlines,ExpandedExecs,ExecLists),
-	flatten(ExecLists,Execs).
-
+	% expansion of executables
+	expand_execs(Exec1,Execs,V).
 
 % semidet
 uniq_pattern_match(TL,A) :-
@@ -268,9 +262,6 @@ uniq_pattern_match(TL,A) :-
 uniq_pattern_match(TL,A) :-
         debug(bindrule,' NO_MATCH: ~w to ~w',[TL,A]),
         fail.
-
-pattern_target(TL,A) :- unwrap_t(TL,A).
-pattern_exec(TL,A) :- unwrap_t(TL,A).
 
 pattern_match(A,B) :- var(A),!,B=A.
 pattern_match(t(TL),A) :- !, pattern_match(TL,A).
@@ -292,6 +283,18 @@ pattern_match_list([],[]).
 pattern_match_list([P|Ps],[M|Ms]) :-
         pattern_match(P,M),
         pattern_match_list(Ps,Ms).
+
+expand_deps(Deps,Result,V) :-
+    normalize_patterns(Deps,NormDeps,V),
+    maplist(unwrap_t,NormDeps,ExpandedDeps),
+    maplist(split_spaces,ExpandedDeps,DepLists),
+    flatten(DepLists,Result).
+
+expand_execs(Execs,Result,V) :-
+    normalize_patterns(Execs,NormExecs,V),
+    maplist(unwrap_t,NormExecs,ExpandedExecs),
+    maplist(split_newlines,ExpandedExecs,ExecLists),
+    flatten(ExecLists,Result).
 
 % ----------------------------------------
 % READING
@@ -582,7 +585,7 @@ varlabel('^D') --> ['(','?','D',')'],!.
 varlabel(A) --> makefile_var_char(C), {atom_chars(A,[C])}.
 varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
 
-bindvar(VL,v(S,T,D,BL),X) :- (var(T); T \= ""), bindauto(VL,v(S,T,D,BL),X), !.  % don't use bindauto when target is bound to null (i.e. first pass through GNU Makefile)
+bindvar(VL,v(S,T,D,BL),X) :- bindauto(VL,v(S,T,D,BL),X), !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
 bindvar(VL,v(V1,V2,V3,BL),X) :-
@@ -592,7 +595,7 @@ bindvar(VL,v(V1,V2,V3,BL),X) :-
 	unwrap_t(Z,X),
 	!.
 bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
-bindvar(_,v(_,T,_,_),'') :- (var(T); T \= null), !.  % default: bind to empty string, but only if target is bound to null (i.e. not on first pass through GNU Makefile)
+bindvar(_,v(_,_,_,_),'') :- !.  % default: bind to empty string
 
 bindauto('%',v(X,_,_,_),X) :- !.
 bindauto('*',v(X,_,_,_),X) :- !.
