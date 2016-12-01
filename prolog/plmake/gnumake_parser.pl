@@ -31,12 +31,13 @@ makefile_rules(Rules,Line,File) --> error_line, !, {Lnext is Line + 1}, makefile
 makefile_rules(Rules,Line,File) --> include_line(Included), !, {Lnext is Line + 1, append(Included,Next,Rules)}, makefile_rules(Next,Lnext,File).
 makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment,Lass), !, {Lnext is Line + Lass}, makefile_rules(Rules,Lnext,File).
 makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
+makefile_rules(_,Line,File) --> opt_space, "\t", !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: unexpected tab character",[Line,File]),syntax_error(Err)}.
 makefile_rules(_,Line,File) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),syntax_error(Err)}.
 
 eos([], []).
 
 error_line -->
-    opt_whitespace,
+    opt_space,
     "$(error",
     whitespace,
     makefile_warning_text(W),
@@ -49,7 +50,7 @@ error_line -->
      throw(Warning)}.
 
 warning_line -->
-    opt_whitespace,
+    opt_space,
     "$(warning",
     whitespace,
     makefile_warning_text(W),
@@ -61,7 +62,7 @@ warning_line -->
      write(user_error,Warning)}.
 
 info_line -->
-    opt_whitespace,
+    opt_space,
     "$(info",
     whitespace,
     makefile_warning_text(W),
@@ -72,7 +73,7 @@ info_line -->
     {format("~w~n",[W])}.
 
 include_line(Rules) -->
-    opt_whitespace,
+    opt_space,
     "include",
     whitespace,
     include_makefiles(Rules).
@@ -81,7 +82,7 @@ include_makefiles(Rules) --> makefile_filename_string(F), opt_whitespace, "\n", 
 include_makefiles(Rules) --> makefile_filename_string(F), whitespace, !, {parse_gnu_makefile(F,R)}, include_makefiles(Next), {append(R,Next,Rules)}.
 
 makefile_assignment(assignment(Var,Op,Val),Lines) -->
-    opt_whitespace,
+    opt_space,
     "define",
     whitespace,
     makefile_var_atom_from_codes(Var),
@@ -94,7 +95,7 @@ makefile_assignment(assignment(Var,Op,Val),Lines) -->
      Lines is BodyLines + 1}.
 
 makefile_assignment(assignment(Var,"=",Val),Lines) -->
-    opt_whitespace,
+    opt_space,
     "define",
     whitespace,
     makefile_var_atom_from_codes(Var),
@@ -105,7 +106,7 @@ makefile_assignment(assignment(Var,"=",Val),Lines) -->
      Lines is BodyLines + 1}.
 
 makefile_assignment(assignment(Var,Op,Val),1) -->
-    opt_whitespace,
+    opt_space,
     makefile_var_atom_from_codes(Var),
     opt_whitespace,
     op_string(Op),
@@ -133,10 +134,10 @@ makefile_rule(rule(Head,Deps,[Efirst|Erest]),Lines) -->
     {Lines is 1 + Lexecs}.
 
 opt_makefile_targets(T) --> makefile_targets(T).
-opt_makefile_targets([]) --> opt_whitespace.
+opt_makefile_targets([]) --> opt_space.
 
-makefile_targets([T|Ts]) --> opt_whitespace, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
-makefile_targets([T]) --> opt_whitespace, makefile_target_string(T), opt_whitespace.
+makefile_targets([T|Ts]) --> opt_space, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
+makefile_targets([T]) --> opt_space, makefile_target_string(T), opt_whitespace.
 
 makefile_warning_text(S) --> string_from_codes(S,")").
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
@@ -185,8 +186,8 @@ line([L|Ls]) --> [L], line(Ls).
 
 line_as_string(S) --> line(Sc), {string_chars(S,Sc)}.
 
-makefile_def_body([],1) --> opt_whitespace, "endef", !, opt_whitespace, "\n".
+makefile_def_body([],1) --> opt_space, "endef", !, opt_whitespace, "\n".
 makefile_def_body(['\n'|Cs],Lplus1) --> ['\n'], !, makefile_def_body(Cs,L), {Lplus1 is L + 1}.
 makefile_def_body([C|Cs],Lines) --> [C], makefile_def_body(Cs,Lines).
 
-comment --> opt_whitespace, "#", line(_).
+comment --> opt_space, "#", line(_).

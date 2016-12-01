@@ -244,9 +244,16 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         Goal,
 
 	% Two-pass expansion of dependency list.
-	% This is ultra-hacky but allows for variable-expanded dependency lists that contain %'s.
+	% This is ultra-hacky but allows for variable-expanded dependency lists that contain % wildcards
+	% (the variables are expanded on the first pass, and the %'s on the second pass).
 	% A more rigorous solution would be a two-pass expansion of the entire GNU Makefile,
-	% which would allow currently impossible things like variable-expanded rules.
+	% which would allow currently impossible things like variable-expanded rules, e.g.
+	%   RULE = target: dep1 dep2
+	%   $(RULE) dep3
+	% which (in GNU make, but not here) expands to
+	%   target: dep1 dep2 dep3
+	% However, this would fragment the current homology between the Prolog syntax and GNU Make syntax.
+	% Consequently, we currently sacrifice perfect GNU make compatibility for a simpler translation.
 	expand_deps(DP1,DP2,V),
 	expand_deps(DP2,Ds,V),
 

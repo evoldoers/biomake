@@ -12,6 +12,8 @@
 	   char_list/4,
 	   whitespace/2,
 	   opt_whitespace/2,
+	   space/2,
+	   opt_space/2,
 	   blank_line/2,
 	   alphanum_char/3,
 	   alphanum_code/3,
@@ -49,7 +51,13 @@ whitespace --> "\t", !, opt_whitespace.
 opt_whitespace --> whitespace.
 opt_whitespace --> !.
 
-blank_line --> opt_whitespace, "\n", !.
+space --> " ", !, opt_space.
+
+opt_space --> space.
+opt_space --> !.
+
+blank_line --> "\n", !.
+blank_line --> space, opt_whitespace, "\n", !.
 
 alphanum_char(X) --> [X],{X@>='A',X@=<'Z'},!.
 alphanum_char(X) --> [X],{X@>='a',X@=<'z'},!.

@@ -21,7 +21,8 @@ user:prolog_exception_hook(_,
 
 test :-
 	init_counts,
-	run_failure_test("-q -f Makefile.err","dummy"),
+	run_failure_test("-q -f Makefile.err","empty"),
+	run_failure_test("-q -f Makefile.tab","empty"),
 	run_failure_test("-q","missing_target"),
 	run_test("-p Prolog.makespec","simple_prolog"),
 	run_test("simple"),
