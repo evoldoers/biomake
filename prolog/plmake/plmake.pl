@@ -18,7 +18,7 @@
 	   
            target_bindrule/2,
            rule_dependencies/3,
-           is_rebuild_required/4,
+           rebuild_required/4,
 
 	   global_binding/2,
 	   expand_vars/3
@@ -73,7 +73,7 @@ build(T,SL,Opts) :-
         report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
         !,
         build_targets(DL,[T|SL],Opts), % semidet
-        (   is_rebuild_required(T,DL,SL,Opts)
+        (   rebuild_required(T,DL,SL,Opts)
         ->  rule_execs(Rule,Execs,Opts),
             run_execs(Execs,Opts),
 	    flag_as_rebuilt(T)
@@ -82,7 +82,7 @@ build(T,SL,Opts) :-
          report('~w is up to date',[T],SL,Opts)).
 build(T,SL,Opts) :-
         debug_report(build,'  checking if rebuild required for ~w',[T],SL),
-        \+ is_rebuild_required(T,[],SL,Opts),
+        \+ rebuild_required(T,[],SL,Opts),
         !,
         report('~w exists',[T],SL,Opts).
 build(T,SL,Opts) :-
@@ -131,32 +131,36 @@ debug_report(Topic,Fmt,Args,SL) :-
 % DEPENDENCY MANAGEMENT
 % ----------------------------------------
 
-is_rebuild_required(T,_,SL,Opts) :-
+rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
         report('Target ~w not materialized - will rebuild if required',[T],SL,Opts).
-is_rebuild_required(T,DL,SL,Opts) :-
+rebuild_required(T,DL,SL,Opts) :-
+        member(D,DL),
+        \+ exists_target(D,Opts),
+        !,
+        report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+rebuild_required(T,DL,SL,Opts) :-
+        \+ member(md5(true),Opts),
+	rebuild_required_by_time_stamp(T,DL,SL,Opts).
+rebuild_required(T,_,SL,Opts) :-
+        member(always_make(true),Opts),
+        target_bindrule(T,_),
+        !,
+        report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
+
+rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         member(D,DL),
         build_count(D,Nd),
         (build_count(T,Nt) -> Nd > Nt; true),
 	!,
         report('Target ~w has recently rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
-is_rebuild_required(T,DL,SL,Opts) :-
+rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         \+ exists_directory(T),
         member(D,DL),
         is_built_after(D,T,Opts),
         !,
         report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
-is_rebuild_required(T,DL,SL,Opts) :-
-        member(D,DL),
-        \+ exists_target(D,Opts),
-        !,
-        report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
-is_rebuild_required(T,_,SL,Opts) :-
-        member(always_make(true),Opts),
-        target_bindrule(T,_),
-        !,
-        report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
 
 is_built_after(A,B,_Opts) :-
         time_file(A,TA),
