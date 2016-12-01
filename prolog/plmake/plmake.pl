@@ -76,6 +76,7 @@ build(T,SL,Opts) :-
         (   rebuild_required(T,DL,SL,Opts)
         ->  rule_execs(Rule,Execs,Opts),
             run_execs(Execs,Opts),
+	    (member(md5(true),Opts) -> update_md5_file(T,DL); true),
 	    flag_as_rebuilt(T)
         ;   true),
         (member(dry_run(true),Opts) -> true;
@@ -142,7 +143,13 @@ rebuild_required(T,DL,SL,Opts) :-
         report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         \+ member(md5(true),Opts),
-	rebuild_required_by_time_stamp(T,DL,SL,Opts).
+	rebuild_required_by_time_stamp(T,DL,SL,Opts),
+	!.
+rebuild_required(T,DL,SL,Opts) :-
+        member(md5(true),Opts),
+	\+ md5_hash_up_to_date(T,DL,Opts),
+	!,
+        report('Target ~w does not have an up-to-date MD5 hash - rebuilding',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         member(always_make(true),Opts),
         target_bindrule(T,_),
@@ -194,6 +201,7 @@ next_build_counter(N) :-
 
 next_build_counter(1) :-
     assert(build_counter(1)).
+
 
 % ----------------------------------------
 % TASK EXECUTION

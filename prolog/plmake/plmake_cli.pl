@@ -69,29 +69,30 @@ parse_args([A|Args],[toplevel(A)|Opts]) :-
 :- discontiguous arg_info/3.
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
-arg_info('--debug','TARGET','[developers] debugging messages. TARGET can be build, pattern, makeprog, makefile...').
+arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
 
 parse_arg(['--dry-run'|L],L,dry_run(true)).
 parse_arg(['-n'|L],L,dry_run(true)).
-arg_info('--dry-run','','Print the commands that would be executed, but do not execute them').
-arg_info('-n','','Shortcut for --dry-run').
+arg_info('-n,--dry-run','','Print the commands that would be executed, but do not execute them').
 
-parse_arg(['-h'|L],L,null) :-
+parse_arg(['-h'|L],L,null) :- show_help, !.
+parse_arg(['--help'|L],L,null) :- show_help, !.
+arg_info('-h,--help','','Show help').
+
+show_help :-
         writeln('plmake [OPTION...] target1 target2...'),
         nl,
         writeln('Options:'),
-        show_help,
+	forall(arg_info(X,Args,Info),
+	       format("~w ~w~n    ~w~n",[X,Args,Info])),
         nl,
         writeln('For more info see http://github.com/cmungall/plmake'),
         nl,
         halt.
-arg_info('-h','','Show help').
-
 
 parse_arg(['--always-make'|L],L,always_make(true)).
 parse_arg(['-B'|L],L,always_make(true)).
-arg_info('--always-make','','Always build fresh target even if dependency is up to date').
-arg_info('-B','','Shortcut for --always-make').
+arg_info('-B,--always-make','','Always build fresh target even if dependency is up to date').
 
 parse_arg(['-f',F|L],L,gnu_makefile(F)).
 arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification [incomplete]').
@@ -107,6 +108,10 @@ parse_arg(['-l',F|L],L,
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
+parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(plmake/md5)), !.
+parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(plmake/md5)), !.
+arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
+
 parse_arg(['--no-backtrace'|L],L,quiet(true)) :- assert(no_backtrace), !.
 arg_info('-no-backtrace','','Do not print a backtrace on error').
 
@@ -114,10 +119,6 @@ parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
 arg_info('Var=Val','','Assign Makefile variables from command line').
-
-show_help :-
-    forall(arg_info(X,Args,Info),
-	   format("~w ~w~n    ~w~n",[X,Args,Info])).
 
 makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
 makefile_var(A) --> atom_from_codes(A,":= \t\n").

@@ -99,7 +99,7 @@ type_of(X,"rational") :- rational(X), !.
 type_of(X,"number") :- number(X), !.  % should never be reached
 type_of(X,"string") :- string(X), !.
 type_of(X,"compound") :- compound(X), !.
-type_of(X,"ground") :- ground(X), !.
+type_of(X,"atom") :- atom(X), !.
 type_of(_,"unknown").
 
 shell_eval(Exec,CodeList) :-
