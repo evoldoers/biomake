@@ -36,6 +36,10 @@ ABC = abc
 vars%:
 	echo ABC=$(ABC) DEF=$(DEF) XYZ=$(XYZ) >$@
 
+hyphenated-var = This variable is hyphenated
+hyphenated_var:
+	echo $(hyphenated-var) >$@
+
 escape_dollar:
 	echo $$ >$@
 
@@ -201,11 +205,9 @@ deps_file: subdir/foo subdir/bar/empty
 deps_dir: subdir/foo subdir/bar/empty
 	echo $(^D) >$@
 
-forced_rebuild_setup:
-	echo test1 >forced_rebuild
-	echo dummy >$@
-
+forced_rebuild_setup := $(shell touch forced_rebuild)
 forced_rebuild: FORCE
 	echo test2 >$@
 
 FORCE:
+	echo wrong >forced_rebuild

@@ -74,7 +74,8 @@ build(T,SL,Opts) :-
         build_targets(DL,[T|SL],Opts), % semidet
         (   is_rebuild_required(T,DL,SL,Opts)
         ->  rule_execs(Rule,Execs,Opts),
-            run_execs(Execs,Opts)
+            run_execs(Execs,Opts),
+	    flag_as_rebuilt(T)
         ;   true),
         (member(dry_run(true),Opts) -> true;
          report('~w is up to date',[T],SL,Opts)).
@@ -130,15 +131,21 @@ is_rebuild_required(T,_,SL,Opts) :-
         report('Target ~w not materialized - will rebuild if required',[T],SL,Opts).
 is_rebuild_required(T,DL,SL,Opts) :-
         member(D,DL),
-        \+ exists_target(D,Opts),
-        !,
-        report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+        build_count(D,Nd),
+        (build_count(T,Nt) -> Nd > Nt; true),
+	!,
+        report('Target ~w has recently rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 is_rebuild_required(T,DL,SL,Opts) :-
         \+ exists_directory(T),
         member(D,DL),
         is_built_after(D,T,Opts),
         !,
         report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
+is_rebuild_required(T,DL,SL,Opts) :-
+        member(D,DL),
+        \+ exists_target(D,Opts),
+        !,
+        report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 is_rebuild_required(T,_,SL,Opts) :-
         member(always_make(true),Opts),
         target_bindrule(T,_),
@@ -155,11 +162,28 @@ exists_target(T,_Opts) :-
 exists_target(T,_Opts) :-
         exists_directory(T).
 
-
 rule_dependencies(rb(_,DL,_),DL,_Opts).
 rule_execs(rb(_,_,X),X,_Opts) :- !.
 rule_execs(rb(_,_,X),_,_Opts) :- throw(error(no_exec(X))).
 
+
+:- dynamic build_count/2.
+:- dynamic build_counter/1.
+
+flag_as_rebuilt(T) :-
+    next_build_counter(N),
+    retractall(build_count(T,_)),
+    assert(build_count(T,N)).
+
+next_build_counter(N) :-
+    build_counter(Last),
+    !,
+    N is Last + 1,
+    retract(build_counter(Last)),
+    assert(build_counter(N)).
+
+next_build_counter(1) :-
+    assert(build_counter(1)).
 
 % ----------------------------------------
 % TASK EXECUTION

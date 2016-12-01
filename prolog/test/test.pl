@@ -35,6 +35,7 @@ test :-
 	run_test("vars1"),
 	run_test("DEF=def","vars2"),
 	run_test("ABC=123","vars3"),
+	run_test("hyphenated_var"),
 	run_test("escape_dollar"),
 	run_test("multi_targets_from_var"),
 	run_test("append_var"),
@@ -79,7 +80,6 @@ test :-
 	run_test("dep_dir"),
 	run_test("deps_file"),
 	run_test("deps_dir"),
-	run_test("forced_rebuild_setup"),
 	run_test("forced_rebuild"),
 	report_counts,
 	halt.
