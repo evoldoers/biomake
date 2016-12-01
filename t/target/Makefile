@@ -217,3 +217,6 @@ FORCE:
 
 foreach:
 	echo $(foreach thing,Life Death Tax,$(thing) is constant.) >$@
+
+bad_function_syntax:
+	echo $(non sense) >$@

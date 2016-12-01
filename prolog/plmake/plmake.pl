@@ -537,10 +537,10 @@ toks([Tok|Toks],V) --> tok(Tok,V),!,toks(Toks,V).
 tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
 tok('$',_V) --> ['$','$'], !.  % escape $'s
 tok(Var,V) --> ['$'], varlabel(VL),{bindvar_debug(VL,V,Var)}.
-tok(Var,V) --> ['$'], makefile_function(Var,V), !.
 tok(Var,V) --> ['$'], makefile_subst_ref(Var,V), !.
 tok(Var,V) --> ['$'], makefile_computed_var(Var,V), !.
-tok('$',_V) --> ['$'], !.  % if we don't recognize the function syntax, just treat as plaintext
+tok(Var,V) --> ['$'], makefile_function(Var,V), !.
+tok("$",V) --> ['$'], !.   % if all else fails, let the dollar through
 tok(Tok,_) --> tok_a(Cs),{atom_chars(Tok,Cs)}.
 tok_a([C|Cs]) --> [C],{C\='$',C\='%'},!,tok_a(Cs).
 tok_a([]) --> [].

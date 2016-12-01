@@ -83,6 +83,7 @@ test :-
 	run_test("deps_dir"),
 	run_test("forced_rebuild"),
 	run_test("foreach"),
+	run_test("bad_function_syntax"),
 	report_counts,
 	halt.
 
