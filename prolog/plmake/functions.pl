@@ -104,6 +104,10 @@ makefile_function(Result,V) --> lb("call"), xvar_arg(UserFunc,V), opt_whitespace
 makefile_function(Result,V) --> lb("shell"), xstr_arg(Exec,V), rb, !,
         { shell_eval_str(Exec,Result) }.
 
+makefile_function(Result,V) --> lb("foreach"), var_arg(Var), opt_whitespace, comma, xlst_arg(List,V), comma, str_arg(Text), rb, !,
+        { makefile_foreach(Var,List,Text,R,V),
+	  concat_string_list_spaced(R,Result) }.
+
 makefile_function("",_V) --> ['('], whitespace, str_arg(S), [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 makefile_function("",_V) --> ['('], str_arg(S), whitespace, [')'], !, {format("Warning: unknown function ~w~n",[S])}.
 
@@ -127,15 +131,17 @@ xchr_arg(C,V) --> xstr_arg(S,V), !, {string_chars(S,C)}.
 xstr_arg(Sx,V) --> str_arg(S), !, {expand_vars(S,Sx,V)}.
 chr_arg(C) --> str_arg(S), !, {string_chars(S,C)}.
 str_arg(S) --> opt_whitespace, str_arg_outer(S).
-str_arg_outer(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(",Si,")"],S)}.
+str_arg_outer(S) --> ['('], !, str_arg_inner(Si), [')'], str_arg_outer(Rest), {concat_string_list(["(",Si,")",Rest],S)}.
 str_arg_outer(S) --> string_from_chars(Start,"(),"), !, str_arg_outer(Rest), {string_concat(Start,Rest,S)}.
 str_arg_outer("") --> !.
 str_arg_inner(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(",Si,")"],S)}.
 str_arg_inner(S) --> string_from_chars(Start,"()"), !, str_arg_inner(Rest), {string_concat(Start,Rest,S)}.
 str_arg_inner("") --> !.
 
-xvar_arg(S,_V) --> makefile_var_string_from_chars(S).
+xvar_arg(S,_V) --> var_arg(S).
 xvar_arg(S,V) --> ['$','('], !, xstr_arg(X,V), [')'], {eval_var(X,S,V)}.
+
+var_arg(S) --> opt_whitespace, makefile_var_string_from_chars(S).
 
 suffix_arg(C) --> char_list(C,['=',')',' ']).
 
@@ -151,6 +157,14 @@ call_bindings([Param|Params],Num,[NumAtom=Param|Vars]) :-
 	atom_number(NumAtom,Num),
 	NextNum is Num + 1,
 	call_bindings(Params,NextNum,Vars).
+
+makefile_foreach(_,[],_,[],_).
+makefile_foreach(Var,[L|Ls],Text,[R|Rs],V) :-
+    atom_string(VarAtom,Var),
+    V = v(V1,V2,V3,BLold),
+    append(BLold,[VarAtom=L],BL),
+    expand_vars(Text,R,v(V1,V2,V3,BL)),
+    makefile_foreach(Var,Ls,Text,Rs,V).
 
 num_arg(N) --> opt_whitespace, num_chars(C), {C\=[],number_chars(N,C)}.
 num_chars([]) --> [].

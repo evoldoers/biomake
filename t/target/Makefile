@@ -211,3 +211,6 @@ forced_rebuild: FORCE
 
 FORCE:
 	echo wrong >forced_rebuild
+
+foreach:
+	echo $(foreach thing,Life Death Tax,$(thing) is constant.) >$@

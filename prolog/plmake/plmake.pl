@@ -85,6 +85,11 @@ build(T,SL,Opts) :-
         !,
         report('~w exists',[T],SL,Opts).
 build(T,SL,Opts) :-
+        \+ target_bindrule(T,_),
+        report('Don\'t know how to make ~w',[T],SL,Opts),
+        !,
+        fail.
+build(T,SL,Opts) :-
         report('~w FAILED',[T],SL,Opts),
         !,
         fail.
@@ -499,7 +504,9 @@ normalize_patterns(P,Ns,V) :-
 wrap_t(t([L]),L) :- member(t(_),L), !.
 wrap_t(X,[X]).
 
-unwrap_t(Call,Flat) :- Call =.. [call,_|_], !, format("Matched call~n"),unwrap_t_call(Call,F), unwrap_t(F,Flat).
+unwrap_t(X,_) :- var(X), !, format("Can't unwrap unbound var~n"), backtrace(20), halt.
+%unwrap_t(_,_) :- backtrace(20), fail.
+unwrap_t(Call,Flat) :- nonvar(Call), Call =.. [call,_|_], !, unwrap_t_call(Call,F), unwrap_t(F,Flat).
 unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
 unwrap_t([],"") :- !.
 unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), string_concat(F,Fs,Flat), !.

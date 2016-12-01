@@ -81,6 +81,7 @@ test :-
 	run_test("deps_file"),
 	run_test("deps_dir"),
 	run_test("forced_rebuild"),
+	run_test("foreach"),
 	report_counts,
 	halt.
 
