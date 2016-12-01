@@ -233,17 +233,16 @@ silent_run_exec(Exec,_Opts) :-
 target_bindrule(T,rb(T,Ds,Execs)) :-
         mkrule_default(TP1,DP1,Exec1,Goal,Bindings),
         append(Bindings,_,Bindings_Open),
-%        V=v(_Base,T,SpacedDs,Bindings_Open),
         V=v(_Base,T,Ds,Bindings_Open),
         normalize_patterns(TP1,TPs,V),
-        normalize_patterns(DP1,DPs,V),
-        normalize_patterns(Exec1,ExecPs,V),
 
         % we allow multiple heads;
         % only one of the specified targets has to match
         member(TP,TPs),
         debug(bindrule,'  pre TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
         uniq_pattern_match(TP,T),
+        normalize_patterns(DP1,DPs,V),
+        normalize_patterns(Exec1,ExecPs,V),
         debug(bindrule,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
         Goal,
         debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
@@ -251,7 +250,6 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         maplist(pattern_target,DPs,ExpandedDeps),
         maplist(split_spaces,ExpandedDeps,DepLists),
 	flatten(DepLists,Ds),
-%	interleave_spaces(Ds,SpacedDs),
 
         maplist(pattern_exec,ExecPs,ExpandedExecs),
         maplist(split_newlines,ExpandedExecs,ExecLists),
