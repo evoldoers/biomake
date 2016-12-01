@@ -335,29 +335,23 @@ add_cmdline_assignment((Var = X)) :-
         assert(global_cmdline_binding(Var,X)),
         debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
 
-add_gnumake_rule(rule(Ts,Ds,Es)) :-
+add_gnumake_clause(rule(Ts,Ds,Es)) :-
     add_spec_clause((Ts <-- Ds,Es),[]).
 
-add_gnumake_assignment(assignment(Var,"=",Val)) :-
+add_gnumake_clause(assignment(Var,"=",Val)) :-
     add_spec_clause((Var = Val)).
 
-add_gnumake_assignment(assignment(Var,"?=",Val)) :-
+add_gnumake_clause(assignment(Var,"?=",Val)) :-
     add_spec_clause((Var ?= Val)).
 
-add_gnumake_assignment(assignment(Var,":=",Val)) :-
+add_gnumake_clause(assignment(Var,":=",Val)) :-
     add_spec_clause((Var := Val)).
 
-add_gnumake_assignment(assignment(Var,"+=",Val)) :-
+add_gnumake_clause(assignment(Var,"+=",Val)) :-
     add_spec_clause((Var += Val)).
 
-add_gnumake_assignment(assignment(Var,"!=",Val)) :-
+add_gnumake_clause(assignment(Var,"!=",Val)) :-
     add_spec_clause((Var =* Val)).
-
-add_gnumake_clause(rule(Ts,Ds,Es)) :-
-    add_gnumake_rule(rule(Ts,Ds,Es)).
-
-add_gnumake_clause(assignment(Var,Op,Val)) :-
-    add_gnumake_assignment(assignment(Var,Op,Val)).
 
 add_gnumake_clause(C) :-
     format("Error translating ~w~n",[C]).
