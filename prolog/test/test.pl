@@ -84,6 +84,7 @@ test :-
 	run_test("forced_rebuild"),
 	run_test("foreach"),
 	run_test("bad_function_syntax"),
+	run_failure_test("-f Makefile.err","dummy"),
 	report_counts,
 	halt.
 
@@ -112,15 +113,25 @@ run_test(RefDir,TestDir,Args,Target) :-
 
 report_test(RefDir,TestDir,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
-	format(string(Desc),Fmt,Vars),
+	start_test(Fmt,Vars,Desc),
+	(exec_test(RefDir,TestDir,Args,Target)
+         -> pass_test(Desc); fail_test(Desc)),
+	working_directory(_,CWD).
+
+start_test(Fmt,Vars,Desc) :-
 	inc(tests),
 	nb_getval(tests,T),
-	format("Starting test #~d: ~s~n",[T,Desc]),
-	(exec_test(RefDir,TestDir,Args,Target)
-         -> (format("ok: passed test #~d: ~s~n~n",[T,Desc]),
-	 inc(passed));
-         format("not ok: failed test #~d: ~s~n~n",[T,Desc])),
-	working_directory(_,CWD).
+	format(string(Desc),Fmt,Vars),
+	format("Starting test #~d: ~s~n",[T,Desc]).
+
+pass_test(Desc) :-
+        nb_getval(tests,T),
+        format("ok: passed test #~d: ~s~n~n",[T,Desc]),
+	inc(passed).
+
+fail_test(Desc) :-
+        nb_getval(tests,T),
+	format("not ok: failed test #~d: ~s~n~n",[T,Desc]).
 
 inc(Counter) :-
 	nb_getval(Counter, C),
@@ -176,17 +187,17 @@ read_string_from_file(Path,String) :-
 	read_string(IO,"","",_,String),
 	close(IO).
 
-fail_test(RefDir,TestDir,Args,Target) :-
-	format(string(TestPath),"~s/~s",[TestDir,Target]),
-	\+ exists_file(TestPath),
-	plmake_path(Make),
-	format(string(Exec),"~s -B ~s ~s",[Make,Args,Target]),
-	working_directory(CWD,TestDir),
-	format("Running '~s' in ~s~n",[Exec,TestDir]),
-	shell(Exec,Err),
-	!,
-	working_directory(_,CWD),
-	(\+ exists_file(TestPath),
-	 Err = 0)
-	-> (format("Expected an error!~n"), fail);
-	true.
+run_failure_test(Args,Target) :-
+	default_ref_dir(RefDir),
+	default_test_dir(TestDir),
+	report_failure_test(RefDir,TestDir,Args,Target,"[~s ~s] (expecting failure)",[Args,Target]).
+	
+run_failure_test(RefDir,TestDir,Args,Target) :-
+    report_failure_test(RefDir,TestDir,Args,Target,"[~s,~s,~s ~s] (expecting failure)",[RefDir,TestDir,Args,Target]).
+
+report_failure_test(RefDir,TestDir,Args,Target,Fmt,Vars) :-
+	working_directory(CWD,CWD),
+	start_test(Fmt,Vars,Desc),
+	(exec_test(RefDir,TestDir,Args,Target)
+         -> fail_test(Desc); pass_test(Desc)),
+	working_directory(_,CWD).

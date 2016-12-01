@@ -1,3 +1,2 @@
 
-error:
-	$( non sense )
+This Makefile should cause an error.
