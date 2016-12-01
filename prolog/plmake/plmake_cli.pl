@@ -107,8 +107,8 @@ parse_arg(['-l',F|L],L,
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
-parse_arg(['-q'|L],L,quiet(true)) :- assert(no_backtrace), !.
-arg_info('-q','','Be quiet').
+parse_arg(['--no-backtrace'|L],L,quiet(true)) :- assert(no_backtrace), !.
+arg_info('-no-backtrace','','Do not print a backtrace on error').
 
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
