@@ -35,7 +35,7 @@ build_toplevel(Opts) :-
 
 add_assignments(Opts) :-
         forall(member(assignment(Var,Val),Opts),
-	       add_assignment((Var = Val))).
+	       add_cmdline_assignment((Var = Val))).
 
 consult_makefile(Opts) :-
 	DefaultMakeprog = 'makespec.pro',

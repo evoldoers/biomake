@@ -13,7 +13,7 @@
 
 	   add_spec_clause/1,
 	   add_spec_clause/2,
-	   add_assignment/1,
+	   add_cmdline_assignment/1,
 	   
            target_bindrule/2,
            rule_dependencies/3,
@@ -312,16 +312,7 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 consult_gnu_makefile(F) :-
         ensure_loaded(library(plmake/gnumake_parser)),
         parse_gnu_makefile(F,M),
-        forall(member(L,M),
-	       (((L = rule(Ts,Ds,Es)) -> add_spec_clause((Ts <-- Ds,Es),[]);
-	 	 ((L = assignment(Var,Op,Val)) ->
-	 	      (Op = "=" -> add_spec_clause((Var = Val));
-		       (Op = "?=" -> add_spec_clause((Var ?= Val));
-		        (Op = ":=" -> add_spec_clause((Var := Val));
-			 (Op = "+=" -> add_spec_clause((Var += Val));
-			  (Op = "!=" -> add_spec_clause((Var =* Val));
-			     true)))));
-		  true)); format("Error translating ~w~n",[L]))).
+        forall(member(C,M), add_gnumake_clause(C)).
 
 consult_makeprog(F) :-
         debug(makeprog,'reading: ~w',[F]),
@@ -339,10 +330,38 @@ consult_makeprog(F) :-
         close(IO).
 
 
-add_assignment((Var = X)) :-
+add_cmdline_assignment((Var = X)) :-
         global_unbind(Var),
         assert(global_cmdline_binding(Var,X)),
         debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
+
+add_gnumake_rule(rule(Ts,Ds,Es)) :-
+    add_spec_clause((Ts <-- Ds,Es),[]).
+
+add_gnumake_assignment(assignment(Var,"=",Val)) :-
+    add_spec_clause((Var = Val)).
+
+add_gnumake_assignment(assignment(Var,"?=",Val)) :-
+    add_spec_clause((Var ?= Val)).
+
+add_gnumake_assignment(assignment(Var,":=",Val)) :-
+    add_spec_clause((Var := Val)).
+
+add_gnumake_assignment(assignment(Var,"+=",Val)) :-
+    add_spec_clause((Var += Val)).
+
+add_gnumake_assignment(assignment(Var,"!=",Val)) :-
+    add_spec_clause((Var =* Val)).
+
+add_gnumake_clause(rule(Ts,Ds,Es)) :-
+    add_gnumake_rule(rule(Ts,Ds,Es)).
+
+add_gnumake_clause(assignment(Var,Op,Val)) :-
+    add_gnumake_assignment(assignment(Var,Op,Val)).
+
+add_gnumake_clause(C) :-
+    format("Error translating ~w~n",[C]).
+
 
 is_assignment_op(=).
 is_assignment_op(?=).
