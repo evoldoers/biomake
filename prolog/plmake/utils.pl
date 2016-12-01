@@ -28,6 +28,7 @@
 	   shell_eval/2,
 	   shell_eval_str/2,
 	   file_directory_slash/2,
+	   quote_string/2,
 	   newlines_to_spaces/2
 	  ]).
 
@@ -119,3 +120,14 @@ newlines_to_spaces([C|N],[C|S]) :- newlines_to_spaces(N,S).
 file_directory_slash(Path,Result) :-
 	file_directory_name(Path,D),
 	string_concat(D,"/",Result).  % GNU make adds the trailing '/'
+
+quote_string(S,QS) :-
+    string_chars(S,Cs),
+    phrase(escape_quotes(ECs),Cs),
+    append(['"'|ECs],['"'],QCs),
+    string_chars(QS,QCs).
+
+escape_quotes([]) --> [].
+escape_quotes(['\\','\\'|Cs]) --> ['\\'], !, escape_quotes(Cs).
+escape_quotes(['\\','"'|Cs]) --> ['"'], !, escape_quotes(Cs).
+escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).

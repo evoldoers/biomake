@@ -8,8 +8,8 @@
            build/1,
            build/2,
 	   
-           consult_makeprog/1,
-           consult_gnu_makefile/1,
+           consult_makeprog/2,
+           consult_gnu_makefile/2,
 
 	   add_spec_clause/1,
 	   add_spec_clause/2,
@@ -26,6 +26,7 @@
 
 :- use_module(library(plmake/utils)).
 :- use_module(library(plmake/functions)).
+:- use_module(library(plmake/gnumake_parser)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -332,12 +333,20 @@ expand_execs(Execs,Result,V) :-
 :- user:op(1103,xfy,+=).
 :- user:op(1104,xfy,=*).
 
-consult_gnu_makefile(F) :-
+is_assignment_op(=).
+is_assignment_op(?=).
+is_assignment_op(:=).
+is_assignment_op(+=).
+is_assignment_op(=*).
+
+consult_gnu_makefile(F,Opts) :-
         ensure_loaded(library(plmake/gnumake_parser)),
         parse_gnu_makefile(F,M),
+	(member(translate_gnu_makefile(P),Opts)
+	 -> translate_gnu_makefile(M,P); true),
         forall(member(C,M), add_gnumake_clause(C)).
 
-consult_makeprog(F) :-
+consult_makeprog(F,_Opts) :-
         debug(makeprog,'reading: ~w',[F]),
         open(F,read,IO,[]),
         repeat,
@@ -352,49 +361,53 @@ consult_makeprog(F) :-
         debug(makeprog,'read: ~w',[F]),
         close(IO).
 
+translate_gnu_makefile(M,P) :-
+    debug(makeprog,"Writing translated makefile to ~w",[P]),
+    open(P,write,IO,[]),
+    forall(member(G,M), write_clause(IO,G)),
+    close(IO).
+
+add_gnumake_clause(G) :-
+    translate_gnumake_clause(G,P),
+    add_spec_clause(P).
+    
+translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)).
+translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)).
+translate_gnumake_clause(assignment(Var,"?=",Val), (Var ?= Val)).
+translate_gnumake_clause(assignment(Var,":=",Val), (Var := Val)).
+translate_gnumake_clause(assignment(Var,"+=",Val), (Var += Val)).
+translate_gnumake_clause(assignment(Var,"!=",Val), (Var =* Val)).
+translate_gnumake_clause(C,_) :-
+    format("Error translating ~w~n",[C]),
+    fail.
+
+write_clause(IO,rule(Ts,Ds,Es)) :-
+    !,
+    format(IO,"~q <-- ~q, ~q.~n",[Ts,Ds,Es]).
+
+write_clause(IO,assignment(Var,Op,Val)) :-
+    format(IO,"~w ~w ~q.~n",[Var,Op,Val]).
 
 add_cmdline_assignment((Var = X)) :-
         global_unbind(Var),
         assert(global_cmdline_binding(Var,X)),
         debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
 
-add_gnumake_clause(rule(Ts,Ds,Es)) :-
-    add_spec_clause((Ts <-- Ds,Es),[]).
-
-add_gnumake_clause(assignment(Var,"=",Val)) :-
-    add_spec_clause((Var = Val)).
-
-add_gnumake_clause(assignment(Var,"?=",Val)) :-
-    add_spec_clause((Var ?= Val)).
-
-add_gnumake_clause(assignment(Var,":=",Val)) :-
-    add_spec_clause((Var := Val)).
-
-add_gnumake_clause(assignment(Var,"+=",Val)) :-
-    add_spec_clause((Var += Val)).
-
-add_gnumake_clause(assignment(Var,"!=",Val)) :-
-    add_spec_clause((Var =* Val)).
-
-add_gnumake_clause(C) :-
-    format("Error translating ~w~n",[C]).
-
-
-is_assignment_op(=).
-is_assignment_op(?=).
-is_assignment_op(:=).
-is_assignment_op(+=).
-is_assignment_op(=*).
-
 add_spec_clause(Ass) :-
 	Ass =.. [Op,Var,_],
 	is_assignment_op(Op),
+	!,
 	add_spec_clause(Ass, [Var=Var]).
+
+add_spec_clause( (Head <-- Deps, Exec) ) :-
+        !,
+        add_spec_clause( (Head <-- Deps, Exec), [] ).
 
 add_spec_clause( (Var ?= X) ,_VNs) :-
         global_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w = ~w since ~w is already bound to ~w",[Var,X,Var,Oldval]).
+
 
 add_spec_clause( (Var ?= X) ,VNs) :-
         add_spec_clause((Var = X),VNs).
