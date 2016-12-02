@@ -216,7 +216,7 @@ exec_test(RefDir,TestDir,Setup,Args,Target) :-
 	% If no "Setup" shell commands were specified, remove the target file.
 	% If Setup commands were specified, let the caller take care of this.
 	(Setup = [] -> (exists_file(TargetPath) -> delete_file(TargetPath); true);
-	 (forall(member(Cmd,Setup), (format("~s~n",[Cmd]), shell(Cmd))))),
+	 (forall(member(Cmd,Setup), (format("~s~n",[Cmd]), shell(Cmd); true)))),
 	shell(Exec,Err),
 	!,
 	(Err = 0 -> true; format("Error code ~w~n",Err), fail),
