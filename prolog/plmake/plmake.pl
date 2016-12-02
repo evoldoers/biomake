@@ -275,7 +275,8 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
 	%   $(RULE) dep3
 	% which (in GNU make, but not here) expands to
 	%   target: dep1 dep2 dep3
-	% However, this would fragment the current homology between the Prolog syntax and GNU Make syntax.
+	% However, this would fragment the current homology between the Prolog syntax and GNU Make syntax,
+	% making it harder to translate GNU Makefiles into Prolog.
 	% Consequently, we currently sacrifice perfect GNU make compatibility for a simpler translation.
 	expand_deps(DP1,DP2,V),
 	expand_deps(DP2,Ds,V),

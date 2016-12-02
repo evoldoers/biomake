@@ -108,8 +108,6 @@ make_md5_valid_goal_list([Dep|Deps],[Goal|Goals]) :-
 make_md5_valid_goal_list([_|Deps],Goals) :- make_md5_valid_goal_list(Deps,Goals), !.
 make_md5_valid_goal_list([],[]).
 
-% this next bit is a little messy: I think there is a more elegant way of constructing the terms
-% and then writing them to the file, rather than doing a formatted write
 update_md5_file(T,DL) :-
     debug(md5,'updating MD5 hash file for ~w <-- ~w',[T,DL]),
     delete_md5_file(T),
