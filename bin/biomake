@@ -8,9 +8,14 @@ SWIPL=swipl
 if [ -z `which swipl` ]; then
     # default locations on OS X
     SWIPL=/Applications/SWI-Prolog.app/Contents/MacOS/swipl;
-    if [ -z $SWIPL ]; then
+    if [ ! -e $SWIPL ]; then
 	SWIPL=/opt/local/bin/swipl;
     fi
+    if [ ! -e $SWIPL ]; then
+	echo Biomake requires SWI-Prolog. Please download from http://www.swi-prolog.org/
+	exit 1
+    fi
 fi
+
 
 $SWIPL -L0 -G0 -T0 -q -p library=$BIOMAKE_PATH  -g main,halt -t halt -s $BIOMAKE_PATH/biomake/biomake_cli -- "$@"
