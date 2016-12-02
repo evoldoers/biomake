@@ -12,9 +12,9 @@
 
 :- use_module(library(readutil)).
 
-:- use_module(library(plmake/utils)).
-:- use_module(library(plmake/plmake)).
-:- use_module(library(plmake/gnumake_parser)).
+:- use_module(library(biomake/utils)).
+:- use_module(library(biomake/biomake)).
+:- use_module(library(biomake/gnumake_parser)).
 
 makefile_function(Result) --> makefile_function(Result,v(null,null,null,[])).
 

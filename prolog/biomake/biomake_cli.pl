@@ -1,7 +1,7 @@
 % * -*- Mode: Prolog -*- */
 
-:- use_module(library(plmake/plmake)).
-:- use_module(library(plmake/utils)).
+:- use_module(library(biomake/biomake)).
+:- use_module(library(biomake/utils)).
 
 :- dynamic no_backtrace/0.
 
@@ -38,15 +38,21 @@ add_assignments(Opts) :-
 	       add_cmdline_assignment((Var = Val))).
 
 consult_makefile(Opts) :-
-	DefaultMakeprog = 'makespec.pro',
-	DefaultGnuMakefile = 'Makefile',
+	DefaultMakeprogs = ['makespec.pro','Makespec.pro'],
+	DefaultGnuMakefiles = ['Makefile'],
 	(member(makeprog(BF),Opts)
 	 -> consult_makeprog(BF,Opts);
 	 (member(gnu_makefile(F),Opts)
 	  -> consult_gnu_makefile(F,Opts);
-	  (exists_file(DefaultMakeprog)
+	  (find_file(DefaultMakeprog,DefaultMakeprogs)
 	   -> consult_makeprog(DefaultMakeprog,Opts);
-	   consult_gnu_makefile(DefaultGnuMakefile,Opts)))).
+	   (find_file(DefaultGnuMakefile,DefaultGnuMakefiles)
+	    -> consult_gnu_makefile(DefaultGnuMakefile,Opts))))).
+
+find_file(File,List) :-
+    member(File,List),
+    exists_file(File),
+    !.
 
 % ----------------------------------------
 % OPTION PROCESSING
@@ -80,13 +86,13 @@ parse_arg(['--help'|L],L,null) :- show_help, !.
 arg_info('-h,--help','','Show help').
 
 show_help :-
-        writeln('plmake [OPTION...] target1 target2...'),
+        writeln('biomake [OPTION...] target1 target2...'),
         nl,
         writeln('Options:'),
 	forall(arg_info(X,Args,Info),
 	       format("~w ~w~n    ~w~n",[X,Args,Info])),
         nl,
-        writeln('For more info see http://github.com/cmungall/plmake'),
+        writeln('For more info see http://github.com/cmungall/biomake'),
         nl,
         halt.
 
@@ -95,7 +101,7 @@ parse_arg(['-B'|L],L,always_make(true)).
 arg_info('-B,--always-make','','Always build fresh target even if dependency is up to date').
 
 parse_arg(['-p',F|L],L,makeprog(F)) :- !.
-arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: makespec.pro]').
+arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]').
 
 parse_arg(['-f',F|L],L,gnu_makefile(F)).
 arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
@@ -108,12 +114,12 @@ parse_arg(['-l',F|L],L,
           goal( (collect_stored_targets(F,[]),
                  show_stored_targets
                 ) )) :-
-        ensure_loaded(library(plmake/plmake_db)),
+        ensure_loaded(library(biomake/biomake_db)),
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
-parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(plmake/md5)), !.
-parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(plmake/md5)), !.
+parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5)), !.
+parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5)), !.
 arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
 
 parse_arg(['--no-backtrace'|L],L,quiet(true)) :- assert(no_backtrace), !.

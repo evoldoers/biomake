@@ -1,0 +1,6 @@
+
+test1: test2
+	echo This is test1 >$@
+
+test2: test1
+	echo This is test2 >$@

@@ -17,6 +17,7 @@
 	   blank_line/2,
 	   alphanum_char/3,
 	   alphanum_code/3,
+	   n_chars/3,
 	   concat_string_list/2,
 	   concat_string_list/3,
 	   concat_string_list_spaced/2,
@@ -29,7 +30,9 @@
 	   shell_eval_str/2,
 	   file_directory_slash/2,
 	   quote_string/2,
-	   newlines_to_spaces/2
+	   newlines_to_spaces/2,
+	   to_strings/2,
+	   equal_as_strings/2
 	  ]).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
@@ -67,6 +70,9 @@ alphanum_char(X) --> [X],{X@>='0',X@=<'9'},!.
 alphanum_code(X) --> [X],{X@>=65,X@=<90},!.  % A through Z
 alphanum_code(X) --> [X],{X@>=97,X@=<122},!.  % a through z
 alphanum_code(X) --> [X],{X@>=48,X@=<57},!.  % 0 through 9
+
+n_chars(N,_,[]) :- N =< 0, !.
+n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.
 
 concat_string_list_spaced(L,S) :- concat_string_list(L,S," ").
 concat_string_list(L,S) :- concat_string_list(L,S,"").
@@ -131,3 +137,8 @@ escape_quotes([]) --> [].
 escape_quotes(['\\','\\'|Cs]) --> ['\\'], !, escape_quotes(Cs).
 escape_quotes(['\\','"'|Cs]) --> ['"'], !, escape_quotes(Cs).
 escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
+
+to_string(A,S) :- atomics_to_string([A],S).
+equal_as_strings(X,Y) :-
+	to_string(X,S),
+	to_string(Y,S).

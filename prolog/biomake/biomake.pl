@@ -1,6 +1,6 @@
 % * -*- Mode: Prolog -*- */
 
-:- module(plmake,
+:- module(biomake,
           [
            build_default/0,
            build_default/1,
@@ -24,9 +24,9 @@
 	   expand_vars/3
            ]).
 
-:- use_module(library(plmake/utils)).
-:- use_module(library(plmake/functions)).
-:- use_module(library(plmake/gnumake_parser)).
+:- use_module(library(biomake/utils)).
+:- use_module(library(biomake/functions)).
+:- use_module(library(biomake/gnumake_parser)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -63,6 +63,14 @@ build(T) :-
         build(T,[]).
 build(T,Opts) :-
         build(T,[],Opts).
+
+build(T,SL,Opts) :-
+	member(Dep,SL),
+	equal_as_strings(Dep,T),
+	!,
+	concat_string_list(SL,Chain," <-- "),
+	report("Cyclic dependency detected: ~w <-- ~w",[T,Chain],SL,Opts),
+        report('~w FAILED',[T],SL,Opts).
 
 build(T,SL,Opts) :-
         %show_global_bindings,
@@ -351,7 +359,7 @@ is_assignment_op(+=).
 is_assignment_op(=*).
 
 consult_gnu_makefile(F,Opts) :-
-        ensure_loaded(library(plmake/gnumake_parser)),
+        ensure_loaded(library(biomake/gnumake_parser)),
         parse_gnu_makefile(F,M),
 	(member(translate_gnu_makefile(P),Opts)
 	 -> translate_gnu_makefile(M,P); true),
@@ -365,7 +373,7 @@ consult_makeprog(F,_Opts) :-
         ->  !
         ;   read_term(IO,Term,[variable_names(VNs),
                                syntax_errors(error),
-                               module(plmake)]),
+                               module(biomake)]),
             debug(makeprog,'adding: ~w',[Term]),
             add_spec_clause(Term,VNs),
             fail),
@@ -491,21 +499,25 @@ add_spec_clause(Rule,VNs) :-
         Rule =.. [mkrule,T|_],
         !,
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
+	debug(makeprog,"Setting default target to ~w",[T]),
 	set_default_target(T),
         assert(with(Rule,VNs)).
 
 add_spec_clause(Term,_) :-
+        debug(makeprog,"assert ~w~n",Term),
         assert(Term).
 
 set_default_target(_) :-
 	default_target(_),
+	debug(makeprog,"Default target already set",[]),
 	!.
 set_default_target([T|_]) :-
+	debug(makeprog,"Setting",[]),
 	!,
 	expand_vars(T,Tx),
 	debug(makeprog,"Setting default target to ~s",[Tx]),
 	assert(default_target(Tx)).
-set_default_target(_).
+set_default_target(T) :- set_default_target([T]).
 
 global_unbind(Var) :-
 	retractall(global_cmdline_binding(Var,_)),
@@ -566,7 +578,7 @@ unwrap_t(X,"") :- var(X), !.
 unwrap_t(Call,Flat) :- nonvar(Call), Call =.. [call,_|_], !, unwrap_t_call(Call,F), unwrap_t(F,Flat).
 unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
 unwrap_t([],"") :- !.
-unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), string_concat(F,Fs,Flat), !.
+unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), atom_concat(F,Fs,Flat), !.
 unwrap_t(N,A) :- number(A), atom_number(A,N), !.
 unwrap_t(A,F) :- atom(A), atom_string(A,F), !.
 unwrap_t(S,S) :- string(S), !.
