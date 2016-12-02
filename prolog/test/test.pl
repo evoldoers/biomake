@@ -97,8 +97,13 @@ test :-
 	run_test("or3"),
 	run_test("and1"),
 	run_test("and2"),
+	% this is a test of the MD5 checksums
 	run_test("ref/md5","target/md5",[],"-B -H","hello_world"),
 	% the next test fakes out the MD5 checksums... kind of hacky
+	% the general idea is to test whether biomake can be tricked into NOT making a target
+	% because the MD5 checksums look correct.
+	% this is really a way of checking that biomake is paying attention to the checksums,
+	% while only looking at the files it generates.
 	run_test("ref/md5.wrong","target/md5.wrong",["echo wrong >hello","echo wrong >world","echo wrong >hello_world"],"-H","hello_world"),
 	report_counts,
 	halt.
