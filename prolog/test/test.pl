@@ -3,6 +3,8 @@
 default_ref_dir("ref").
 default_test_dir("target").
 
+:- dynamic failed_test/2.
+
 base_path(Dir) :-
 	prolog_load_context(directory,SrcDir),
 	string_concat(SrcDir,"../../",Dir).
@@ -28,7 +30,7 @@ test :-
 	run_failure_test("--no-backtrace","missing_target"),
 	run_failure_test("--no-backtrace `echo Up to date >uptodate`","uptodate"),
 	run_test("bad_function_syntax"),
-
+	
 	announce("PROLOG"),
 	run_test("-p Prolog.makespec","simple_prolog"),
 
@@ -100,10 +102,7 @@ test :-
 	run_test("abspath"),
 	run_test("realpath"),
 
-	announce("OTHER FUNCTIONS"),
-	run_test("call"),
-	run_test("shell"),
-	run_test("foreach"),
+	announce("CONDITIONAL FUNCTIONS"),
 	run_test("if1"),
 	run_test("if2"),
 	run_test("if3"),
@@ -114,7 +113,12 @@ test :-
 	run_test("and1"),
 	run_test("and2"),
 
-	announce("MD5 tests"),
+	announce("OTHER FUNCTIONS"),
+	run_test("call"),
+	run_test("shell"),
+	run_test("foreach"),
+
+	announce("MD5 CHECKSUMS"),
 
 	% this is a test of the MD5 checksums
 	run_test("ref/md5","target/md5",[],"-B -H --debug md5","hello_world"),
@@ -150,7 +154,9 @@ report_counts :-
 	nb_getval(tests,T),
 	nb_getval(passed,P),
 	(P = T -> format("ok: passed ~d/~d tests~n",[P,T]);
-	    format("not ok: passed ~d/~d tests~n",[P,T])).
+	 (forall(failed_test(N,D),
+		 format("Failed test #~d: ~w~n",[N,D])),
+	  format("not ok: passed ~d/~d tests~n",[P,T]))).
 
 run_test(Target) :-
 	default_ref_dir(RefDir),
@@ -185,6 +191,7 @@ pass_test(Desc) :-
 
 fail_test(Desc) :-
         nb_getval(tests,T),
+	assert(failed_test(T,Desc)),
 	format("not ok: failed test #~d: ~s~n~n",[T,Desc]).
 
 inc(Counter) :-
