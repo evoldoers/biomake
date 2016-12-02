@@ -38,7 +38,7 @@ get_md5(T) :-
     debug(md5,'Reading MD5 hash file: ~w',[F]),
     retract_md5_hash(T),
     % weirdly, if we try to retract_md5_valid(T) here, it bails out. Why?
-    % uncomment to see what I mean.
+    % uncomment to see what I mean - and then run on e.g. hello.world.baz test in t/target/Makefile
     % instead, we retract_md5_valid at the end of update_md5_file. A bit awkward...
 %    format("retracting md5_valid(~w)~n",[T]),
 %    retract_md5_valid(T),
