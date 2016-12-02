@@ -206,6 +206,8 @@ exec_test(RefDir,TestDir,Setup,Args,Target) :-
 	format(string(Exec),"~s ~s ~s",[Make,Args,Target]),
 	format("Running '~s' in ~s~n",[Exec,TestPath]),
 	working_directory(CWD,TestPath),
+	% If no "Setup" shell commands were specified, remove the target file.
+	% If Setup commands were specified, let the caller take care of this.
 	(Setup = [] -> (exists_file(TargetPath) -> delete_file(TargetPath); true);
 	 (forall(member(Cmd,Setup), (format("~s~n",[Cmd]), shell(Cmd))))),
 	shell(Exec,Err),
@@ -213,8 +215,11 @@ exec_test(RefDir,TestDir,Setup,Args,Target) :-
 	(Err = 0 -> true; format("Error code ~w~n",Err), fail),
 	working_directory(_,CWD),
 	compare_output(TestDir,RefDir,Target),
+	% If no "Setup" shell commands were specified, remove the target file again at the end.
 	(Setup = [] -> delete_file(TargetPath); true).
 
+% If we are using the default test & reference directories,
+% then just compare the target files.
 compare_output(TestDir,RefDir,Target) :-
     default_test_dir(TestDir),
     default_ref_dir(RefDir),
@@ -223,6 +228,8 @@ compare_output(TestDir,RefDir,Target) :-
     make_test_path(RefDir,RefPath),
     compare_files(TestPath,RefPath,Target).
 
+% If we are not in the default test & reference directories,
+% then compare the entire directories, allowing for more sensitive tests.
 compare_output(TestDir,RefDir,_) :-
     make_test_path(TestDir,TestPath),
     make_test_path(RefDir,RefPath),
@@ -242,6 +249,7 @@ compare_files(TestPath,RefPath,File) :-
     format(string(RefFilePath),"~s/~s",[RefPath,File]),
     compare_files(TestFilePath,RefFilePath).
 
+% Directory version of compare_files recursively compares directories
 compare_files(TestPath,RefPath) :-
     exists_directory(TestPath),
     exists_directory(RefPath),
@@ -256,6 +264,7 @@ compare_files(TestPath,RefPath) :-
     forall(member(File,TestFiles),
 	   compare_files(TestPath,RefPath,File)).
 
+% File version of compare_files tests for equality
 compare_files(TestPath,RefPath) :-
     format("Comparing file ~s to ~s ... ",[TestPath,RefPath]),
     read_string_from_file(TestPath,TestText),
@@ -263,6 +272,7 @@ compare_files(TestPath,RefPath) :-
     RefText = TestText,
     format("match~n",[TestPath,RefPath]).
 
+% If file version of compare_files failed, but files were present, then print a diff
 compare_files(TestPath,RefPath) :-
 	exists_file(TestPath),
 	exists_file(RefPath),
@@ -272,6 +282,7 @@ compare_files(TestPath,RefPath) :-
 	shell(Diff,_),
 	fail.
 
+% If file version of compare_files failed because a file is absent, then say so
 compare_files(TestPath,_) :-
 	file_missing(TestPath),
 	fail.
