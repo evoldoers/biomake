@@ -491,21 +491,25 @@ add_spec_clause(Rule,VNs) :-
         Rule =.. [mkrule,T|_],
         !,
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
+	debug(makeprog,"Setting default target to ~w",[T]),
 	set_default_target(T),
         assert(with(Rule,VNs)).
 
 add_spec_clause(Term,_) :-
+        debug(makeprog,"assert ~w~n",Term),
         assert(Term).
 
 set_default_target(_) :-
 	default_target(_),
+	debug(makeprog,"Default target already set",[]),
 	!.
 set_default_target([T|_]) :-
+	debug(makeprog,"Setting",[]),
 	!,
 	expand_vars(T,Tx),
 	debug(makeprog,"Setting default target to ~s",[Tx]),
 	assert(default_target(Tx)).
-set_default_target(_).
+set_default_target(T) :- set_default_target([T]).
 
 global_unbind(Var) :-
 	retractall(global_cmdline_binding(Var,_)),

@@ -30,10 +30,11 @@ test :-
 	run_failure_test("--no-backtrace","missing_target"),
 	run_failure_test("ref","target",["echo Up to date >uptodate"],"--no-backtrace","uptodate"),
 	
-	announce("PROLOG"),
+	announce("PROLOG SYNTAX"),
 	run_test("-p Prolog.makespec","simple_prolog"),
-
-	announce("BASIC MAKEFILE SYNTAX"),
+	run_test("ref/prolog","target/prolog",["rm [hmz]*"],"",""),
+	
+	announce("BASIC GNU MAKEFILE SYNTAX"),
 	run_test("simple"),
 	run_test("target1"),
 	run_test("target2"),
@@ -222,7 +223,7 @@ exec_test(RefDir,TestDir,Setup,Args,Target) :-
 	working_directory(_,CWD),
 	compare_output(TestDir,RefDir,Target),
 	% If no "Setup" shell commands were specified, remove the target file again at the end.
-	(Setup = [] -> delete_file(TargetPath); true).
+	(Setup = [] -> (exists_file(TargetPath) -> delete_file(TargetPath); true); true).
 
 % If we are using the default test & reference directories,
 % then just compare the target files.

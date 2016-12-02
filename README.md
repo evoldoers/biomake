@@ -53,7 +53,7 @@ Options
 -f GNUMAKEFILE
     Use a GNU Makefile as the build specification [incomplete]
 -p MAKEPROG
-    Use MAKEPROG as the (Prolog) build specification [default: makespec.pro]
+    Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]
 -l DIRECTORY
     Iterates through directory writing metadata on each file found
 -H,--md5-hash 
@@ -69,7 +69,7 @@ Examples
 
 (this assumes some knowledge of make and makefiles)
 
-biomake looks for a Prolog file called `makespec.pro` in your
+biomake looks for a Prolog file called `Makespec.pro` in your
 current directory. If it's not there, it will try looking for a
 `Makefile` in GNU Make format. The following examples describe the
 Prolog syntax; GNU Make syntax is described elsewhere, e.g. [here](https://www.gnu.org/software/make/manual/html_node/index.html).
@@ -77,7 +77,7 @@ Prolog syntax; GNU Make syntax is described elsewhere, e.g. [here](https://www.g
 Assume you have two file formats, ".foo" and ".bar", and a foo2bar
 converter.
 
-Add the following rule to your makespec.pro:
+Add the following rule to your Makespec.pro:
 
     '%.bar' <-- '%.foo',
         'foo2bar $< > $@'.

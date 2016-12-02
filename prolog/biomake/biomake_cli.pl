@@ -38,15 +38,21 @@ add_assignments(Opts) :-
 	       add_cmdline_assignment((Var = Val))).
 
 consult_makefile(Opts) :-
-	DefaultMakeprog = 'makespec.pro',
-	DefaultGnuMakefile = 'Makefile',
+	DefaultMakeprogs = ['makespec.pro','Makespec.pro'],
+	DefaultGnuMakefiles = ['Makefile'],
 	(member(makeprog(BF),Opts)
 	 -> consult_makeprog(BF,Opts);
 	 (member(gnu_makefile(F),Opts)
 	  -> consult_gnu_makefile(F,Opts);
-	  (exists_file(DefaultMakeprog)
+	  (find_file(DefaultMakeprog,DefaultMakeprogs)
 	   -> consult_makeprog(DefaultMakeprog,Opts);
-	   consult_gnu_makefile(DefaultGnuMakefile,Opts)))).
+	   (find_file(DefaultGnuMakefile,DefaultGnuMakefiles)
+	    -> consult_gnu_makefile(DefaultGnuMakefile,Opts))))).
+
+find_file(File,List) :-
+    member(File,List),
+    exists_file(File),
+    !.
 
 % ----------------------------------------
 % OPTION PROCESSING
@@ -95,7 +101,7 @@ parse_arg(['-B'|L],L,always_make(true)).
 arg_info('-B,--always-make','','Always build fresh target even if dependency is up to date').
 
 parse_arg(['-p',F|L],L,makeprog(F)) :- !.
-arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: makespec.pro]').
+arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]').
 
 parse_arg(['-f',F|L],L,gnu_makefile(F)).
 arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
