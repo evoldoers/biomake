@@ -8,16 +8,17 @@
            build/1,
            build/2,
 	   
-           consult_makeprog/1,
-           consult_gnu_makefile/1,
+           consult_makeprog/2,
+           consult_gnu_makefile/2,
 
 	   add_spec_clause/1,
 	   add_spec_clause/2,
-	   add_assignment/1,
+	   add_cmdline_assignment/1,
+	   add_gnumake_clause/1,
 	   
            target_bindrule/2,
            rule_dependencies/3,
-           is_rebuild_required/4,
+           rebuild_required/4,
 
 	   global_binding/2,
 	   expand_vars/3
@@ -25,6 +26,7 @@
 
 :- use_module(library(plmake/utils)).
 :- use_module(library(plmake/functions)).
+:- use_module(library(plmake/gnumake_parser)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -72,18 +74,16 @@ build(T,SL,Opts) :-
         report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
         !,
         build_targets(DL,[T|SL],Opts), % semidet
-        (   is_rebuild_required(T,DL,SL,Opts)
-        ->  rule_execs(Rule,Execs,Opts),
-            run_execs(Execs,Opts),
-	    flag_as_rebuilt(T)
+        (   rebuild_required(T,DL,SL,Opts)
+        ->  run_execs_and_update(Rule,Opts)
         ;   true),
         (member(dry_run(true),Opts) -> true;
          report('~w is up to date',[T],SL,Opts)).
 build(T,SL,Opts) :-
         debug_report(build,'  checking if rebuild required for ~w',[T],SL),
-        \+ is_rebuild_required(T,[],SL,Opts),
+        \+ rebuild_required(T,[],SL,Opts),
         !,
-        report('~w exists',[T],SL,Opts).
+        report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
         \+ target_bindrule(T,_),
         report('Don\'t know how to make ~w',[T],SL,Opts),
@@ -130,48 +130,63 @@ debug_report(Topic,Fmt,Args,SL) :-
 % DEPENDENCY MANAGEMENT
 % ----------------------------------------
 
-is_rebuild_required(T,_,SL,Opts) :-
+rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
         report('Target ~w not materialized - will rebuild if required',[T],SL,Opts).
-is_rebuild_required(T,DL,SL,Opts) :-
-        member(D,DL),
-        build_count(D,Nd),
-        (build_count(T,Nt) -> Nd > Nt; true),
-	!,
-        report('Target ~w has recently rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
-is_rebuild_required(T,DL,SL,Opts) :-
-        \+ exists_directory(T),
-        member(D,DL),
-        is_built_after(D,T,Opts),
-        !,
-        report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
-is_rebuild_required(T,DL,SL,Opts) :-
+rebuild_required(T,DL,SL,Opts) :-
         member(D,DL),
         \+ exists_target(D,Opts),
         !,
         report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
-is_rebuild_required(T,_,SL,Opts) :-
+rebuild_required(T,DL,SL,Opts) :-
+        \+ member(md5(true),Opts),
+	rebuild_required_by_time_stamp(T,DL,SL,Opts),
+	!.
+rebuild_required(T,DL,SL,Opts) :-
+        member(md5(true),Opts),
+	\+ md5_hash_up_to_date(T,DL,Opts),
+	!,
+        report('Target ~w does not have an up-to-date MD5 hash - rebuilding',[T],SL,Opts).
+rebuild_required(T,_,SL,Opts) :-
         member(always_make(true),Opts),
         target_bindrule(T,_),
         !,
         report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
 
-is_built_after(A,B,_Opts) :-
+rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
+        member(D,DL),
+	was_built_after(D,T,Opts),
+	!,
+        report('Target ~w has recently rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
+        \+ exists_directory(T),
+        member(D,DL),
+        has_newer_timestamp(D,T,Opts),
+        !,
+        report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
+
+has_newer_timestamp(A,B,_Opts) :-
         time_file(A,TA),
         time_file(B,TB),
         TA > TB.
+
+was_built_after(D,T,_Opts) :-
+        build_count(D,Nd),
+        (build_count(T,Nt) -> Nd > Nt; true).
 
 exists_target(T,_Opts) :-
         exists_file(T).
 exists_target(T,_Opts) :-
         exists_directory(T).
 
+rule_target(rb(T,_,_),T,_Opts).
 rule_dependencies(rb(_,DL,_),DL,_Opts).
 rule_execs(rb(_,_,X),X,_Opts) :- !.
 rule_execs(rb(_,_,X),_,_Opts) :- throw(error(no_exec(X))).
 
 
+% internal tracking of build order
 :- dynamic build_count/2.
 :- dynamic build_counter/1.
 
@@ -190,9 +205,18 @@ next_build_counter(N) :-
 next_build_counter(1) :-
     assert(build_counter(1)).
 
+
 % ----------------------------------------
 % TASK EXECUTION
 % ----------------------------------------
+
+run_execs_and_update(Rule,Opts) :-
+    rule_target(Rule,T,Opts),
+    rule_dependencies(Rule,DL,Opts),
+    rule_execs(Rule,Execs,Opts),
+    run_execs(Execs,Opts),
+    (member(md5(true),Opts) -> update_md5_file(T,DL); true),
+    flag_as_rebuilt(T).
 
 run_execs([],_).
 run_execs([E|Es],Opts) :-
@@ -239,24 +263,26 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         % we allow multiple heads;
         % only one of the specified targets has to match
         member(TP,TPs),
-        debug(bindrule,'  pre TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
         uniq_pattern_match(TP,T),
-
-        normalize_patterns(DP1,DPs,V),
-        normalize_patterns(Exec1,ExecPs,V),
-        debug(bindrule,'  pst1 TP/DPs: ~w / ~w ==> ~w :: ~w',[TP,DPs,ExecPs,Goal]),
-
         Goal,
-        debug(bindrule,'  pst TP/DPs: ~w / ~w ==> ~w',[TP,DPs,ExecPs]),
 
-        maplist(pattern_target,DPs,ExpandedDeps),
-        maplist(split_spaces,ExpandedDeps,DepLists),
-	flatten(DepLists,Ds),
+	% Two-pass expansion of dependency list.
+	% This is ultra-hacky but allows for variable-expanded dependency lists that contain % wildcards
+	% (the variables are expanded on the first pass, and the %'s on the second pass).
+	% A more rigorous solution would be a two-pass expansion of the entire GNU Makefile,
+	% which would allow currently impossible things like variable-expanded rules, e.g.
+	%   RULE = target: dep1 dep2
+	%   $(RULE) dep3
+	% which (in GNU make, but not here) expands to
+	%   target: dep1 dep2 dep3
+	% However, this would fragment the current homology between the Prolog syntax and GNU Make syntax,
+	% making it harder to translate GNU Makefiles into Prolog.
+	% Consequently, we currently sacrifice perfect GNU make compatibility for a simpler translation.
+	expand_deps(DP1,DP2,V),
+	expand_deps(DP2,Ds,V),
 
-        maplist(pattern_exec,ExecPs,ExpandedExecs),
-        maplist(split_newlines,ExpandedExecs,ExecLists),
-	flatten(ExecLists,Execs).
-
+	% expansion of executables
+	expand_execs(Exec1,Execs,V).
 
 % semidet
 uniq_pattern_match(TL,A) :-
@@ -267,9 +293,6 @@ uniq_pattern_match(TL,A) :-
 uniq_pattern_match(TL,A) :-
         debug(bindrule,' NO_MATCH: ~w to ~w',[TL,A]),
         fail.
-
-pattern_target(TL,A) :- unwrap_t(TL,A).
-pattern_exec(TL,A) :- unwrap_t(TL,A).
 
 pattern_match(A,B) :- var(A),!,B=A.
 pattern_match(t(TL),A) :- !, pattern_match(TL,A).
@@ -292,6 +315,18 @@ pattern_match_list([P|Ps],[M|Ms]) :-
         pattern_match(P,M),
         pattern_match_list(Ps,Ms).
 
+expand_deps(Deps,Result,V) :-
+    normalize_patterns(Deps,NormDeps,V),
+    maplist(unwrap_t,NormDeps,ExpandedDeps),
+    maplist(split_spaces,ExpandedDeps,DepLists),
+    flatten(DepLists,Result).
+
+expand_execs(Execs,Result,V) :-
+    normalize_patterns(Execs,NormExecs,V),
+    maplist(unwrap_t,NormExecs,ExpandedExecs),
+    maplist(split_newlines,ExpandedExecs,ExecLists),
+    flatten(ExecLists,Result).
+
 % ----------------------------------------
 % READING
 % ----------------------------------------
@@ -309,21 +344,20 @@ pattern_match_list([P|Ps],[M|Ms]) :-
 :- user:op(1103,xfy,+=).
 :- user:op(1104,xfy,=*).
 
-consult_gnu_makefile(F) :-
+is_assignment_op(=).
+is_assignment_op(?=).
+is_assignment_op(:=).
+is_assignment_op(+=).
+is_assignment_op(=*).
+
+consult_gnu_makefile(F,Opts) :-
         ensure_loaded(library(plmake/gnumake_parser)),
         parse_gnu_makefile(F,M),
-        forall(member(L,M),
-	       (((L = rule(Ts,Ds,Es)) -> add_spec_clause((Ts <-- Ds,Es),[]);
-	 	 ((L = assignment(Var,Op,Val)) ->
-	 	      (Op = "=" -> add_spec_clause((Var = Val));
-		       (Op = "?=" -> add_spec_clause((Var ?= Val));
-		        (Op = ":=" -> add_spec_clause((Var := Val));
-			 (Op = "+=" -> add_spec_clause((Var += Val));
-			  (Op = "!=" -> add_spec_clause((Var =* Val));
-			     true)))));
-		  true)); format("Error translating ~w~n",[L]))).
+	(member(translate_gnu_makefile(P),Opts)
+	 -> translate_gnu_makefile(M,P); true),
+        forall(member(C,M), add_gnumake_clause(C)).
 
-consult_makeprog(F) :-
+consult_makeprog(F,_Opts) :-
         debug(makeprog,'reading: ~w',[F]),
         open(F,read,IO,[]),
         repeat,
@@ -338,27 +372,53 @@ consult_makeprog(F) :-
         debug(makeprog,'read: ~w',[F]),
         close(IO).
 
+translate_gnu_makefile(M,P) :-
+    debug(makeprog,"Writing translated makefile to ~w",[P]),
+    open(P,write,IO,[]),
+    forall(member(G,M), write_clause(IO,G)),
+    close(IO).
 
-add_assignment((Var = X)) :-
+add_gnumake_clause(G) :-
+    translate_gnumake_clause(G,P),
+    add_spec_clause(P).
+    
+translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)).
+translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)).
+translate_gnumake_clause(assignment(Var,"?=",Val), (Var ?= Val)).
+translate_gnumake_clause(assignment(Var,":=",Val), (Var := Val)).
+translate_gnumake_clause(assignment(Var,"+=",Val), (Var += Val)).
+translate_gnumake_clause(assignment(Var,"!=",Val), (Var =* Val)).
+translate_gnumake_clause(C,_) :-
+    format("Error translating ~w~n",[C]),
+    fail.
+
+write_clause(IO,rule(Ts,Ds,Es)) :-
+    !,
+    format(IO,"~q <-- ~q, ~q.~n",[Ts,Ds,Es]).
+
+write_clause(IO,assignment(Var,Op,Val)) :-
+    format(IO,"~w ~w ~q.~n",[Var,Op,Val]).
+
+add_cmdline_assignment((Var = X)) :-
         global_unbind(Var),
         assert(global_cmdline_binding(Var,X)),
         debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
 
-is_assignment_op(=).
-is_assignment_op(?=).
-is_assignment_op(:=).
-is_assignment_op(+=).
-is_assignment_op(=*).
-
 add_spec_clause(Ass) :-
 	Ass =.. [Op,Var,_],
 	is_assignment_op(Op),
+	!,
 	add_spec_clause(Ass, [Var=Var]).
+
+add_spec_clause( (Head <-- Deps, Exec) ) :-
+        !,
+        add_spec_clause( (Head <-- Deps, Exec), [] ).
 
 add_spec_clause( (Var ?= X) ,_VNs) :-
         global_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w = ~w since ~w is already bound to ~w",[Var,X,Var,Oldval]).
+
 
 add_spec_clause( (Var ?= X) ,VNs) :-
         add_spec_clause((Var = X),VNs).
@@ -568,21 +628,10 @@ varlabel('^D') --> ['(','?','D',')'],!.
 varlabel(A) --> makefile_var_char(C), {atom_chars(A,[C])}.
 varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
 
-bindvar('%',v(X,_,_,_),X) :- !.
-bindvar('*',v(X,_,_,_),X) :- !.
-bindvar('@',v(_,X,_,_),X) :- !.
-bindvar('<',v(_,_,[X|_],_),X) :- !.
-bindvar('^',v(_,_,X,_),call(concat_string_list_spaced,X)) :- !.
-bindvar('*F',v(X,_,_,_),call(file_base_name,X)) :- !.
-bindvar('*D',v(X,_,_,_),call(file_directory_name,X)) :- !.
-bindvar('@F',v(_,X,_,_),call(file_base_name,X)) :- !.
-bindvar('@D',v(_,X,_,_),call(file_directory_name,X)) :- !.
-bindvar('<F',v(_,_,[X|_],_),call(file_base_name,X)) :- !.
-bindvar('<D',v(_,_,[X|_],_),call(file_directory_name,X)) :- !.
-bindvar('^F',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_base_name,X))) :- !.
-bindvar('^D',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_directory_name,X))) :- !.
+bindvar(VL,v(S,T,D,BL),X) :- bindauto(VL,v(S,T,D,BL),X), !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
 bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
+bindvar(VL,v(_,_,_,_),X) :- getenv(VL,X).
 bindvar(VL,v(V1,V2,V3,BL),X) :-
 	global_lazy_binding(VL,Y),
 	append(BL,[VL=VL],BL2),
@@ -590,7 +639,21 @@ bindvar(VL,v(V1,V2,V3,BL),X) :-
 	unwrap_t(Z,X),
 	!.
 bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
-bindvar(_,_,'') :- !.
+bindvar(_,v(_,_,_,_),'') :- !.  % default: bind to empty string
+
+bindauto('%',v(X,_,_,_),X) :- !.
+bindauto('*',v(X,_,_,_),X) :- !.
+bindauto('@',v(_,X,_,_),X) :- !.
+bindauto('<',v(_,_,[X|_],_),X) :- !.
+bindauto('^',v(_,_,X,_),call(concat_string_list_spaced,X)) :- !.
+bindauto('*F',v(X,_,_,_),call(file_base_name,X)) :- !.
+bindauto('*D',v(X,_,_,_),call(file_directory_name,X)) :- !.
+bindauto('@F',v(_,X,_,_),call(file_base_name,X)) :- !.
+bindauto('@D',v(_,X,_,_),call(file_directory_name,X)) :- !.
+bindauto('<F',v(_,_,[X|_],_),call(file_base_name,X)) :- !.
+bindauto('<D',v(_,_,[X|_],_),call(file_directory_name,X)) :- !.
+bindauto('^F',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_base_name,X))) :- !.
+bindauto('^D',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_directory_name,X))) :- !.
 
 % debugging variable binding
 bindvar_debug(VL,V,Var) :-

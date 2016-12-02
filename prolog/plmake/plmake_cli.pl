@@ -35,18 +35,18 @@ build_toplevel(Opts) :-
 
 add_assignments(Opts) :-
         forall(member(assignment(Var,Val),Opts),
-	       add_assignment((Var = Val))).
+	       add_cmdline_assignment((Var = Val))).
 
 consult_makefile(Opts) :-
 	DefaultMakeprog = 'makespec.pro',
 	DefaultGnuMakefile = 'Makefile',
 	(member(makeprog(BF),Opts)
-	 -> consult_makeprog(BF);
+	 -> consult_makeprog(BF,Opts);
 	 (member(gnu_makefile(F),Opts)
-	  -> consult_gnu_makefile(F);
+	  -> consult_gnu_makefile(F,Opts);
 	  (exists_file(DefaultMakeprog)
-	   -> consult_makeprog(DefaultMakeprog);
-	   consult_gnu_makefile(DefaultGnuMakefile)))).
+	   -> consult_makeprog(DefaultMakeprog,Opts);
+	   consult_gnu_makefile(DefaultGnuMakefile,Opts)))).
 
 % ----------------------------------------
 % OPTION PROCESSING
@@ -69,35 +69,40 @@ parse_args([A|Args],[toplevel(A)|Opts]) :-
 :- discontiguous arg_info/3.
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
-arg_info('--debug','TARGET','[developers] debugging messages. TARGET can be build, pattern, makeprog, makefile...').
+arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
 
 parse_arg(['--dry-run'|L],L,dry_run(true)).
 parse_arg(['-n'|L],L,dry_run(true)).
-arg_info('--dry-run','','Print the commands that would be executed, but do not execute them').
-arg_info('-n','','Shortcut for --dry-run').
+arg_info('-n,--dry-run','','Print the commands that would be executed, but do not execute them').
 
-parse_arg(['-h'|L],L,null) :-
+parse_arg(['-h'|L],L,null) :- show_help, !.
+parse_arg(['--help'|L],L,null) :- show_help, !.
+arg_info('-h,--help','','Show help').
+
+show_help :-
         writeln('plmake [OPTION...] target1 target2...'),
         nl,
         writeln('Options:'),
-        show_help,
+	forall(arg_info(X,Args,Info),
+	       format("~w ~w~n    ~w~n",[X,Args,Info])),
         nl,
         writeln('For more info see http://github.com/cmungall/plmake'),
         nl,
         halt.
-arg_info('-h','','Show help').
-
 
 parse_arg(['--always-make'|L],L,always_make(true)).
 parse_arg(['-B'|L],L,always_make(true)).
-arg_info('--always-make','','Always build fresh target even if dependency is up to date').
-arg_info('-B','','Shortcut for --always-make').
-
-parse_arg(['-f',F|L],L,gnu_makefile(F)).
-arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification [incomplete]').
+arg_info('-B,--always-make','','Always build fresh target even if dependency is up to date').
 
 parse_arg(['-p',F|L],L,makeprog(F)) :- !.
 arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: makespec.pro]').
+
+parse_arg(['-f',F|L],L,gnu_makefile(F)).
+arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
+
+parse_arg(['-T',F|L],L,translate_gnu_makefile(F)).
+parse_arg(['--translate',F|L],L,translate_gnu_makefile(F)).
+arg_info('-T,--translate','Translate GNU Makefile to Prolog Makeprog syntax').
 
 parse_arg(['-l',F|L],L,
           goal( (collect_stored_targets(F,[]),
@@ -107,17 +112,17 @@ parse_arg(['-l',F|L],L,
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
-parse_arg(['-q'|L],L,quiet(true)) :- assert(no_backtrace), !.
-arg_info('-q','','Be quiet').
+parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(plmake/md5)), !.
+parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(plmake/md5)), !.
+arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
+
+parse_arg(['--no-backtrace'|L],L,quiet(true)) :- assert(no_backtrace), !.
+arg_info('-no-backtrace','','Do not print a backtrace on error').
 
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
 arg_info('Var=Val','','Assign Makefile variables from command line').
-
-show_help :-
-    forall(arg_info(X,Args,Info),
-	   format("~w ~w~n    ~w~n",[X,Args,Info])).
 
 makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
 makefile_var(A) --> atom_from_codes(A,":= \t\n").

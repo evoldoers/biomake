@@ -12,6 +12,8 @@
 	   char_list/4,
 	   whitespace/2,
 	   opt_whitespace/2,
+	   space/2,
+	   opt_space/2,
 	   blank_line/2,
 	   alphanum_char/3,
 	   alphanum_code/3,
@@ -26,6 +28,7 @@
 	   shell_eval/2,
 	   shell_eval_str/2,
 	   file_directory_slash/2,
+	   quote_string/2,
 	   newlines_to_spaces/2
 	  ]).
 
@@ -49,7 +52,13 @@ whitespace --> "\t", !, opt_whitespace.
 opt_whitespace --> whitespace.
 opt_whitespace --> !.
 
-blank_line --> opt_whitespace, "\n", !.
+space --> " ", !, opt_space.
+
+opt_space --> space.
+opt_space --> !.
+
+blank_line --> "\n", !.
+blank_line --> space, opt_whitespace, "\n", !.
 
 alphanum_char(X) --> [X],{X@>='A',X@=<'Z'},!.
 alphanum_char(X) --> [X],{X@>='a',X@=<'z'},!.
@@ -91,7 +100,7 @@ type_of(X,"rational") :- rational(X), !.
 type_of(X,"number") :- number(X), !.  % should never be reached
 type_of(X,"string") :- string(X), !.
 type_of(X,"compound") :- compound(X), !.
-type_of(X,"ground") :- ground(X), !.
+type_of(X,"atom") :- atom(X), !.
 type_of(_,"unknown").
 
 shell_eval(Exec,CodeList) :-
@@ -111,3 +120,14 @@ newlines_to_spaces([C|N],[C|S]) :- newlines_to_spaces(N,S).
 file_directory_slash(Path,Result) :-
 	file_directory_name(Path,D),
 	string_concat(D,"/",Result).  % GNU make adds the trailing '/'
+
+quote_string(S,QS) :-
+    string_chars(S,Cs),
+    phrase(escape_quotes(ECs),Cs),
+    append(['"'|ECs],['"'],QCs),
+    string_chars(QS,QCs).
+
+escape_quotes([]) --> [].
+escape_quotes(['\\','\\'|Cs]) --> ['\\'], !, escape_quotes(Cs).
+escape_quotes(['\\','"'|Cs]) --> ['"'], !, escape_quotes(Cs).
+escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).

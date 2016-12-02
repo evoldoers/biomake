@@ -42,24 +42,26 @@ Options
 -------
 
 ```
---debug TARGET
-    [developers] debugging messages. TARGET can be build, pattern, makeprog, makefile...
---dry-run 
+--debug TAG
+    [developers] debugging messages. TAG can be build, pattern, makeprog, makefile...
+-n,--dry-run 
     Print the commands that would be executed, but do not execute them
--n 
-    Shortcut for --dry-run
--h 
+-h,--help 
     Show help
---always-make 
+-B,--always-make 
     Always build fresh target even if dependency is up to date
--B
-    Shortcut for --always-make
--f GNUMAKaEFILE
+-f GNUMAKEFILE
     Use a GNU Makefile as the build specification [incomplete]
 -p MAKEPROG
-    Uses MAKEPROG as the (Prolog) build specification [default: makespec.pro]
+    Use MAKEPROG as the (Prolog) build specification [default: makespec.pro]
 -l DIRECTORY
     Iterates through directory writing metadata on each file found
+-H,--md5-hash 
+    Use MD5 hashes instead of timestamps
+-no-backtrace 
+    Do not print a backtrace on error
+Var=Val 
+    Assign Makefile variables from command line
 ```
 
 Examples
@@ -67,10 +69,10 @@ Examples
 
 (this assumes some knowledge of make and makefiles)
 
-plmake looks for a file called `makespec.pro` in your
+plmake looks for a Prolog file called `makespec.pro` in your
 current directory. If it's not there, it will try looking for a
 `Makefile` in GNU Make format. The following examples describe the
-Prolog syntax.
+Prolog syntax; GNU Make syntax is described elsewhere, e.g. [here](https://www.gnu.org/software/make/manual/html_node/index.html).
 
 Assume you have two file formats, ".foo" and ".bar", and a foo2bar
 converter.

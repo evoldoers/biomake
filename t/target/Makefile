@@ -4,6 +4,9 @@
 simple:
 	echo Simple test >simple
 
+uptodate:
+	echo Not up to date >$@
+
 target1 target2:
 	echo $@ >$@
 

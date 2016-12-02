@@ -2,8 +2,11 @@
 
 :- module(functions,
           [
+           makefile_function/3,
            makefile_function/4,
+           makefile_subst_ref/3,
            makefile_subst_ref/4,
+	   makefile_computed_var/3,
 	   makefile_computed_var/4
            ]).
 
@@ -12,6 +15,8 @@
 :- use_module(library(plmake/utils)).
 :- use_module(library(plmake/plmake)).
 :- use_module(library(plmake/gnumake_parser)).
+
+makefile_function(Result) --> makefile_function(Result,v(null,null,null,[])).
 
 makefile_function(Result,V) --> lb("subst"), xchr_arg(From,V), comma, xchr_arg(To,V), comma, xchr_arg(Src,V), rb, !,
 	{ phrase(subst(From,To,Rc),Src),
@@ -122,6 +127,8 @@ makefile_function(Result,V) --> lb("and"), opt_whitespace, cond_param_list(L), r
 
 makefile_function("",_V) --> ['('], str_arg(S), [')'], !, {format("Warning: unknown function $(~w)~n",[S])}.
 
+makefile_subst_ref(Result) --> makefile_subst_ref(Result,v(null,null,null,[])).
+
 makefile_subst_ref(Result,V) --> ['('], xvar_arg(Var,V), [':'], suffix_arg(From), ['='], suffix_arg(To), [')'], !,
 	{ eval_var(Var,Val,V),
 	  string_chars(Val,Vc),
@@ -129,6 +136,8 @@ makefile_subst_ref(Result,V) --> ['('], xvar_arg(Var,V), [':'], suffix_arg(From)
 	  phrase(patsubst_lr(TL,TR),['%'|To]),
 	  patsubst(FL,FR,TL,TR,Vc,Rc),
 	  string_chars(Result,Rc) }.
+
+makefile_computed_var(Result) --> makefile_computed_var(Result,v(null,null,null,[])).
 
 makefile_computed_var(Result,V) --> ['('], xvar_arg(Var,V), [')'], !,
 	{ eval_var(Var,Result,V) }.
