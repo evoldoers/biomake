@@ -142,7 +142,6 @@ init_counts :-
 announce(X) :-
     string_chars(X,C),
     length(C,L),
-    type_of(L,T),
     n_chars(L,'=',Bc),
     string_chars(Banner,Bc),
     format("~w~n~w~n~w~n~n",[Banner,X,Banner]).
@@ -319,13 +318,3 @@ report_failure_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
 
 n_chars(N,_,[]) :- N =< 0, !.
 n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.
-
-type_of(X,"var") :- var(X), !.
-type_of(X,"integer") :- integer(X), !.
-type_of(X,"float") :- float(X), !.
-type_of(X,"rational") :- rational(X), !.
-type_of(X,"number") :- number(X), !.  % should never be reached
-type_of(X,"string") :- string(X), !.
-type_of(X,"compound") :- compound(X), !.
-type_of(X,"atom") :- atom(X), !.
-type_of(_,"unknown").
