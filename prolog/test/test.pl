@@ -1,7 +1,7 @@
 % * -*- Mode: Prolog -*- */
 
-default_ref_dir("t/ref").
-default_test_dir("t/target").
+default_ref_dir("ref").
+default_test_dir("target").
 
 base_path(Dir) :-
 	prolog_load_context(directory,SrcDir),
@@ -97,6 +97,9 @@ test :-
 	run_test("or3"),
 	run_test("and1"),
 	run_test("and2"),
+	run_test("ref/md5","target/md5",[],"-B -H","hello_world"),
+	% the next test fakes out the MD5 checksums... kind of hacky
+	run_test("ref/md5.wrong","target/md5.wrong",["echo wrong >hello","echo wrong >world","echo wrong >hello_world"],"-H","hello_world"),
 	report_counts,
 	halt.
 
@@ -113,20 +116,20 @@ report_counts :-
 run_test(Target) :-
 	default_ref_dir(RefDir),
 	default_test_dir(TestDir),
-	report_test(RefDir,TestDir,"",Target,"~s",[Target]).
+	report_test(RefDir,TestDir,[],"",Target,"~s",[Target]).
 
 run_test(Args,Target) :-
 	default_ref_dir(RefDir),
 	default_test_dir(TestDir),
-	report_test(RefDir,TestDir,Args,Target,"~s ~s",[Args,Target]).
+	report_test(RefDir,TestDir,[],Args,Target,"~s ~s",[Args,Target]).
 
-run_test(RefDir,TestDir,Args,Target) :-
-	report_test(RefDir,TestDir,Args,Target,"[~s,~s,~s ~s]",[RefDir,TestDir,Args,Target]).
+run_test(RefDir,TestDir,Setup,Args,Target) :-
+	report_test(RefDir,TestDir,Setup,Args,Target,"[t/~s,t/~s,~s ~s]",[RefDir,TestDir,Args,Target]).
 
-report_test(RefDir,TestDir,Args,Target,Fmt,Vars) :-
+report_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
 	start_test(Fmt,Vars,Desc),
-	(exec_test(RefDir,TestDir,Args,Target)
+	(exec_test(RefDir,TestDir,Setup,Args,Target)
          -> pass_test(Desc); fail_test(Desc)),
 	working_directory(_,CWD).
 
@@ -150,27 +153,75 @@ inc(Counter) :-
 	CNew is C + 1,
 	nb_setval(Counter, CNew).
 
-exec_test(RefDir,TestDir,Args,Target) :-
-	format(string(TestPath),"~s/~s",[TestDir,Target]),
-	format(string(RefPath),"~s/~s",[RefDir,Target]),
-	(exists_file(TestPath) -> delete_file(TestPath); true),
+make_test_path(Dir,TestPath) :-
+    format(string(TestPath),"t/~s",[Dir]).
+
+make_test_path(Dir,Target,TestPath) :-
+    format(string(TestPath),"t/~s/~s",[Dir,Target]).
+
+exec_test(RefDir,TestDir,Setup,Args,Target) :-
+	make_test_path(TestDir,TestPath),
+	make_test_path(TestDir,Target,TargetPath),
 	biomake_path(Make),
 	format(string(Exec),"~s ~s ~s",[Make,Args,Target]),
-	working_directory(CWD,TestDir),
-	format("Running '~s' in ~s~n",[Exec,TestDir]),
+	format("Running '~s' in ~s~n",[Exec,TestPath]),
+	working_directory(CWD,TestPath),
+	(Setup = [] -> (exists_file(TargetPath) -> delete_file(TargetPath); true);
+	 (forall(member(Cmd,Setup), (format("~s~n",[Cmd]), shell(Cmd))))),
 	shell(Exec,Err),
 	!,
 	(Err = 0 -> true; format("Error code ~w~n",Err), fail),
 	working_directory(_,CWD),
-	compare_files(TestPath,RefPath),
-	delete_file(TestPath).
+	compare_output(TestDir,RefDir,Target),
+	(Setup = [] -> delete_file(TargetPath); true).
+
+compare_output(TestDir,RefDir,Target) :-
+    default_test_dir(TestDir),
+    default_ref_dir(RefDir),
+    !,
+    make_test_path(TestDir,TestPath),
+    make_test_path(RefDir,RefPath),
+    compare_files(TestPath,RefPath,Target).
+
+compare_output(TestDir,RefDir,_) :-
+    make_test_path(TestDir,TestPath),
+    make_test_path(RefDir,RefPath),
+    compare_files(TestPath,RefPath).
+
+actual_files(Dir,List) :-
+    directory_files(Dir,Files),
+    include(not_special,Files,List).
+
+not_special(File) :-
+    \+ special(File).
+special(.).
+special(..).
+
+compare_files(TestPath,RefPath,File) :-
+    format(string(TestFilePath),"~s/~s",[TestPath,File]),
+    format(string(RefFilePath),"~s/~s",[RefPath,File]),
+    compare_files(TestFilePath,RefFilePath).
 
 compare_files(TestPath,RefPath) :-
-	format("Comparing ~s to ~s~n",[TestPath,RefPath]),
-	read_string_from_file(TestPath,TestText),
-	read_string_from_file(RefPath,RefText),
-	RefText = TestText,
-	format("~s matches ~s~n",[TestPath,RefPath]).
+    exists_directory(TestPath),
+    exists_directory(RefPath),
+    !,
+    format("Comparing directory ~s to ~s~n",[TestPath,RefPath]),
+    actual_files(TestPath,TestFiles),
+    actual_files(RefPath,RefFiles),
+    (lists_equal(TestFiles,RefFiles);
+     (format("File lists do not match~n~w: ~w~n~w: ~w~n",[TestPath,TestFiles,RefPath,RefFiles]),
+      fail)),
+    !,
+    forall(member(File,TestFiles),
+	   compare_files(TestPath,RefPath,File)).
+
+compare_files(TestPath,RefPath) :-
+    format("Comparing file ~s to ~s ...",[TestPath,RefPath]),
+    read_string_from_file(TestPath,TestText),
+    read_string_from_file(RefPath,RefText),
+    RefText = TestText,
+    format("match~n",[TestPath,RefPath]).
 
 compare_files(TestPath,RefPath) :-
 	exists_file(TestPath),
@@ -189,6 +240,10 @@ compare_files(_,RefPath) :-
 	file_missing(RefPath),
 	fail.
 
+lists_equal([],[]) :- !.
+lists_equal([X|Xs],[X|Ys]) :- !, lists_equal(Xs,Ys).
+lists_equal(Xs,Ys) :- format("mismatch: ~w ~w~n",[Xs,Ys]), fail.
+    
 file_missing(Path) :-
 	\+ exists_file(Path),
 	format("File ~s does not exist~n",[Path]).
@@ -202,14 +257,11 @@ read_string_from_file(Path,String) :-
 run_failure_test(Args,Target) :-
 	default_ref_dir(RefDir),
 	default_test_dir(TestDir),
-	report_failure_test(RefDir,TestDir,Args,Target,"[~s ~s] (expecting failure)",[Args,Target]).
-	
-run_failure_test(RefDir,TestDir,Args,Target) :-
-    report_failure_test(RefDir,TestDir,Args,Target,"[~s,~s,~s ~s] (expecting failure)",[RefDir,TestDir,Args,Target]).
+	report_failure_test(RefDir,TestDir,[],Args,Target,"[~s ~s] (expecting failure)",[Args,Target]).
 
-report_failure_test(RefDir,TestDir,Args,Target,Fmt,Vars) :-
+report_failure_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
 	start_test(Fmt,Vars,Desc),
-	(exec_test(RefDir,TestDir,Args,Target)
+	(exec_test(RefDir,TestDir,Setup,Args,Target)
          -> fail_test(Desc); pass_test(Desc)),
 	working_directory(_,CWD).

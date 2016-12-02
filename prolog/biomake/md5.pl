@@ -24,8 +24,7 @@ md5_hash_up_to_date(T,DL,Opts) :-
 md5_hash_up_to_date(T,DL,_Opts) :-
     !,
     debug(md5,"Checking MD5 hash validity for ~w <-- ~w",[T,DL]),
-    read_md5_file(T),
-    md5_hash(T,H),
+    md5_check(T,H),
     md5_valid(T,H).
 
 % read_md5_file attempts to find the MD5 hash of a target and (if known) the conditions under which this target is still valid.
@@ -48,10 +47,8 @@ read_md5_file(T) :-
          fail),
     close(IO).
 
-read_md5_file(T) :-
-    md5_check(T,_).
-
 md5_check(T,Hash) :- md5_hash(T,Hash), !.
+md5_check(T,Hash) :- read_md5_file(T), !, md5_hash(T,Hash).
 md5_check(T,Hash) :- compute_md5(T,Hash).
 
 retract_md5_hash(T) :-
@@ -120,7 +117,7 @@ update_md5_file(T,DL) :-
     format(IO,"~w.~n",[HashTerm]),
     debug(md5,' ~w',[HashTerm]),
     (ValidGoals = [] -> format(IO,"~w.~n",[ValidTerm]), debug(md5,' ~w.',[ValidTerm]);
-     concat_string_list(ValidGoals,ValidGoalStr,",~n  "),
+     concat_string_list(ValidGoals,ValidGoalStr,",\n  "),
      format(IO,"~w :-~n  ~w.~n",[ValidTerm,ValidGoalStr]),
      debug(md5," ~w :-~n  ~w.",[ValidTerm,ValidGoalStr])),
     close(IO),
