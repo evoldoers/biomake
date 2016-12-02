@@ -1,7 +1,7 @@
 % * -*- Mode: Prolog -*- */
 
-:- use_module(library(plmake/plmake)).
-:- use_module(library(plmake/utils)).
+:- use_module(library(biomake/biomake)).
+:- use_module(library(biomake/utils)).
 
 :- dynamic no_backtrace/0.
 
@@ -80,13 +80,13 @@ parse_arg(['--help'|L],L,null) :- show_help, !.
 arg_info('-h,--help','','Show help').
 
 show_help :-
-        writeln('plmake [OPTION...] target1 target2...'),
+        writeln('biomake [OPTION...] target1 target2...'),
         nl,
         writeln('Options:'),
 	forall(arg_info(X,Args,Info),
 	       format("~w ~w~n    ~w~n",[X,Args,Info])),
         nl,
-        writeln('For more info see http://github.com/cmungall/plmake'),
+        writeln('For more info see http://github.com/cmungall/biomake'),
         nl,
         halt.
 
@@ -108,12 +108,12 @@ parse_arg(['-l',F|L],L,
           goal( (collect_stored_targets(F,[]),
                  show_stored_targets
                 ) )) :-
-        ensure_loaded(library(plmake/plmake_db)),
+        ensure_loaded(library(biomake/biomake_db)),
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
-parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(plmake/md5)), !.
-parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(plmake/md5)), !.
+parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5)), !.
+parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5)), !.
 arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
 
 parse_arg(['--no-backtrace'|L],L,quiet(true)) :- assert(no_backtrace), !.

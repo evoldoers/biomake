@@ -10,8 +10,8 @@
 	  ]).
 
 :- use_module(library(pio)).
-:- use_module(library(plmake/utils)).
-:- use_module(library(plmake/functions)).
+:- use_module(library(biomake/utils)).
+:- use_module(library(biomake/functions)).
 
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M) :-

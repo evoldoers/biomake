@@ -2,7 +2,7 @@ Plmake
 ======
 
 This is a Makefile-like system for managing builds between multiple
-dependent files. No knowledge of prolog is necessary; plmake can
+dependent files. No knowledge of prolog is necessary; biomake can
 run off a stripped-down GNU Makefile. However, if you're prepared to
 learn a little Prolog, you can do a lot more. And, really, logic
 programming is the way you _should_ be specifying dependencies and
@@ -13,14 +13,14 @@ Getting Started
 
 1. Install SWI-Prolog from http://www.swi-prolog.org
 
-2. Get the latest plmake source from github. No installation steps are
+2. Get the latest biomake source from github. No installation steps are
 required. Add it to your path (changing the directory if necessary):
 
-    export PATH=$PATH:$HOME/plmake/bin
+    export PATH=$PATH:$HOME/biomake/bin
 
 3. Get (minimal) help from the command line:
 
-    plmake -h
+    biomake -h
 
 4. Create a 'makefile.pro' (see below)
 
@@ -31,12 +31,12 @@ This can also be installed via the SWI-Prolog pack system
 
 Just start SWI and type:
 
-   ?- pack_install('plmake').
+   ?- pack_install('biomake').
 
 Command-line
 ------------
 
-  plmake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
+  biomake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
 
 Options
 -------
@@ -69,7 +69,7 @@ Examples
 
 (this assumes some knowledge of make and makefiles)
 
-plmake looks for a Prolog file called `makespec.pro` in your
+biomake looks for a Prolog file called `makespec.pro` in your
 current directory. If it's not there, it will try looking for a
 `Makefile` in GNU Make format. The following examples describe the
 Prolog syntax; GNU Make syntax is described elsewhere, e.g. [here](https://www.gnu.org/software/make/manual/html_node/index.html).
@@ -87,7 +87,7 @@ as this is prolog syntax.
 
 To convert a pre-existing file "x.foo" to "x.bar" type:
 
-    plmake x.bar
+    biomake x.bar
 
 Let's say we can go from a .bar to a .baz using a bar2baz
 converter. We can add an additional rule:
@@ -98,7 +98,7 @@ converter. We can add an additional rule:
 Now if we type:
 
     touch x.foo
-    plmake x.baz
+    biomake x.baz
 
 The output will be something like:
 
@@ -130,7 +130,7 @@ You can mix and match if you like:
     '$Base.bar' <-- '$Base.foo',
         'foo2bar $< > $@'.
 
-Unlike makefiles, plmake allows multiple variables in pattern
+Unlike makefiles, biomake allows multiple variables in pattern
 matching. Let's say we have a program called "align" that compares two
 files producing some output (e.g. biological sequence alignment, or
 ontology alignment). Assume our file convention is to suffix `.fa` on
@@ -144,7 +144,7 @@ commas and enclodes in square brackets - i.e. a prolog list]
 
 Now if we have files `x.fa` and `y.fa` we can type:
 
-    plmake align-x-y.tbl
+    biomake align-x-y.tbl
 
 We can include arbitrary prolog, including both database facts and
 rules. We can use these rules to control flow in a way that is more
@@ -169,7 +169,7 @@ Note that here the rule consists of 4 parts:
 In this case, the prolog goal succeeds with 9 solutions, with 3
 different values for X and Y. If we type:
 
-  plmake align-platypus-coelocanth.tbl
+  biomake align-platypus-coelocanth.tbl
 
 It will not succeed, even if the .fa files are on the filesystem. This
 is because the goal cannot be satisfied for these two values.
@@ -190,7 +190,7 @@ We can create a top-level target that generates all solutions:
                 pair(X,Y),
                 Deps)}.
 
-    % plmake rule
+    % biomake rule
     'align-$X-$Y.tbl' <-- ['$X.obo', '$Y.obo'],
         'align $X.obo $Y.obo > $@'.
 
@@ -200,7 +200,7 @@ syntactic form that hides this.
 
 Now if we type:
 
-    plmake all
+    biomake all
 
 And all non-identical pairs are compared (in one direction only - the
 assumption is that "align" is symmetric).
@@ -220,7 +220,7 @@ In the future there may be extensions for:
 * using other back ends and target sources (sqlite db, REST services)
 * cloud-based computing
 * running computes on clusters
-* make2plmake partial translator
+* make2biomake partial translator
 * alternate syntaxes
 
 Examples

@@ -1,6 +1,6 @@
 % * -*- Mode: Prolog -*- */
 
-:- module(plmake,
+:- module(biomake,
           [
            build_default/0,
            build_default/1,
@@ -24,9 +24,9 @@
 	   expand_vars/3
            ]).
 
-:- use_module(library(plmake/utils)).
-:- use_module(library(plmake/functions)).
-:- use_module(library(plmake/gnumake_parser)).
+:- use_module(library(biomake/utils)).
+:- use_module(library(biomake/functions)).
+:- use_module(library(biomake/gnumake_parser)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -351,7 +351,7 @@ is_assignment_op(+=).
 is_assignment_op(=*).
 
 consult_gnu_makefile(F,Opts) :-
-        ensure_loaded(library(plmake/gnumake_parser)),
+        ensure_loaded(library(biomake/gnumake_parser)),
         parse_gnu_makefile(F,M),
 	(member(translate_gnu_makefile(P),Opts)
 	 -> translate_gnu_makefile(M,P); true),
@@ -365,7 +365,7 @@ consult_makeprog(F,_Opts) :-
         ->  !
         ;   read_term(IO,Term,[variable_names(VNs),
                                syntax_errors(error),
-                               module(plmake)]),
+                               module(biomake)]),
             debug(makeprog,'adding: ~w',[Term]),
             add_spec_clause(Term,VNs),
             fail),

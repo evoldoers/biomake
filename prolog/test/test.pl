@@ -9,9 +9,9 @@ base_path(Dir) :-
 base_path(Dir) :-
 	working_directory(Dir,Dir).  % default
 
-plmake_path(Path) :-
+biomake_path(Path) :-
 	base_path(Dir),
-	string_concat(Dir,"bin/plmake",Path).
+	string_concat(Dir,"bin/biomake",Path).
 
 user:prolog_exception_hook(_,
                            _, _, _) :-
@@ -154,7 +154,7 @@ exec_test(RefDir,TestDir,Args,Target) :-
 	format(string(TestPath),"~s/~s",[TestDir,Target]),
 	format(string(RefPath),"~s/~s",[RefDir,Target]),
 	(exists_file(TestPath) -> delete_file(TestPath); true),
-	plmake_path(Make),
+	biomake_path(Make),
 	format(string(Exec),"~s ~s ~s",[Make,Args,Target]),
 	working_directory(CWD,TestDir),
 	format("Running '~s' in ~s~n",[Exec,TestDir]),

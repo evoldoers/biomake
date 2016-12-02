@@ -1,6 +1,6 @@
 % * -*- Mode: Prolog -*- */
 
-:- module(plmake_db,
+:- module(biomake_db,
           [
            show_stored_targets/0,
            collect_stored_targets/1,
@@ -8,7 +8,7 @@
 
            stored_target/5
            ]).
-:- use_module(plmake).
+:- use_module(biomake).
 
 % ----------------------------------------
 % DATABASE
@@ -35,7 +35,7 @@ dir_files_recursive(Dir,AllFiles,VL) :-
         findall(FilePath,(member(File,Files),
                           atomic_list_concat([Dir,/,File],FilePath)),
                 FilePaths),
-        debug(plmake,'dir files: ~w',[Dir]),
+        debug(biomake,'dir files: ~w',[Dir]),
         findall(FilePath,
                 (   member(Dir2,Files),
                     Dir2\='.',
@@ -51,10 +51,10 @@ dir_files_recursive(Dir,AllFiles,VL) :-
         append(FilePaths,Files2,AllFiles).
 
 collect_file(File,Opts) :-
-        debug(plmake,'collecting: "~w"',[File]),
+        debug(biomake,'collecting: "~w"',[File]),
         get_time(TimeChecked),
         file_info(File,DL,Status,Opts),
-        debug(plmake,'  info: ~w',[Status]),
+        debug(biomake,'  info: ~w',[Status]),
         time_file_wrap(File,TimeBuilt),
         retractall(stored_target(File,_,_,_,_)),
         assert(stored_target(File,DL,Status,TimeBuilt,TimeChecked)).

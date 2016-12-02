@@ -42,7 +42,7 @@ read_md5_file(T) :-
     (   at_end_of_stream(IO)
      ->  !
      ;   read_term(IO,Term,[syntax_errors(error),
-                            module(plmake)]),
+                            module(biomake)]),
          debug(md5,'parsed term: ~w',[Term]),
          assert(Term),
          fail),
