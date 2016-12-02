@@ -17,6 +17,7 @@
 	   blank_line/2,
 	   alphanum_char/3,
 	   alphanum_code/3,
+	   n_chars/3,
 	   concat_string_list/2,
 	   concat_string_list/3,
 	   concat_string_list_spaced/2,
@@ -67,6 +68,9 @@ alphanum_char(X) --> [X],{X@>='0',X@=<'9'},!.
 alphanum_code(X) --> [X],{X@>=65,X@=<90},!.  % A through Z
 alphanum_code(X) --> [X],{X@>=97,X@=<122},!.  % a through z
 alphanum_code(X) --> [X],{X@>=48,X@=<57},!.  % 0 through 9
+
+n_chars(N,_,[]) :- N =< 0, !.
+n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.
 
 concat_string_list_spaced(L,S) :- concat_string_list(L,S," ").
 concat_string_list(L,S) :- concat_string_list(L,S,"").

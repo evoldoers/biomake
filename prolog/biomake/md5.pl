@@ -11,10 +11,9 @@
 % MD5 HASHES
 % ----------------------------------------
 
-:- dynamic md5_hash/2.
-:- dynamic md5_valid/2.
+:- dynamic md5_hash/3.
+:- dynamic md5_valid/3.
 
-md5_hash_up_to_date(_,[],_) :- !.
 md5_hash_up_to_date(T,DL,Opts) :-
     atom(T),
     !,
@@ -24,8 +23,8 @@ md5_hash_up_to_date(T,DL,Opts) :-
 md5_hash_up_to_date(T,DL,_Opts) :-
     !,
     debug(md5,"Checking MD5 hash validity for ~w <-- ~w",[T,DL]),
-    md5_check(T,H),
-    md5_valid(T,H).
+    md5_check(T,S,H),
+    md5_valid(T,S,H).
 
 % read_md5_file attempts to find the MD5 hash of a target and (if known) the conditions under which this target is still valid.
 % It does this by first trying to read the file .biomake/md5/{targetName}, then trying to lookup the hash in its database,
@@ -47,25 +46,28 @@ read_md5_file(T) :-
          fail),
     close(IO).
 
-md5_check(T,Hash) :- md5_hash(T,Hash), !.
-md5_check(T,Hash) :- read_md5_file(T), !, md5_hash(T,Hash).
-md5_check(T,Hash) :- compute_md5(T,Hash).
+md5_check_size(File,Size,Hash) :- exists_file(File), size_file(File,Size), md5_hash(File,Size,Hash).
+
+md5_check(File,Size,Hash) :- md5_check_size(File,Size,Hash), !.
+md5_check(File,Size,Hash) :- read_md5_file(File), !, md5_check_size(File,Size,Hash).
+md5_check(File,Size,Hash) :- compute_md5(File,Size,Hash).
 
 retract_md5_hash(T) :-
-    md5_hash(T,_),
+    md5_hash(T,_,_),
     !,
-    retractall(md5_hash(T,_));true.
+    retractall(md5_hash(T,_,_));true.
 retract_md5_hash(_).
 
-compute_md5(T,Hash) :-
+compute_md5(T,Size,Hash) :-
     exists_file(T),
+    size_file(T,Size),
     format(string(Exec),"md5 -q ~w",[T]),
     debug(md5,'computing hash: ~w',[Exec]),
     shell_eval(Exec,HashCodes),
     phrase(chomp(Hash),HashCodes),
-    debug(md5,'MD5 hash of ~w is ~w',[T,Hash]),
+    debug(md5,'MD5 hash of file ~w (size ~w) is ~w',[T,Size,Hash]),
     retract_md5_hash(T),
-    assert(md5_hash(T,Hash)).
+    assert(md5_hash(T,Size,Hash)).
 
 chomp(S) --> string_from_codes(S,"\n"), [10].
 
@@ -88,19 +90,19 @@ md5_filename_mkdir(Target,Filename) :-
     format(string(MkDir),"mkdir -p ~w",[D]),
     shell(MkDir).
 
-make_md5_hash_term(T,H,S) :-
-    format(string(S),"md5_hash(\"~w\",~q)",[T,H]).
+make_md5_hash_term(T,S,H,Str) :-
+    format(string(Str),"md5_hash(\"~w\",~d,~q)",[T,S,H]).
 
-make_md5_valid_term(T,H,S) :-
-    format(string(S),"md5_valid(\"~w\",~q)",[T,H]).
+make_md5_valid_term(T,S,H,Str) :-
+    format(string(Str),"md5_valid(\"~w\",~d,~q)",[T,S,H]).
 
-make_md5_check_term(T,H,S) :-
-    format(string(S),"md5_check(\"~w\",~q)",[T,H]).
+make_md5_check_term(T,S,H,Str) :-
+    format(string(Str),"md5_check(\"~w\",~d,~q)",[T,S,H]).
 
 make_md5_valid_goal_list([Dep|Deps],[Goal|Goals]) :-
-    md5_check(Dep,Hash),
+    md5_check(Dep,Size,Hash),
     !,
-    make_md5_check_term(Dep,Hash,Goal),
+    make_md5_check_term(Dep,Size,Hash,Goal),
     make_md5_valid_goal_list(Deps,Goals).
 make_md5_valid_goal_list([_|Deps],Goals) :- make_md5_valid_goal_list(Deps,Goals), !.
 make_md5_valid_goal_list([],[]).
@@ -108,9 +110,9 @@ make_md5_valid_goal_list([],[]).
 update_md5_file(T,DL) :-
     debug(md5,'updating MD5 hash file for ~w <-- ~w',[T,DL]),
     delete_md5_file(T),
-    md5_check(T,HashT),
-    make_md5_hash_term(T,HashT,HashTerm),
-    make_md5_valid_term(T,HashT,ValidTerm),
+    md5_check(T,SizeT,HashT),
+    make_md5_hash_term(T,SizeT,HashT,HashTerm),
+    make_md5_valid_term(T,SizeT,HashT,ValidTerm),
     make_md5_valid_goal_list(DL,ValidGoals),
     md5_filename_mkdir(T,F),
     open(F,write,IO,[]),
