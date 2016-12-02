@@ -1,5 +1,5 @@
-Plmake
-======
+Biomake
+=======
 
 This is a Makefile-like system for managing builds between multiple
 dependent files. No knowledge of prolog is necessary; biomake can
