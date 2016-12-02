@@ -65,6 +65,14 @@ build(T,Opts) :-
         build(T,[],Opts).
 
 build(T,SL,Opts) :-
+	member(Dep,SL),
+	equal_as_strings(Dep,T),
+	!,
+	concat_string_list(SL,Chain," <-- "),
+	report("Cyclic dependency detected: ~w <-- ~w",[T,Chain],SL,Opts),
+        report('~w FAILED',[T],SL,Opts).
+
+build(T,SL,Opts) :-
         %show_global_bindings,
         %report('Target: ~w',[T]),
         debug_report(build,'  Target: ~w',[T],SL),
@@ -570,7 +578,7 @@ unwrap_t(X,"") :- var(X), !.
 unwrap_t(Call,Flat) :- nonvar(Call), Call =.. [call,_|_], !, unwrap_t_call(Call,F), unwrap_t(F,Flat).
 unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
 unwrap_t([],"") :- !.
-unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), string_concat(F,Fs,Flat), !.
+unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), atom_concat(F,Fs,Flat), !.
 unwrap_t(N,A) :- number(A), atom_number(A,N), !.
 unwrap_t(A,F) :- atom(A), atom_string(A,F), !.
 unwrap_t(S,S) :- string(S), !.

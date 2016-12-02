@@ -30,7 +30,9 @@
 	   shell_eval_str/2,
 	   file_directory_slash/2,
 	   quote_string/2,
-	   newlines_to_spaces/2
+	   newlines_to_spaces/2,
+	   to_strings/2,
+	   equal_as_strings/2
 	  ]).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
@@ -135,3 +137,8 @@ escape_quotes([]) --> [].
 escape_quotes(['\\','\\'|Cs]) --> ['\\'], !, escape_quotes(Cs).
 escape_quotes(['\\','"'|Cs]) --> ['"'], !, escape_quotes(Cs).
 escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
+
+to_string(A,S) :- atomics_to_string([A],S).
+equal_as_strings(X,Y) :-
+	to_string(X,S),
+	to_string(Y,S).

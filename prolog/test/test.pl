@@ -25,6 +25,7 @@ test :-
 	init_counts,
 	
 	announce("FAILURE TESTS"),
+	run_failure_test("-f Makefile.cyclic","test1"),
 	run_failure_test("--no-backtrace -f Makefile.err","empty"),
 	run_failure_test("--no-backtrace -f Makefile.tab","empty"),
 	run_failure_test("--no-backtrace","missing_target"),
