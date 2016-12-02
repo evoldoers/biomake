@@ -28,8 +28,7 @@ test :-
 	run_failure_test("--no-backtrace -f Makefile.err","empty"),
 	run_failure_test("--no-backtrace -f Makefile.tab","empty"),
 	run_failure_test("--no-backtrace","missing_target"),
-	run_failure_test("--no-backtrace `echo Up to date >uptodate`","uptodate"),
-	run_test("bad_function_syntax"),
+	run_failure_test("ref","target",["echo Up to date >uptodate"],"--no-backtrace","uptodate"),
 	
 	announce("PROLOG"),
 	run_test("-p Prolog.makespec","simple_prolog"),
@@ -117,6 +116,7 @@ test :-
 	run_test("call"),
 	run_test("shell"),
 	run_test("foreach"),
+	run_test("bad_function_syntax"),
 
 	announce("MD5 CHECKSUMS"),
 
@@ -315,6 +315,9 @@ run_failure_test(Args,Target) :-
 	default_ref_dir(RefDir),
 	default_test_dir(TestDir),
 	report_failure_test(RefDir,TestDir,[],Args,Target,"[~s ~s] (expecting failure)",[Args,Target]).
+
+run_failure_test(RefDir,TestDir,Setup,Args,Target) :-
+        report_failure_test(RefDir,TestDir,Setup,Args,Target,"[t/~s,t/~s,~s ~s] (expecting failure)",[RefDir,TestDir,Args,Target]).
 
 report_failure_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
