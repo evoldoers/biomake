@@ -62,7 +62,7 @@ collect_file(File,Opts) :-
 file_info(T,DL,Status,Opts) :-
         target_bindrule(T,Rule),
         rule_dependencies(Rule,DL,Opts),
-        (   is_rebuild_required(T,DL,[],Opts)
+        (   rebuild_required(T,DL,[],Opts)
         ->  Status=stale
         ;   Status=fresh),
         !.
