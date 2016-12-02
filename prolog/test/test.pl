@@ -139,7 +139,9 @@ test :-
 	run_test("ref/md5.len","target/md5.len",["echo wrong >hello","echo wrong length >world","echo wrong_wrong >hello_world"],"-H","hello_world"),
 
 	report_counts,
-	halt.
+        (   failed_test(_,_)
+        ->  halt(1)
+        ;   halt(0)).
 
 init_counts :-
 	nb_setval(tests,0),
