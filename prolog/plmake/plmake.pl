@@ -75,10 +75,7 @@ build(T,SL,Opts) :-
         !,
         build_targets(DL,[T|SL],Opts), % semidet
         (   rebuild_required(T,DL,SL,Opts)
-        ->  rule_execs(Rule,Execs,Opts),
-            run_execs(Execs,Opts),
-	    (member(md5(true),Opts) -> update_md5_file(T,DL); true),
-	    flag_as_rebuilt(T)
+        ->  run_execs_and_update(Rule,Opts)
         ;   true),
         (member(dry_run(true),Opts) -> true;
          report('~w is up to date',[T],SL,Opts)).
@@ -86,7 +83,7 @@ build(T,SL,Opts) :-
         debug_report(build,'  checking if rebuild required for ~w',[T],SL),
         \+ rebuild_required(T,[],SL,Opts),
         !,
-        report('~w exists',[T],SL,Opts).
+        report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
         \+ target_bindrule(T,_),
         report('Don\'t know how to make ~w',[T],SL,Opts),
@@ -159,32 +156,37 @@ rebuild_required(T,_,SL,Opts) :-
 
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         member(D,DL),
-        build_count(D,Nd),
-        (build_count(T,Nt) -> Nd > Nt; true),
+	was_built_after(D,T,Opts),
 	!,
         report('Target ~w has recently rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         \+ exists_directory(T),
         member(D,DL),
-        is_built_after(D,T,Opts),
+        has_newer_timestamp(D,T,Opts),
         !,
         report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
 
-is_built_after(A,B,_Opts) :-
+has_newer_timestamp(A,B,_Opts) :-
         time_file(A,TA),
         time_file(B,TB),
         TA > TB.
+
+was_built_after(D,T,_Opts) :-
+        build_count(D,Nd),
+        (build_count(T,Nt) -> Nd > Nt; true).
 
 exists_target(T,_Opts) :-
         exists_file(T).
 exists_target(T,_Opts) :-
         exists_directory(T).
 
+rule_target(rb(T,_,_),T,_Opts).
 rule_dependencies(rb(_,DL,_),DL,_Opts).
 rule_execs(rb(_,_,X),X,_Opts) :- !.
 rule_execs(rb(_,_,X),_,_Opts) :- throw(error(no_exec(X))).
 
 
+% internal tracking of build order
 :- dynamic build_count/2.
 :- dynamic build_counter/1.
 
@@ -207,6 +209,14 @@ next_build_counter(1) :-
 % ----------------------------------------
 % TASK EXECUTION
 % ----------------------------------------
+
+run_execs_and_update(Rule,Opts) :-
+    rule_target(Rule,T,Opts),
+    rule_dependencies(Rule,DL,Opts),
+    rule_execs(Rule,Execs,Opts),
+    run_execs(Execs,Opts),
+    (member(md5(true),Opts) -> update_md5_file(T,DL); true),
+    flag_as_rebuilt(T).
 
 run_execs([],_).
 run_execs([E|Es],Opts) :-

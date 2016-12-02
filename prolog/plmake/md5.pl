@@ -36,8 +36,13 @@ get_md5(T) :-
     exists_file(F),
     !,
     debug(md5,'Reading MD5 hash file: ~w',[F]),
-    (md5_hash(T,_) -> retractall(md5_hash(T,_)); true),
-    (md5_valid(T) -> retract(md5_valid(T)); true),
+    retract_md5_hash(T),
+    % weirdly, if we try to retract_md5_valid(T) here, it bails out. Why?
+    % uncomment to see what I mean.
+    % instead, we retract_md5_valid at the end of update_md5_file. A bit awkward...
+%    format("retracting md5_valid(~w)~n",[T]),
+%    retract_md5_valid(T),
+%    format("retracted md5_valid(~w)~n",[T]),
     open(F,read,IO,[]),
     repeat,
     (   at_end_of_stream(IO)
@@ -55,6 +60,18 @@ get_md5(T) :-
 lookup_md5(T,Hash) :- md5_hash(T,Hash), !.
 lookup_md5(T,Hash) :- compute_md5(T,Hash).
 
+retract_md5_hash(T) :-
+    md5_hash(T,_),
+    !,
+    retractall(md5_hash(T,_));true.
+retract_md5_hash(_).
+
+retract_md5_valid(T) :-
+    md5_valid(T),
+    !,
+    retract(md5_valid(T));true.
+retract_md5_valid(_).
+
 compute_md5(T,Hash) :-
     exists_file(T),
     format(string(Exec),"md5 -q ~w",[T]),
@@ -62,6 +79,7 @@ compute_md5(T,Hash) :-
     shell_eval(Exec,HashCodes),
     phrase(chomp(Hash),HashCodes),
     debug(md5,'MD5 hash of ~w is ~w',[T,Hash]),
+    retract_md5_hash(T),
     (md5_hash(T,_) -> retractall(md5_hash(T,_)); true),
     assert(md5_hash(T,Hash)).
 
@@ -118,6 +136,7 @@ update_md5_file(T,DL) :-
      format(IO,"~w :- ~w.~n",[ValidTerm,ValidGoalStr]),
      debug(md5," ~w :- ~w.",[ValidTerm,ValidGoalStr])),
     close(IO),
+    retract_md5_valid(T), % it's awkward putting this here, but if we put it in load_md5, it seems to fail (see comment there)
     !.
 
 update_md5_file(T,DL) :-
