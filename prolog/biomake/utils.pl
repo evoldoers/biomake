@@ -32,7 +32,15 @@
 	   quote_string/2,
 	   newlines_to_spaces/2,
 	   to_string/2,
-	   equal_as_strings/2
+	   equal_as_strings/2,
+	   makefile_var_char/3,
+	   makefile_var_chars/3,
+	   makefile_var_atom_from_chars/3,
+	   makefile_var_string_from_chars/3,
+	   makefile_var_code/3,
+	   makefile_var_codes/3,
+	   makefile_var_atom_from_codes/3,
+	   makefile_var_string_from_codes/3
 	  ]).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
@@ -145,3 +153,28 @@ to_string(A,S) :- atomics_to_string([A],S).
 equal_as_strings(X,Y) :-
 	to_string(X,S),
 	to_string(Y,S).
+
+
+% We allow only a restricted subset of characters in variable names,
+% compared to the GNU make specification.
+% (seriously, does anyone use makefile variable names containing brackets, commas, colons, etc?)
+makefile_var_char(C) --> alphanum_char(C).
+makefile_var_char('_') --> ['_'].
+makefile_var_char('-') --> ['-'].
+
+makefile_var_chars([]) --> [].
+makefile_var_chars([C|Cs]) --> makefile_var_char(C), makefile_var_chars(Cs).
+
+makefile_var_atom_from_chars(A) --> makefile_var_chars(Cs), {atom_chars(A,Cs)}.
+makefile_var_string_from_chars(S) --> makefile_var_chars(Cs), {string_chars(S,Cs)}.
+
+% define these again as character codes, because Prolog is so annoying
+makefile_var_code(C) --> alphanum_code(C).
+makefile_var_code(95) --> [95].  % underscore '_'
+makefile_var_code(45) --> [45].  % hyphen '-'
+
+makefile_var_codes([]) --> [].
+makefile_var_codes([C|Cs]) --> makefile_var_code(C), makefile_var_codes(Cs).
+
+makefile_var_atom_from_codes(A) --> makefile_var_codes(Cs), {atom_codes(A,Cs)}.
+makefile_var_string_from_codes(S) --> makefile_var_codes(Cs), {string_codes(S,Cs)}.

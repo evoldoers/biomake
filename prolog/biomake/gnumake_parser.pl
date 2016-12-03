@@ -2,11 +2,7 @@
 
 :- module(gnumake_parser,
           [
-              parse_gnu_makefile/2,
-	      makefile_var_char/3,
-	      makefile_var_chars/3,
-	      makefile_var_atom_from_chars/3,
-	      makefile_var_string_from_chars/3
+              parse_gnu_makefile/2
 	  ]).
 
 :- use_module(library(pio)).
@@ -142,31 +138,6 @@ makefile_targets([T]) --> opt_space, makefile_target_string(T), opt_whitespace.
 makefile_warning_text(S) --> string_from_codes(S,")").
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
 makefile_target_string(S) --> string_from_codes(S,":; \t\n").
-
-% We allow only a restricted subset of characters in variable names,
-% compared to the GNU make specification.
-% (seriously, does anyone use makefile variable names containing brackets, commas, colons, etc?)
-makefile_var_char(C) --> alphanum_char(C).
-makefile_var_char('_') --> ['_'].
-makefile_var_char('-') --> ['-'].
-
-makefile_var_chars([]) --> [].
-makefile_var_chars([C|Cs]) --> makefile_var_char(C), makefile_var_chars(Cs).
-
-makefile_var_atom_from_chars(A) --> makefile_var_chars(Cs), {atom_chars(A,Cs)}.
-makefile_var_string_from_chars(S) --> makefile_var_chars(Cs), {string_chars(S,Cs)}.
-
-% define these again as character codes, because Prolog is so annoying
-makefile_var_code(C) --> alphanum_code(C).
-makefile_var_code(95) --> [95].  % underscore '_'
-makefile_var_code(45) --> [45].  % hyphen '-'
-
-makefile_var_codes([]) --> [].
-makefile_var_codes([C|Cs]) --> makefile_var_code(C), makefile_var_codes(Cs).
-
-makefile_var_atom_from_codes(A) --> makefile_var_codes(Cs), {atom_codes(A,Cs)}.
-makefile_var_string_from_codes(S) --> makefile_var_codes(Cs), {string_codes(S,Cs)}.
-
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".

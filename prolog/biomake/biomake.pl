@@ -26,7 +26,6 @@
 
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
-:- use_module(library(biomake/gnumake_parser)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
