@@ -1,12 +1,13 @@
 % * -*- Mode: Prolog -*- */
 
-:- module(md5,
+:- module(md5hash,
           [
 	      md5_hash_up_to_date/3,
 	      update_md5_file/2
           ]).
 
-:- use_module(library(md5), [ md5/2 as library_md5 ]).
+:- use_module(library(md5), [ md5_hash/3 as library_md5_hash ]).
+:- use_module(library(readutil)).
 
 % ----------------------------------------
 % MD5 HASHES
@@ -70,6 +71,7 @@ compute_md5(T,Size,Hash) :-
     retract_md5_hash(T),
     assert(md5_hash(T,Size,Hash)).
 
+% try all the md5 executables specified with md5_prog
 try_md5_prog(Filename,Hash) :-
     md5_prog(Md5Prog),
     format(string(Exec),"~w ~w",[Md5Prog,Filename]),
@@ -78,6 +80,11 @@ try_md5_prog(Filename,Hash) :-
     phrase(first_n(32,HashCodes),ExecOut),
     string_codes(HashStr,HashCodes),
     string_lower(HashStr,Hash).
+
+% fall back to using Prolog's in-memory MD5 implementation
+try_md5_prog(Filename,Hash) :-
+    read_file_to_string(Filename,Str,[]),
+    library_md5_hash(Str,Hash,[]).
 
 first_n(0,[]) --> [].
 first_n(0,[]) --> [_], first_n(0,[]).
