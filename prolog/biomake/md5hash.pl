@@ -80,12 +80,19 @@ try_md5_prog(Filename,Hash) :-
     string_codes(HashStr,HashCodes),
     string_lower(HashStr,Hash).
 
-% fall back to using Prolog's in-memory MD5 implementation
+% fall back to using Prolog's in-memory MD5 implementation in the md5 library
+%try_md5_prog(Filename,Hash) :-
+%    use_module(library(md5), [ md5_hash/3 as library_md5_hash ]),
+%    debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
+%    read_file_to_string(Filename,Str,[]),
+%    library_md5_hash(Str,Hash,[]).
+
+% fall back to using Prolog's deprecated in-memory MD5 implementation in the rdf_db library
 try_md5_prog(Filename,Hash) :-
-    use_module(library(md5), [ md5_hash/3 as library_md5_hash ]),
+    use_module(library(semweb/rdf_db)),
     debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
     read_file_to_string(Filename,Str,[]),
-    library_md5_hash(Str,Hash,[]).
+    rdf_atom_md5(Str,1,Hash).
 
 first_n(0,[]) --> [].
 first_n(0,[]) --> [_], first_n(0,[]).
@@ -111,13 +118,13 @@ md5_filename_mkdir(Target,Filename) :-
     shell(MkDir).
 
 make_md5_hash_term(T,S,H,Str) :-
-    format(string(Str),"md5_hash(\"~w\",~d,~q)",[T,S,H]).
+    format(string(Str),"md5_hash(\"~w\",~d,\"~w\")",[T,S,H]).
 
 make_md5_valid_term(T,S,H,Str) :-
-    format(string(Str),"md5_valid(\"~w\",~d,~q)",[T,S,H]).
+    format(string(Str),"md5_valid(\"~w\",~d,\"~w\")",[T,S,H]).
 
 make_md5_check_term(T,S,H,Str) :-
-    format(string(Str),"md5_check(\"~w\",~d,~q)",[T,S,H]).
+    format(string(Str),"md5_check(\"~w\",~d,\"~w\")",[T,S,H]).
 
 make_md5_valid_goal_list([Dep|Deps],[Goal|Goals]) :-
     md5_check(Dep,Size,Hash),
