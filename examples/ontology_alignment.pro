@@ -32,24 +32,24 @@ all <-- Deps,
 'all-%' <-- ['%.owl', '%.owx'].
 
 % obo2owl WITH dangling
-'$Base.$Fmt' <-- ['$Base.obo'],
+'$(Base).$(Fmt)' <-- ['$(Base).obo'],
        {allow_dangling(Base),suffix_fmt(Fmt,FmtName)},
-       'obolib-obo2owl --to $FmtName --allow-dangling $< -o $@ >& $@.err'.
+       'obolib-obo2owl --to $(FmtName) --allow-dangling $< -o $@ >& $@.err'.
 
 % obo2owl NO dangling
-'$Base.$Fmt' <-- ['$Base.obo'],
+'$(Base).$(Fmt)' <-- ['$(Base).obo'],
        {\+ allow_dangling(Base),suffix_fmt(Fmt,FmtName)},
-       'obolib-obo2owl --to $FmtName $< -o $@ >& $@.err'.
+       'obolib-obo2owl --to $(FmtName) $< -o $@ >& $@.err'.
 
 
 suffix_fmt(mos,manchester).
 suffix_fmt(owx,owlxml).
 suffix_fmt(owl,'RDFXML').
 
-'$Base.metadata' <-- ['$Base.owl'],
+'$(Base).metadata' <-- ['$(Base).owl'],
        'owltools file://`pwd`/$<  --show-metadata > $@'.
 
-'$Base.closure' <-- ['$Base.owl'],
+'$(Base).closure' <-- ['$(Base).owl'],
        'owltools file://`pwd`/$<  --save-closure -c $@'.
 
 % ----------------------------------------
@@ -79,8 +79,8 @@ align_all <-- Deps,
 
 % GENERIC
 
-'$Dir/' <-- [],
-  'mkdir -p $Dir'.
+'$(Dir)/' <-- [],
+  'mkdir -p $(Dir)'.
 
 
 
