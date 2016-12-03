@@ -83,6 +83,7 @@ try_md5_prog(Filename,Hash) :-
 
 % fall back to using Prolog's in-memory MD5 implementation
 try_md5_prog(Filename,Hash) :-
+    debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
     read_file_to_string(Filename,Str,[]),
     library_md5_hash(Str,Hash,[]).
 
