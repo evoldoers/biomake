@@ -1,0 +1,8 @@
+## from http://rlaanemets.com/post/show/adding-travis-to-swi-prolog-packs
+
+before_script:
+  - sudo apt-add-repository ppa:swi-prolog/devel -y
+  - sudo apt-get update -q
+  - sudo apt-get install swi-prolog-nox
+
+script: make test
