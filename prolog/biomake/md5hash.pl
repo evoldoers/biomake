@@ -1,15 +1,20 @@
 % * -*- Mode: Prolog -*- */
 
-:- module(md5,
+:- module(md5hash,
           [
 	      md5_hash_up_to_date/3,
 	      update_md5_file/2
           ]).
 
+:- use_module(library(md5), [ md5_hash/3 as library_md5_hash ]).
+:- use_module(library(readutil)).
 
 % ----------------------------------------
 % MD5 HASHES
 % ----------------------------------------
+
+md5_prog("md5sum").  % Ubuntu
+md5_prog("md5 -q").  % MacOS, BSD
 
 :- dynamic md5_hash/3.
 :- dynamic md5_valid/3.
@@ -61,15 +66,30 @@ retract_md5_hash(_).
 compute_md5(T,Size,Hash) :-
     exists_file(T),
     size_file(T,Size),
-    format(string(Exec),"md5 -q ~w",[T]),
-    debug(md5,'computing hash: ~w',[Exec]),
-    shell_eval(Exec,HashCodes),
-    phrase(chomp(Hash),HashCodes),
+    try_md5_prog(T,Hash),
     debug(md5,'MD5 hash of file ~w (size ~w) is ~w',[T,Size,Hash]),
     retract_md5_hash(T),
     assert(md5_hash(T,Size,Hash)).
 
-chomp(S) --> string_from_codes(S,"\n"), [10].
+% try all the md5 executables specified with md5_prog
+try_md5_prog(Filename,Hash) :-
+    md5_prog(Md5Prog),
+    format(string(Exec),"~w ~w",[Md5Prog,Filename]),
+    debug(md5,'computing hash: ~w',[Exec]),
+    shell_eval(Exec,ExecOut),
+    phrase(first_n(32,HashCodes),ExecOut),
+    string_codes(HashStr,HashCodes),
+    string_lower(HashStr,Hash).
+
+% fall back to using Prolog's in-memory MD5 implementation
+try_md5_prog(Filename,Hash) :-
+    debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
+    read_file_to_string(Filename,Str,[]),
+    library_md5_hash(Str,Hash,[]).
+
+first_n(0,[]) --> [].
+first_n(0,[]) --> [_], first_n(0,[]).
+first_n(N,[C|Cs]) --> [C], {Np is N - 1}, first_n(Np,Cs).
 
 delete_md5_file(T) :-
     md5_filename(T,F),

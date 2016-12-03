@@ -16,13 +16,13 @@ Getting Started
 2. Get the latest biomake source from github. No installation steps are
 required. Add it to your path (changing the directory if necessary):
 
-    export PATH=$PATH:$HOME/biomake/bin
+    `export PATH=$PATH:$HOME/biomake/bin`
 
 3. Get (minimal) help from the command line:
 
-    biomake -h
+    `biomake -h`
 
-4. Create a 'makefile.pro' (see below)
+4. Create a 'Makespec.pro' or a 'Makefile' (see below)
 
 Alternate installation instructions
 -----------------------------------
@@ -31,12 +31,12 @@ This can also be installed via the SWI-Prolog pack system
 
 Just start SWI and type:
 
-   ?- pack_install('biomake').
+    ?- pack_install('biomake').
 
 Command-line
 ------------
 
-  biomake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
+    biomake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
 
 Options
 -------
@@ -72,24 +72,32 @@ Examples
 biomake looks for a Prolog file called `Makespec.pro` in your
 current directory. If it's not there, it will try looking for a
 `Makefile` in GNU Make format. The following examples describe the
-Prolog syntax; GNU Make syntax is described elsewhere, e.g. [here](https://www.gnu.org/software/make/manual/html_node/index.html).
+Prolog syntax; GNU Make syntax is described elsewhere,
+e.g. [here](https://www.gnu.org/software/make/manual/html_node/index.html).
 
-Assume you have two file formats, ".foo" and ".bar", and a foo2bar
+Assume you have two file formats, ".foo" and ".bar", and a `foo2bar`
 converter.
 
-Add the following rule to your Makespec.pro:
+Add the following rule to your `Makespec.pro`:
 
     '%.bar' <-- '%.foo',
         'foo2bar $< > $@'.
 
-Unlike makefiles, whitespace is irrelevant. Remember the closing ".",
+Unlike makefiles, whitespace is irrelevant. However, you
+do need the quotes, and remember the closing ".",
 as this is prolog syntax.
+
+If you prefer to stick with GNU Make syntax,
+the above `Makespec.pro` is equivalent to the following `Makefile`:
+
+    %.bar: %.foo
+    	   foo2bar $< > $@
 
 To convert a pre-existing file "x.foo" to "x.bar" type:
 
     biomake x.bar
 
-Let's say we can go from a .bar to a .baz using a bar2baz
+Let's say we can go from a .bar to a .baz using a `bar2baz`
 converter. We can add an additional rule:
 
     '%.baz' <-- '%.bar',
@@ -100,41 +108,50 @@ Now if we type:
     touch x.foo
     biomake x.baz
 
-The output will be something like:
+The output shows the tree structure of the dependencies:
 
-    NT: x.baz <-- [x.bar]
-      NT: x.bar <-- [x.foo]
-        T: x.foo
+    Checking dependencies: test.baz <-- [test.bar]
+        Checking dependencies: test.bar <-- [test.foo]
+            Nothing to be done for test.foo
+        Target test.bar not materialized - will rebuild if required
         foo2bar x.foo > x.bar
-      NT: x.bar is up to date
-      bar2baz x.bar > x.baz
-    NT: x.baz is up to date
-
-In the future the output format will be more configurable. The idea is
-to show the dependencies as a tree structure.
+        test.bar is up to date
+    Target test.baz not materialized - will rebuild if required
+    bar2baz x.bar > x.baz
+    test.baz is up to date
 
 The syntax in the makespec above is designed to be similar to what is
 already used in makefiles. You can bypass this and use prolog
 variables. The following form is functionally equivalent:
 
-    '$Base.bar' <-- '$Base.foo',
-        'foo2bar $Base.foo > $Base.bar'.
+    '$(Base).bar' <-- '$(Base).foo',
+        'foo2bar $(Base).foo > $(Base).bar'.
 
-Note that unlike Makefiles, the variables are not enclosed in
-parentheses. These are not Makefile variable, but are actually prolog
-variables (and must conform to prolog syntax - they must have a
-leading uppercase, and only alphanumeric characters plus underscore).
+The equivalent `Makefile` is
 
-You can mix and match if you like:
+    $(Base).foo:
+    	echo $(Base) >$@
 
-    '$Base.bar' <-- '$Base.foo',
+    $(Base).bar: $(Base).foo
+    	foo2bar $(Base).foo > $(Base).bar
+
+If you want the variables to work as Prolog variables as well
+as GNU Make variables, then they must conform to prolog syntax -
+they must have a leading uppercase, and only alphanumeric characters plus underscore.
+
+You can also use GNU Makefile constructs like automatic variables if you like:
+
+    '$(Base).bar' <-- '$(Base).foo',
         'foo2bar $< > $@'.
 
+Following the GNU Make convention, variable names must be enclosed in
+parentheses unless they are single letters.
+
 Unlike makefiles, biomake allows multiple variables in pattern
-matching. Let's say we have a program called "align" that compares two
+matching. Let's say we have a program called `align` that compares two
 files producing some output (e.g. biological sequence alignment, or
-ontology alignment). Assume our file convention is to suffix `.fa` on
-the inputs.  We can write a makespec with the following:
+ontology alignment). Assume our file convention is to suffix ".fa" on
+the inputs.  We can write a `Makespec.pro` with the following:
 
     'align-$X-$Y.tbl' <-- ['$X.fa', '$Y.fa'],
         'align $X.fa $Y.fa > $@'.
@@ -169,7 +186,7 @@ Note that here the rule consists of 4 parts:
 In this case, the prolog goal succeeds with 9 solutions, with 3
 different values for X and Y. If we type:
 
-  biomake align-platypus-coelocanth.tbl
+    biomake align-platypus-coelocanth.tbl
 
 It will not succeed, even if the .fa files are on the filesystem. This
 is because the goal cannot be satisfied for these two values.
@@ -194,39 +211,20 @@ We can create a top-level target that generates all solutions:
     'align-$X-$Y.tbl' <-- ['$X.obo', '$Y.obo'],
         'align $X.obo $Y.obo > $@'.
 
-It takes a little knowledge of prolog metalogical operators to
-construct the generator - in future there may be a convenient
-syntactic form that hides this.
-
 Now if we type:
 
     biomake all
 
 And all non-identical pairs are compared (in one direction only - the
-assumption is that "align" is symmetric).
+assumption is that the `align` program is symmetric).
 
 More
 ----
 
-There are a few more features that will be documented in the
-future. The core will likely stay minimal. The core system is
-extensive and powerful so you should be able to do lots by
-using/abusing either prolog or shell wrappers.
-
-In the future there may be extensions for:
+Ideas for future development:
 
 * a web-based build environment (a la Galaxy)
 * semantic web enhancement (using NEPOMUK file ontology)
 * using other back ends and target sources (sqlite db, REST services)
 * cloud-based computing
 * running computes on clusters
-* make2biomake partial translator
-* alternate syntaxes
-
-Examples
---------
-
-The makespec.pro in this project is used to make the pack release.
-
-See http://code.google.com/p/omeo/ - in particular,
-http://code.google.com/p/omeo/source/browse/trunk/build/makespec.pro

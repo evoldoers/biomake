@@ -54,7 +54,11 @@ build_default :-
 
 build_default(Opts) :-
 	default_target(T),
+	!,
 	build(T,Opts).
+
+build_default(_) :-
+	format("No targets. Stop.~n").
 
 build :-
 	format("No targets. Stop.~n").
@@ -83,7 +87,7 @@ build(T,SL,Opts) :-
         !,
         build_targets(DL,[T|SL],Opts), % semidet
         (   rebuild_required(T,DL,SL,Opts)
-        ->  run_execs_and_update(Rule,Opts)
+        ->  run_execs_and_update(Rule,SL,Opts)
         ;   true),
         (member(dry_run(true),Opts) -> true;
          report('~w is up to date',[T],SL,Opts)).
@@ -218,38 +222,38 @@ next_build_counter(1) :-
 % TASK EXECUTION
 % ----------------------------------------
 
-run_execs_and_update(Rule,Opts) :-
+run_execs_and_update(Rule,SL,Opts) :-
     rule_target(Rule,T,Opts),
     rule_dependencies(Rule,DL,Opts),
     rule_execs(Rule,Execs,Opts),
-    run_execs(Execs,Opts),
+    run_execs(Execs,SL,Opts),
     (member(md5(true),Opts) -> update_md5_file(T,DL); true),
     flag_as_rebuilt(T).
 
-run_execs([],_).
-run_execs([E|Es],Opts) :-
-        run_exec(E,Opts),
-        run_execs(Es,Opts).
+run_execs([],_,_).
+run_execs([E|Es],SL,Opts) :-
+        run_exec(E,SL,Opts),
+        run_execs(Es,SL,Opts).
 
-run_exec(Exec,Opts) :-
+run_exec(Exec,SL,Opts) :-
         member(dry_run(true),Opts),
         !,
-        report('~w',[Exec],Opts).
-run_exec(Exec,Opts) :-
+        report('~w',[Exec],SL,Opts).
+run_exec(Exec,SL,_Opts) :-
 	string_chars(Exec,['@'|SilentChars]),
 	!,
 	string_chars(Silent,SilentChars),
-	silent_run_exec(Silent,Opts).
-run_exec(Exec,Opts) :-
-        report('~w',[Exec],Opts),
-	silent_run_exec(Exec,Opts).
+	silent_run_exec(Silent,SL).
+run_exec(Exec,SL,Opts) :-
+        report('~w',[Exec],SL,Opts),
+	silent_run_exec(Exec,SL).
 
-silent_run_exec(Exec,Opts) :-
+silent_run_exec(Exec,SL) :-
         get_time(T1),
         shell(Exec,Err),
         get_time(T2),
         DT is T2-T1,
-        debug_report(build,'  Return: ~w Time: ~w',[Err,DT],Opts),
+        debug_report(build,'  Return: ~w Time: ~w',[Err,DT],SL),
         Err=0,
         !.
 
@@ -398,6 +402,7 @@ translate_gnumake_clause(assignment(Var,"+=",Val), (Var += Val)).
 translate_gnumake_clause(assignment(Var,"!=",Val), (Var =* Val)).
 translate_gnumake_clause(C,_) :-
     format("Error translating ~w~n",[C]),
+	backtrace(20),
     fail.
 
 write_clause(IO,rule(Ts,Ds,Es)) :-
@@ -499,7 +504,6 @@ add_spec_clause(Rule,VNs) :-
         Rule =.. [mkrule,T|_],
         !,
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
-	debug(makeprog,"Setting default target to ~w",[T]),
 	set_default_target(T),
         assert(with(Rule,VNs)).
 
@@ -512,11 +516,12 @@ set_default_target(_) :-
 	debug(makeprog,"Default target already set",[]),
 	!.
 set_default_target([T|_]) :-
-	debug(makeprog,"Setting",[]),
-	!,
 	expand_vars(T,Tx),
+	equal_as_strings(T,Tx),  % only set default target if T contains no variables
+	!,
 	debug(makeprog,"Setting default target to ~s",[Tx]),
 	assert(default_target(Tx)).
+set_default_target([_|_]) :- !.
 set_default_target(T) :- set_default_target([T]).
 
 global_unbind(Var) :-
