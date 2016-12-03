@@ -31,12 +31,12 @@ This can also be installed via the SWI-Prolog pack system
 
 Just start SWI and type:
 
-    `?- pack_install('biomake').`
+    ?- pack_install('biomake').
 
 Command-line
 ------------
 
-    `biomake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]`
+    biomake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
 
 Options
 -------
