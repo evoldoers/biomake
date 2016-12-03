@@ -1,6 +1,6 @@
 % * -*- Mode: Prolog -*- */
 
-:- module(parser_utils,
+:- module(utils,
           [
            show_type/1,
            type_of/2,
@@ -110,8 +110,11 @@ type_of(X,"atom") :- atom(X), !.
 type_of(_,"unknown").
 
 shell_eval(Exec,CodeList) :-
-	process_create(path(sh),['-c',Exec],[stdout(pipe(Stream))]),
+        process_create(path(sh),['-c',Exec],[stdout(pipe(Stream)),
+					     stderr(null),
+					     process(Pid)]),
         read_stream_to_codes(Stream,CodeList),
+	process_wait(Pid,_Status),
         close(Stream).
 
 shell_eval_str(Exec,Result) :-

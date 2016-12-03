@@ -118,8 +118,8 @@ parse_arg(['-l',F|L],L,
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
-parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5)), !.
-parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5)), !.
+parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
+parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
 arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
 
 parse_arg(['--no-backtrace'|L],L,quiet(true)) :- assert(no_backtrace), !.
