@@ -21,8 +21,9 @@ main :-
 	consult_makefile(Opts),
         forall(member(goal(G),Opts),
                G),
-	build_toplevel(Opts),
-        halt.
+	(build_toplevel(Opts)
+	 -> halt(0)
+	 ;  halt(1)).
 
 build_toplevel(Opts) :-
 	member(toplevel(_),Opts),
