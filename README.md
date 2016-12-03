@@ -150,7 +150,7 @@ parentheses unless they are single letters.
 Unlike makefiles, biomake allows multiple variables in pattern
 matching. Let's say we have a program called `align` that compares two
 files producing some output (e.g. biological sequence alignment, or
-ontology alignment). Assume our file convention is to suffix `.fa` on
+ontology alignment). Assume our file convention is to suffix ".fa" on
 the inputs.  We can write a `Makespec.pro` with the following:
 
     'align-$X-$Y.tbl' <-- ['$X.fa', '$Y.fa'],
