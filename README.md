@@ -228,11 +228,3 @@ Ideas for future development:
 * using other back ends and target sources (sqlite db, REST services)
 * cloud-based computing
 * running computes on clusters
-
-Examples
---------
-
-The makespec.pro in this project is used to make the pack release.
-
-See http://code.google.com/p/omeo/ - in particular,
-http://code.google.com/p/omeo/source/browse/trunk/build/makespec.pro
