@@ -76,8 +76,5 @@ time_file_wrap(_,-).
 
 show_stored_targets :-
         forall(stored_target(T,DL,S,T1,T2),
-               print_message(informational,stored_target(T,DL,S,T1,T2))).
-
-prolog:message(stored_target(T,DL,S,T1,T2)) -->
-        {atomic_list_concat(DL,' ',DLA)},
-        [T,' [',DLA,'] ',S,' ',T1,' ',T2].
+	       (atomic_list_concat(DL,' ',DLA),
+	        format("~w [~w] ~w ~w ~w~n",[T,DLA,S,T1,T2]))).

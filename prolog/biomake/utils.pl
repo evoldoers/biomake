@@ -31,7 +31,7 @@
 	   file_directory_slash/2,
 	   quote_string/2,
 	   newlines_to_spaces/2,
-	   to_strings/2,
+	   to_string/2,
 	   equal_as_strings/2
 	  ]).
 
