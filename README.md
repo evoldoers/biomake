@@ -186,7 +186,7 @@ Note that here the rule consists of 4 parts:
 In this case, the prolog goal succeeds with 9 solutions, with 3
 different values for X and Y. If we type:
 
-  biomake align-platypus-coelocanth.tbl
+    biomake align-platypus-coelocanth.tbl
 
 It will not succeed, even if the .fa files are on the filesystem. This
 is because the goal cannot be satisfied for these two values.
