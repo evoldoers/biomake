@@ -16,11 +16,11 @@ Getting Started
 2. Get the latest biomake source from github. No installation steps are
 required. Add it to your path (changing the directory if necessary):
 
-    export PATH=$PATH:$HOME/biomake/bin
+    `export PATH=$PATH:$HOME/biomake/bin`
 
 3. Get (minimal) help from the command line:
 
-    biomake -h
+    `biomake -h`
 
 4. Create a 'Makespec.pro' or a 'Makefile' (see below)
 
@@ -31,12 +31,12 @@ This can also be installed via the SWI-Prolog pack system
 
 Just start SWI and type:
 
-   ?- pack_install('biomake').
+    `?- pack_install('biomake').`
 
 Command-line
 ------------
 
-  biomake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
+    `biomake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]`
 
 Options
 -------
