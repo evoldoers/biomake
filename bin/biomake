@@ -18,4 +18,4 @@ if [ -z `which swipl` ]; then
 fi
 
 
-$SWIPL -L0 -G0 -T0 -q -p library=$BIOMAKE_PATH  -g 'assert(biomake_prog("'$0'")),main,halt' -t halt -s $BIOMAKE_PATH/biomake/biomake_cli -- "$@"
+$SWIPL -L0 -G0 -T0 -q -p library=$BIOMAKE_PATH  -g 'assert(biomake_prog("'$0'")),main,halt' -t halt -s $BIOMAKE_PATH/biomake/cli -- "$@"

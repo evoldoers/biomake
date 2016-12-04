@@ -136,7 +136,7 @@ parse_arg(['-l',F|L],L,
           goal( (collect_stored_targets(F,[]),
                  show_stored_targets
                 ) )) :-
-        ensure_loaded(library(biomake/biomake_db)),
+        ensure_loaded(library(biomake/scan)),
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
