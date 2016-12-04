@@ -15,14 +15,9 @@ main :-
         current_prolog_flag(argv, Arguments),
         (append(_SytemArgs, [--|Args], Arguments) ; =(Arguments,Args)),
         !,
-        parse_args(Args,LumpyOpts),
-        flatten(LumpyOpts,FlatOpts),
-	(bagof(Arg,get_core_arg(Arg,FlatOpts),LumpyCore);
-	    LumpyCore=[]),
-        flatten(LumpyCore,Core),
-        concat_string_list_spaced(Core,CoreStr),
-	Opts = [args(CoreStr)|FlatOpts],
-	add_assignments(Opts),
+        parse_args(Args,TmpOpts),
+	get_cmd_args(TmpOpts,Opts),
+ 	add_assignments(Opts),
 	consult_makefile(Opts),
         forall(member(goal(G),Opts),
                G),
@@ -76,6 +71,14 @@ parse_args([MultiArgs|Args],Opts) :-
     parse_args(Args,RestOpts).
 parse_args([A|Args],[toplevel(A)|Opts]) :-
         parse_args(Args,Opts).
+
+get_cmd_args(FlatOpts,Opts) :-
+	(bagof(Arg,get_core_arg(Arg,FlatOpts),LumpyCore);
+	    LumpyCore=[]),
+        flatten(LumpyCore,Core),
+        concat_string_list_spaced(Core,CoreStr),
+	biomake_prog(Cmd),
+	Opts = [cmd(Cmd),args(CoreStr)|FlatOpts].
 
 get_core_arg(Arg,Opts) :-
 	member(Opt,Opts),
