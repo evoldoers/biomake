@@ -15,8 +15,13 @@ main :-
         current_prolog_flag(argv, Arguments),
         (append(_SytemArgs, [--|Args], Arguments) ; =(Arguments,Args)),
         !,
-        parse_args(Args,Opts_1),
-        flatten(Opts_1,Opts),
+        parse_args(Args,LumpyOpts),
+        flatten(LumpyOpts,FlatOpts),
+	(bagof(Arg,get_core_arg(Arg,FlatOpts),LumpyCore);
+	    LumpyCore=[]),
+        flatten(LumpyCore,Core),
+        concat_string_list_spaced(Core,CoreStr),
+	Opts = [args(CoreStr)|FlatOpts],
 	add_assignments(Opts),
 	consult_makefile(Opts),
         forall(member(goal(G),Opts),
@@ -72,8 +77,21 @@ parse_args([MultiArgs|Args],Opts) :-
 parse_args([A|Args],[toplevel(A)|Opts]) :-
         parse_args(Args,Opts).
 
+get_core_arg(Arg,Opts) :-
+	member(Opt,Opts),
+	core_arg(Arg,Opt).
+
 :- discontiguous parse_arg/3.
+:- discontiguous core_arg/2.
+:- discontiguous parse_core_arg/2.
 :- discontiguous arg_info/3.
+
+parse_arg(Args,Rest,Opt) :-
+	append(CoreArg,Rest,Args),
+	parse_core_arg(CoreArg,Opt).
+
+core_arg(CoreArg,Opt) :-
+	parse_core_arg(CoreArg,Opt).
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
 arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
@@ -101,10 +119,10 @@ parse_arg(['--always-make'|L],L,always_make(true)).
 parse_arg(['-B'|L],L,always_make(true)).
 arg_info('-B,--always-make','','Always build fresh target even if dependency is up to date').
 
-parse_arg(['-p',F|L],L,makeprog(F)) :- !.
+parse_core_arg(['-p',F],makeprog(F)).
 arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]').
 
-parse_arg(['-f',F|L],L,gnu_makefile(F)).
+parse_core_arg(['-f',F],gnu_makefile(F)).
 arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
 
 parse_arg(['-T',F|L],L,translate_gnu_makefile(F)).
@@ -121,6 +139,7 @@ arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each f
 
 parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
 parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
+core_arg(['-H'],md5(true)).
 arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
 
 parse_arg(['--no-backtrace'|L],L,quiet(true)) :- assert(no_backtrace), !.
@@ -129,6 +148,8 @@ arg_info('-no-backtrace','','Do not print a backtrace on error').
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
+core_arg([VarEqualsVal],assignment(Var,Val)) :-
+    format(string(VarEqualsVal),"~w=~q",[Var,Val]).
 arg_info('Var=Val','','Assign Makefile variables from command line').
 
 makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
