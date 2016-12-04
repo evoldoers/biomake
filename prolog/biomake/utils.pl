@@ -26,6 +26,8 @@
 	   last_element/2,
 	   nth_element/3,
 	   slice/4,
+	   shell_path/1,
+	   shell_wrap/2,
 	   shell_eval/2,
 	   shell_eval_str/2,
 	   file_directory_slash/2,
@@ -40,7 +42,9 @@
 	   makefile_var_code/3,
 	   makefile_var_codes/3,
 	   makefile_var_atom_from_codes/3,
-	   makefile_var_string_from_codes/3
+	   makefile_var_string_from_codes/3,
+	   biomake_private_filename/3,
+	   biomake_private_filename_mkdir/3
 	  ]).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
@@ -117,6 +121,16 @@ type_of(X,"compound") :- compound(X), !.
 type_of(X,"atom") :- atom(X), !.
 type_of(_,"unknown").
 
+shell_path(Path) :-
+	expand_file_search_path(path(sh),Path),
+	exists_file(Path),
+	!.
+
+shell_wrap(Exec,ShellExec) :-
+	shell_path(Sh),
+	!,
+	format(string(ShellExec),"~w -c ~q",[Sh,Exec]).
+
 shell_eval(Exec,CodeList) :-
         process_create(path(sh),['-c',Exec],[stdout(pipe(Stream)),
 					     stderr(null),
@@ -178,3 +192,25 @@ makefile_var_codes([C|Cs]) --> makefile_var_code(C), makefile_var_codes(Cs).
 
 makefile_var_atom_from_codes(A) --> makefile_var_codes(Cs), {atom_codes(A,Cs)}.
 makefile_var_string_from_codes(S) --> makefile_var_codes(Cs), {string_codes(S,Cs)}.
+
+biomake_private_dir(Target,Path) :-
+	absolute_file_name(Target,F),
+	file_directory_name(F,D),
+	format(string(Path),"~w/.biomake",[D]).
+
+biomake_private_subdir(Target,Subdir,Path) :-
+	biomake_private_dir(Target,Private),
+	format(string(Path),"~w/~w",[Private,Subdir]).
+
+biomake_private_filename(Target,Subdir,Filename) :-
+	biomake_private_subdir(Target,Subdir,Private),
+	absolute_file_name(Target,F),
+	file_base_name(F,N),
+	format(string(Filename),"~w/~w",[Private,N]).
+
+biomake_private_filename_mkdir(Target,Subdir,Filename) :-
+	biomake_private_dir(Target,Path),
+	(exists_directory(Path); make_directory(Path)),
+	biomake_private_subdir(Target,Subdir,SubPath),
+	(exists_directory(SubPath); make_directory(SubPath)),
+	biomake_private_filename(Target,Subdir,Filename).

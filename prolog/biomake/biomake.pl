@@ -7,6 +7,8 @@
 
            build/1,
            build/2,
+
+	   report/3,
 	   
            consult_makeprog/2,
            consult_gnu_makefile/2,
@@ -17,8 +19,13 @@
 	   add_gnumake_clause/1,
 	   
            target_bindrule/2,
-           rule_dependencies/3,
            rebuild_required/4,
+
+           rule_target/3,
+           rule_dependencies/3,
+           rule_execs/3,
+
+	   run_execs_in_script/3,
 
 	   global_binding/2,
 	   expand_vars/3
@@ -26,6 +33,7 @@
 
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
+:- use_module(library(biomake/queue)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -222,28 +230,65 @@ next_build_counter(1) :-
 % ----------------------------------------
 
 run_execs_and_update(Rule,SL,Opts) :-
+    member(dry_run(true),Opts),
+    !,
     rule_target(Rule,T,Opts),
-    rule_dependencies(Rule,DL,Opts),
     rule_execs(Rule,Execs,Opts),
-    run_execs(Execs,SL,Opts),
-    (member(md5(true),Opts) -> update_md5_file(T,DL); true),
+    forall(member(Exec,Execs),
+           report('~w',[Exec],SL,Opts)),
     flag_as_rebuilt(T).
+
+run_execs_and_update(Rule,SL,Opts) :-
+    rule_target(Rule,T,Opts),
+    dispatch_run_execs(Rule,SL,Opts),
+    flag_as_rebuilt(T).
+
+dispatch_run_execs(Rule,SL,Opts) :-
+	member(queue(Q),Opts),
+	!,
+	run_execs_in_queue(Q,Rule,SL,Opts).
+dispatch_run_execs(Rule,SL,Opts) :-
+	member(oneshell(true),Opts),
+	!,
+	run_execs_in_script(Rule,SL,Opts).
+dispatch_run_execs(Rule,SL,Opts) :-
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	rule_execs(Rule,Es,Opts),
+	run_execs(Es,SL,Opts),
+	update_hash(T,DL,Opts).
+
+run_execs_in_script(Rule,SL,Opts) :-
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	rule_execs(Rule,Es,Opts),
+	write_script_file(T,Es,Opts,Script),
+	report_run_exec(Script,SL,Opts),
+	update_hash(T,DL,Opts).
+
+update_hash(T,DL,Opts) :-
+    member(md5(true),Opts),
+    !,
+    update_md5_file(T,DL).
+update_hash(_,_,_).
 
 run_execs([],_,_).
 run_execs([E|Es],SL,Opts) :-
         run_exec(E,SL,Opts),
         run_execs(Es,SL,Opts).
 
-run_exec(Exec,SL,Opts) :-
-        member(dry_run(true),Opts),
-        !,
-        report('~w',[Exec],SL,Opts).
 run_exec(Exec,SL,_Opts) :-
 	string_chars(Exec,['@'|SilentChars]),
 	!,
 	string_chars(Silent,SilentChars),
 	silent_run_exec(Silent,SL).
 run_exec(Exec,SL,Opts) :-
+	member(silent(true),Opts),
+	silent_run_exec(Exec,SL).
+run_exec(Exec,SL,Opts) :-
+	report_run_exec(Exec,SL,Opts).
+
+report_run_exec(Exec,SL,Opts) :-
         report('~w',[Exec],SL,Opts),
 	silent_run_exec(Exec,SL).
 

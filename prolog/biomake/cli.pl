@@ -2,6 +2,7 @@
 
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/utils)).
+:- use_module(library(biomake/queue)).
 
 :- dynamic no_backtrace/0.
 
@@ -60,15 +61,19 @@ find_file(File,List) :-
 % ----------------------------------------
 
 parse_args([],[]).
+parse_args([Alias|Rest],Opt) :-
+	arg_alias(Arg,Alias),
+	!,
+	parse_args([Arg|Rest],Opt).
 parse_args(Args,[Opt|Opts]) :-
         parse_arg(Args,Rest,Opt),
         !,
         parse_args(Rest,Opts).
 parse_args([MultiArgs|Args],Opts) :-
-    string_codes(MultiArgs,C),
-    phrase(multi_args(MultiOpts),C),
-    append(MultiOpts,RestOpts,Opts),
-    parse_args(Args,RestOpts).
+        string_codes(MultiArgs,C),
+        phrase(multi_args(MultiOpts),C),
+        append(MultiOpts,RestOpts,Opts),
+        parse_args(Args,RestOpts).
 parse_args([A|Args],[toplevel(A)|Opts]) :-
         parse_args(Args,Opts).
 
@@ -87,6 +92,7 @@ get_core_arg(Arg,Opts) :-
 :- discontiguous parse_arg/3.
 :- discontiguous core_arg/2.
 :- discontiguous parse_core_arg/2.
+:- discontiguous arg_alias/2.
 :- discontiguous arg_info/3.
 
 parse_arg(Args,Rest,Opt) :-
@@ -99,12 +105,14 @@ core_arg(CoreArg,Opt) :-
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
 arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
 
-parse_arg(['--dry-run'|L],L,dry_run(true)).
 parse_arg(['-n'|L],L,dry_run(true)).
-arg_info('-n,--dry-run','','Print the commands that would be executed, but do not execute them').
+arg_alias('-n','--dry-run').
+arg_alias('-n','--recon').
+arg_alias('-n','--just-print').
+arg_info('-n,--dry-run,--recon,--just-print','','Print the commands that would be executed, but do not execute them').
 
 parse_arg(['-h'|L],L,null) :- show_help, !.
-parse_arg(['--help'|L],L,null) :- show_help, !.
+arg_alias('-h','--help').
 arg_info('-h,--help','','Show help').
 
 show_help :-
@@ -118,8 +126,8 @@ show_help :-
         nl,
         halt.
 
-parse_arg(['--always-make'|L],L,always_make(true)).
 parse_arg(['-B'|L],L,always_make(true)).
+arg_alias('-B','--always-make').
 arg_info('-B,--always-make','','Always build fresh target even if dependency is up to date').
 
 parse_core_arg(['-p',F],makeprog(F)).
@@ -141,11 +149,22 @@ parse_arg(['-l',F|L],L,
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
 parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
-parse_arg(['--md5-hash'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
+arg_alias('-H','--md5-hash').
 core_arg(['-H'],md5(true)).
 arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
 
-parse_arg(['--no-backtrace'|L],L,quiet(true)) :- assert(no_backtrace), !.
+parse_arg(['-q'|L],L,silent(true)).
+arg_info('-q,--quiet,--silent','','Silent operation; do not print recipes as they are executed').
+
+parse_arg(['--one-shell'|L],L,oneshell(true)).
+arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'s .ONESHELL)').
+
+parse_arg(['-Q',Qs|L],L,queue(Q)) :- string_chars(Qs,Qc), atom_chars(Q,Qc), queue_engine(Q), !.
+parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
+arg_alias('-Q','--queue').
+arg_info('-Q,--queue QUEUE','','Run recipes using queue engine QUEUE (supported engines: test)').
+
+parse_arg(['--no-backtrace'|L],L,null) :- assert(no_backtrace), !.
 arg_info('-no-backtrace','','Do not print a backtrace on error').
 
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-

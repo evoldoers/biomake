@@ -106,16 +106,10 @@ delete_md5_file(T) :-
 delete_md5_file(_).
 
 md5_filename(Target,Filename) :-
-    absolute_file_name(Target,F),
-    file_directory_name(F,D),
-    file_base_name(F,N),
-    format(string(Filename),"~w/.biomake/md5/~w",[D,N]).
+    biomake_private_filename(Target,"md5",Filename).
 
 md5_filename_mkdir(Target,Filename) :-
-    md5_filename(Target,Filename),
-    file_directory_name(Filename,D),
-    format(string(MkDir),"mkdir -p ~w",[D]),
-    shell(MkDir).
+    biomake_private_filename_mkdir(Target,"md5",Filename).
 
 make_md5_hash_term(T,S,H,Str) :-
     format(string(Str),"md5_hash(\"~w\",~d,\"~w\")",[T,S,H]).
