@@ -26,6 +26,8 @@ main :-
 	 -> halt(0)
 	 ;  halt(1)).
 
+rabbit(X,Y) :- string_concat(X,Y).
+
 build_toplevel(Opts) :-
 	member(toplevel(_),Opts),
 	!,
@@ -78,29 +80,23 @@ parse_args([A|Args],[toplevel(A)|Opts]) :-
         parse_args(Args,Opts).
 
 get_cmd_args(FlatOpts,Opts) :-
-	(bagof(Arg,get_core_arg(Arg,FlatOpts),LumpyCore);
+	(bagof(Arg,arg_from_opts(Arg,FlatOpts),LumpyCore);
 	    LumpyCore=[]),
         flatten(LumpyCore,Core),
         concat_string_list_spaced(Core,CoreStr),
 	biomake_prog(Cmd),
-	Opts = [cmd(Cmd),args(CoreStr)|FlatOpts].
+	absolute_file_name(Cmd,CmdPath),
+	working_directory(CWD,CWD),
+	Opts = [biomake_prog(CmdPath),biomake_args(CoreStr),biomake_cwd(CWD)|FlatOpts].
 
-get_core_arg(Arg,Opts) :-
+arg_from_opts(Arg,Opts) :-
 	member(Opt,Opts),
-	core_arg(Arg,Opt).
+	recover_arg(Arg,Opt).
 
 :- discontiguous parse_arg/3.
-:- discontiguous core_arg/2.
-:- discontiguous parse_core_arg/2.
+:- discontiguous recover_arg/2.
 :- discontiguous arg_alias/2.
 :- discontiguous arg_info/3.
-
-parse_arg(Args,Rest,Opt) :-
-	append(CoreArg,Rest,Args),
-	parse_core_arg(CoreArg,Opt).
-
-core_arg(CoreArg,Opt) :-
-	parse_core_arg(CoreArg,Opt).
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
 arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
@@ -130,10 +126,12 @@ parse_arg(['-B'|L],L,always_make(true)).
 arg_alias('-B','--always-make').
 arg_info('-B,--always-make','','Always build fresh target even if dependency is up to date').
 
-parse_core_arg(['-p',F],makeprog(F)).
+parse_arg(['-p',F|L],L,makeprog(F)).
+recover_arg(Arg,makeprog(F)) :- absolute_file_name(F,Fabs), format(string(Arg),"-p ~w",[Fabs]).
 arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]').
 
-parse_core_arg(['-f',F],gnu_makefile(F)).
+parse_arg(['-f',F|L],L,gnu_makefile(F)).
+recover_arg(Arg,gnu_makefile(F)) :- absolute_file_name(F,Fabs), format(string(Arg),"-f ~w",[Fabs]).
 arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
 
 parse_arg(['-T',F|L],L,translate_gnu_makefile(F)).
@@ -150,7 +148,7 @@ arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each f
 
 parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
 arg_alias('-H','--md5-hash').
-core_arg(['-H'],md5(true)).
+recover_arg(['-H'],md5(true)).
 arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
 
 parse_arg(['-q'|L],L,silent(true)).
@@ -167,8 +165,14 @@ arg_info('-Q,--queue-engine ENGINE','','Queue recipes using ENGINE (supported en
 parse_arg(['--qsub-exec',X|L],L,qsub_exec(X)).
 arg_info('--qsub-exec PATH','','Path to qsub (sge,pbs)').
 
+parse_arg(['--queue-args',X|L],L,queue_args(X)).
+arg_info('--queue-args "ARGS"','','Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)').
+
 parse_arg(['--qsub-args',X|L],L,qsub_args(X)).
-arg_info('--qsub-args ARGS','','Arguments for qsub (sge,pbs)').
+arg_info('--qsub-args "ARGS"','','Additional arguments for qsub (sge,pbs) or sbatch (slurm)').
+
+parse_arg(['--qdel-args',X|L],L,qdel_args(X)).
+arg_info('--qdel-args "ARGS"','','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
 
 parse_arg(['--no-backtrace'|L],L,null) :- assert(no_backtrace), !.
 arg_info('-no-backtrace','','Do not print a backtrace on error').
@@ -176,7 +180,7 @@ arg_info('-no-backtrace','','Do not print a backtrace on error').
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
-core_arg([VarEqualsVal],assignment(Var,Val)) :-
+recover_arg([VarEqualsVal],assignment(Var,Val)) :-
     format(string(VarEqualsVal),"~w=~q",[Var,Val]).
 arg_info('Var=Val','','Assign Makefile variables from command line').
 
