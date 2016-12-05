@@ -22,6 +22,8 @@ main :-
 	consult_makefile(Opts),
         forall(member(goal(G),Opts),
                G),
+        forall(member(flush_queue(T),Opts),
+	       flush_queue_recursive(T,Opts)),
 	(build_toplevel(Opts)
 	 -> halt(0)
 	 ;  halt(1)).
@@ -35,7 +37,15 @@ build_toplevel(Opts) :-
                build(T,Opts)).
 
 build_toplevel(Opts) :-
+	nonbuild_task_specified(Opts),
+	!.
+
+build_toplevel(Opts) :-
 	build_default(Opts).
+
+nonbuild_task_specified(Opts) :- member(translate_gnu_makefile(_),Opts).
+nonbuild_task_specified(Opts) :- member(goal(_),Opts).
+nonbuild_task_specified(Opts) :- member(flush_queue(_),Opts).
 
 add_assignments(Opts) :-
         forall(member(assignment(Var,Val),Opts),
@@ -93,19 +103,18 @@ arg_from_opts(Arg,Opts) :-
 	member(Opt,Opts),
 	recover_arg(Arg,Opt).
 
+multi_args(Opts) --> "-", multi_arg(Opts).
+multi_arg([Opt|Rest]) --> [C], {string_codes("-",[H]),C\=H,atom_codes(Arg,[H,C]),parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
+multi_arg([]) --> !.
+
 :- discontiguous parse_arg/3.
 :- discontiguous recover_arg/2.
 :- discontiguous arg_alias/2.
 :- discontiguous arg_info/3.
 
-parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
-arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
-
-parse_arg(['-n'|L],L,dry_run(true)).
-arg_alias('-n','--dry-run').
-arg_alias('-n','--recon').
-arg_alias('-n','--just-print').
-arg_info('-n,--dry-run,--recon,--just-print','','Print the commands that would be executed, but do not execute them').
+% ----------------------------------------
+% COMMON OPERATIONS
+% ----------------------------------------
 
 parse_arg(['-h'|L],L,null) :- show_help, !.
 arg_alias('-h','--help').
@@ -121,6 +130,12 @@ show_help :-
         writeln('For more info see http://github.com/cmungall/biomake'),
         nl,
         halt.
+
+parse_arg(['-n'|L],L,dry_run(true)).
+arg_alias('-n','--dry-run').
+arg_alias('-n','--recon').
+arg_alias('-n','--just-print').
+arg_info('-n,--dry-run,--recon,--just-print','','Print the commands that would be executed, but do not execute them').
 
 parse_arg(['-B'|L],L,always_make(true)).
 arg_alias('-B','--always-make').
@@ -138,45 +153,6 @@ parse_arg(['-T',F|L],L,translate_gnu_makefile(F)).
 parse_arg(['--translate',F|L],L,translate_gnu_makefile(F)).
 arg_info('-T,--translate','Translate GNU Makefile to Prolog Makeprog syntax').
 
-parse_arg(['-l',F|L],L,
-          goal( (collect_stored_targets(F,[]),
-                 show_stored_targets
-                ) )) :-
-        ensure_loaded(library(biomake/scan)),
-        !.
-arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
-
-parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
-arg_alias('-H','--md5-hash').
-recover_arg(['-H'],md5(true)).
-arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
-
-parse_arg(['-q'|L],L,silent(true)).
-arg_info('-q,--quiet,--silent','','Silent operation; do not print recipes as they are executed').
-
-parse_arg(['--one-shell'|L],L,oneshell(true)).
-arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'s .ONESHELL)').
-
-parse_arg(['-Q',Qs|L],L,queue(Q)) :- string_chars(Qs,Qc), atom_chars(Q,Qc), queue_engine(Q), !.
-parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
-arg_alias('-Q','--queue-engine').
-arg_info('-Q,--queue-engine ENGINE','','Queue recipes using ENGINE (supported engines: test,sge,pbs)').
-
-parse_arg(['--qsub-exec',X|L],L,qsub_exec(X)).
-arg_info('--qsub-exec PATH','','Path to qsub (sge,pbs)').
-
-parse_arg(['--queue-args',X|L],L,queue_args(X)).
-arg_info('--queue-args "ARGS"','','Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)').
-
-parse_arg(['--qsub-args',X|L],L,qsub_args(X)).
-arg_info('--qsub-args "ARGS"','','Additional arguments for qsub (sge,pbs) or sbatch (slurm)').
-
-parse_arg(['--qdel-args',X|L],L,qdel_args(X)).
-arg_info('--qdel-args "ARGS"','','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
-
-parse_arg(['--no-backtrace'|L],L,null) :- assert(no_backtrace), !.
-arg_info('-no-backtrace','','Do not print a backtrace on error').
-
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
@@ -189,6 +165,66 @@ makefile_var(A) --> atom_from_codes(A,":= \t\n").
 makefile_val(S) --> "\"", string_from_codes(S,"\""), "\"".
 makefile_val(S) --> string_from_codes(S," ").
 
-multi_args(Opts) --> "-", multi_arg(Opts).
-multi_arg([Opt|Rest]) --> [C], {string_codes("-",[H]),C\=H,atom_codes(Arg,[H,C]),parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
-multi_arg([]) --> !.
+% ----------------------------------------
+% ESOTERIC FEATURES
+% ----------------------------------------
+
+parse_arg(['-l',F|L],L,
+          goal( (collect_stored_targets(F,[]),
+                 show_stored_targets
+                ) )) :-
+        ensure_loaded(library(biomake/scan)),
+        !.
+arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
+
+parse_arg(['-q'|L],L,silent(true)).
+arg_info('-q,--quiet,--silent','','Silent operation; do not print recipes as they are executed').
+
+parse_arg(['--one-shell'|L],L,oneshell(true)).
+arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'s .ONESHELL)').
+
+% ----------------------------------------
+% MD5 CHECKSUMS
+% ----------------------------------------
+
+parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
+arg_alias('-H','--md5-hash').
+recover_arg(['-H'],md5(true)).
+arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
+
+% ----------------------------------------
+% QUEUES
+% ----------------------------------------
+
+parse_arg(['-Q',Qs|L],L,queue(Q)) :- string_chars(Qs,Qc), atom_chars(Q,Qc), queue_engine(Q), !.
+parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
+arg_alias('-Q','--queue-engine').
+arg_info('-Q,--queue-engine ENGINE','','Queue recipes using ENGINE (supported engines: test,sge,pbs)').
+
+parse_arg(['--qsub-exec',X|L],L,qsub_exec(X)).
+arg_info('--qsub-exec PATH','','Path to qsub (sge,pbs) or sbatch (slurm)').
+
+parse_arg(['--qdel-exec',X|L],L,qsub_exec(X)).
+arg_info('--qdel-exec PATH','','Path to qdel (sge,pbs) or scancel (slurm)').
+
+parse_arg(['--queue-args',X|L],L,queue_args(X)).
+arg_info('--queue-args "ARGS"','','Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)').
+
+parse_arg(['--qsub-args',X|L],L,qsub_args(X)).
+arg_info('--qsub-args "ARGS"','','Additional arguments for qsub (sge,pbs) or sbatch (slurm)').
+
+parse_arg(['--qdel-args',X|L],L,qdel_args(X)).
+arg_info('--qdel-args "ARGS"','','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
+
+parse_arg(['--flush',X|L],L,flush_queue(X)).
+arg_info('--qsub-flush <target or directory>','','Erase all jobs for given target/dir').
+
+% ----------------------------------------
+% DEBUGGING
+% ----------------------------------------
+
+parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
+arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
+
+parse_arg(['--no-backtrace'|L],L,null) :- assert(no_backtrace), !.
+arg_info('--no-backtrace','','Do not print a backtrace on error').

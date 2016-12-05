@@ -231,4 +231,3 @@ open_biomake_private_file(Target,Subdir,Filename,Stream) :-
 open_biomake_private_file(Target,Subdir,Filename,Stream,Options) :-
 	biomake_private_filename_dir_exists(Target,Subdir,Filename),
 	open(Filename,write,Stream,Options).
-

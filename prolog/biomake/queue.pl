@@ -6,7 +6,8 @@
 	      script_filename/2,
 	      write_script_file/4,
 	      write_script_file/5,
-	      run_execs_in_queue/4
+	      run_execs_in_queue/4,
+	      flush_queue_recursive/2
           ]).
 
 :- use_module(library(readutil)).
@@ -62,7 +63,7 @@ qsub_rule_execs(Rule,[Chdir,Biomake],Opts) :-
 	member(biomake_cwd(Dir),Opts),
 	member(biomake_prog(Prog),Opts),
 	member(biomake_args(Args),Opts),
-	format(string(Chdir),"cd ~w",[Dir]),
+	format(string(Chdir),"cd ~w",[Dir]),  % probably redundant: write_script_file starts with a cd to CWD
 	format(string(Biomake),"~w ~w ~w",[Prog,Args,T]).
 
 qsub_rule_execs(Rule,Es,Opts) :-
@@ -79,18 +80,6 @@ qsub_job_ids(Engine,[_|Ds],Ns) :-
 	!,
 	qsub_job_ids(Engine,Ds,Ns).
 qsub_job_ids(_,[],[]).
-
-qsub_kill(Engine,T,SL,Opts) :-
-	qsub_job_id(Engine,T,Id),
-	(member(qdel_exec(QdelExec),Opts); default_qdel_exec(Engine,QdelExec)),
-	(member(qdel_args(QdelArgs),Opts); QdelArgs = ""),
-	(member(queue_args(QArgs),Opts); QArgs = ""),
-	format(string(QdelCmd),"~w ~w ~w ~w",[QdelExec,QArgs,QdelArgs,Id]),
-	report("Killing previous job: ~w",[QdelCmd],SL,Opts),
-	(shell(QdelCmd); true),
-	biomake_private_filename(T,Engine,JobFilename),
-	(exists_file(JobFilename) -> delete_file(JobFilename); true).
-qsub_kill(_,_,_,_).
 
 qsub_numeric_job_id(Engine,T,Id) :-
 	biomake_private_filename(T,Engine,JobFilename),
@@ -122,6 +111,42 @@ qsub_make_dep_arg(Engine,DepJobs,DepArg) :-
 	string_concat(DepSep,DepPrefix,SepPrefix),
 	atomic_list_concat(DepJobs,SepPrefix,DepJobStr),
 	format(string(DepArg),"~w~w~w",[DepArgPrefix,DepPrefix,DepJobStr]).
+
+% ----------------------------------------
+% KILLING JOBS
+% ----------------------------------------
+
+qsub_kill(Engine,T,SL,Opts) :-
+	qsub_job_id(Engine,T,Id),
+	(member(qdel_exec(QdelExec),Opts); default_qdel_exec(Engine,QdelExec)),
+	(member(qdel_args(QdelArgs),Opts); QdelArgs = ""),
+	(member(queue_args(QArgs),Opts); QArgs = ""),
+	format(string(QdelCmd),"~w ~w ~w ~w",[QdelExec,QArgs,QdelArgs,Id]),
+	report("Killing previous job: ~w",[QdelCmd],SL,Opts),
+	(shell(QdelCmd); true),
+	biomake_private_filename(T,Engine,JobFilename),
+	(exists_file(JobFilename) -> delete_file(JobFilename); true).
+qsub_kill(_,_,_,_).
+
+flush_queue_recursive(Dir,Opts) :-
+	member(queue(Engine),Opts),
+	absolute_file_name(Dir,AbsDir),  % guard against Dir='.'
+	flush_queue_recursive(Engine,AbsDir,[],Opts).
+
+flush_queue_recursive(_,X,_,_) :-
+	atom_chars(X,['.'|_]),
+	!.
+flush_queue_recursive(Engine,Dir,SL,Opts) :-
+	exists_directory(Dir),
+	!,
+	report("Scanning ~w",[Dir],SL,Opts),
+	directory_files(Dir,Files),
+	forall(member(File,Files),
+	       flush_queue_recursive(Engine,File,[Dir|SL],Opts)).
+flush_queue_recursive(Engine,File,SL,Opts) :-
+	qsub_kill(Engine,File,SL,Opts),
+	!.
+flush_queue_recursive(_,_,_,_).
 
 % ----------------------------------------
 % WRITING COMMANDS TO SCRIPT FILES
@@ -214,7 +239,7 @@ run_execs_in_queue(slurm,Rule,SL,Opts) :-
 	run_execs_with_qsub(slurm,Rule,SL,Opts).
 
 default_qsub_exec(slurm,"sbatch").
-default_qdel_exec(pbs,"scancel").
+default_qdel_exec(slurm,"scancel").
 qsub_dep_arg_prefix(slurm,"--dependency=").
 qsub_dep_prefix(slurm,"afterok:").
 qsub_dep_separator(slurm,",").

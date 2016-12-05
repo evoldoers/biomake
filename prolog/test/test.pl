@@ -251,8 +251,8 @@ actual_files(Dir,List) :-
 
 not_special(File) :-
     \+ special(File).
-special(.).
-special(..).
+special('.').
+special('..').
 
 compare_files(TestPath,RefPath,File) :-
     format(string(TestFilePath),"~s/~s",[TestPath,File]),
