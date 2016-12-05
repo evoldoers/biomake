@@ -9,6 +9,7 @@
            build/2,
 
 	   report/3,
+	   report/4,
 	   
            consult_makeprog/2,
            consult_gnu_makefile/2,

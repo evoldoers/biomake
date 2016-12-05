@@ -17,6 +17,8 @@
 	   blank_line/2,
 	   alphanum_char/3,
 	   alphanum_code/3,
+	   parse_num_char/3,
+	   parse_num_code/3,
 	   n_chars/3,
 	   concat_string_list/2,
 	   concat_string_list/3,
@@ -28,6 +30,7 @@
 	   slice/4,
 	   shell_path/1,
 	   shell_wrap/2,
+	   shell_comment/2,
 	   shell_eval/2,
 	   shell_eval_str/2,
 	   file_directory_slash/2,
@@ -44,7 +47,9 @@
 	   makefile_var_atom_from_codes/3,
 	   makefile_var_string_from_codes/3,
 	   biomake_private_filename/3,
-	   biomake_private_filename_mkdir/3
+	   biomake_private_filename_dir_exists/3,
+	   open_biomake_private_file/4,
+	   open_biomake_private_file/5
 	  ]).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
@@ -77,11 +82,13 @@ blank_line --> space, opt_whitespace, "\n", !.
 
 alphanum_char(X) --> [X],{X@>='A',X@=<'Z'},!.
 alphanum_char(X) --> [X],{X@>='a',X@=<'z'},!.
-alphanum_char(X) --> [X],{X@>='0',X@=<'9'},!.
+alphanum_char(X) --> parse_num_char(X),!.
+parse_num_char(X) --> [X],{X@>='0',X@=<'9'}.
 
 alphanum_code(X) --> [X],{X@>=65,X@=<90},!.  % A through Z
 alphanum_code(X) --> [X],{X@>=97,X@=<122},!.  % a through z
-alphanum_code(X) --> [X],{X@>=48,X@=<57},!.  % 0 through 9
+alphanum_code(X) --> parse_num_code(X),!.
+parse_num_code(X) --> [X],{X@>=48,X@=<57}.  % 0 through 9
 
 n_chars(N,_,[]) :- N =< 0, !.
 n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.
@@ -130,6 +137,9 @@ shell_wrap(Exec,ShellExec) :-
 	shell_path(Sh),
 	!,
 	format(string(ShellExec),"~w -c ~q",[Sh,Exec]).
+
+shell_comment(Comment,ShellComment) :-
+	format(string(ShellComment),"# ~w",[Comment]).
 
 shell_eval(Exec,CodeList) :-
         process_create(path(sh),['-c',Exec],[stdout(pipe(Stream)),
@@ -208,9 +218,17 @@ biomake_private_filename(Target,Subdir,Filename) :-
 	file_base_name(F,N),
 	format(string(Filename),"~w/~w",[Private,N]).
 
-biomake_private_filename_mkdir(Target,Subdir,Filename) :-
+biomake_private_filename_dir_exists(Target,Subdir,Filename) :-
 	biomake_private_dir(Target,Path),
 	(exists_directory(Path); make_directory(Path)),
 	biomake_private_subdir(Target,Subdir,SubPath),
 	(exists_directory(SubPath); make_directory(SubPath)),
 	biomake_private_filename(Target,Subdir,Filename).
+
+open_biomake_private_file(Target,Subdir,Filename,Stream) :-
+	open_biomake_private_file(Target,Subdir,Filename,Stream,[]).
+
+open_biomake_private_file(Target,Subdir,Filename,Stream,Options) :-
+	biomake_private_filename_dir_exists(Target,Subdir,Filename),
+	open(Filename,write,Stream,Options).
+

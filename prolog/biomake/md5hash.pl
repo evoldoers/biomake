@@ -108,8 +108,8 @@ delete_md5_file(_).
 md5_filename(Target,Filename) :-
     biomake_private_filename(Target,"md5",Filename).
 
-md5_filename_mkdir(Target,Filename) :-
-    biomake_private_filename_mkdir(Target,"md5",Filename).
+open_md5_file(Target,Stream) :-
+    open_biomake_private_file(Target,"md5",_,Stream).
 
 make_md5_hash_term(T,S,H,Str) :-
     format(string(Str),"md5_hash(\"~w\",~d,\"~w\")",[T,S,H]).
@@ -135,8 +135,7 @@ update_md5_file(T,DL) :-
     make_md5_hash_term(T,SizeT,HashT,HashTerm),
     make_md5_valid_term(T,SizeT,HashT,ValidTerm),
     make_md5_valid_goal_list(DL,ValidGoals),
-    md5_filename_mkdir(T,F),
-    open(F,write,IO,[]),
+    open_md5_file(T,IO),
     format(IO,"~w.~n",[HashTerm]),
     debug(md5,' ~w',[HashTerm]),
     (ValidGoals = [] -> format(IO,"~w.~n",[ValidTerm]), debug(md5,' ~w.',[ValidTerm]);
