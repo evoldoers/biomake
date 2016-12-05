@@ -162,13 +162,13 @@ arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'
 parse_arg(['-Q',Qs|L],L,queue(Q)) :- string_chars(Qs,Qc), atom_chars(Q,Qc), queue_engine(Q), !.
 parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
 arg_alias('-Q','--queue-engine').
-arg_info('-Q,--queue-engine ENGINE','','Queue recipes using ENGINE (supported engines: test,sge)').
+arg_info('-Q,--queue-engine ENGINE','','Queue recipes using ENGINE (supported engines: test,sge,pbs)').
 
 parse_arg(['--qsub-exec',X|L],L,qsub_exec(X)).
-arg_info('--qsub-exec PATH','','Path to qsub (sge)').
+arg_info('--qsub-exec PATH','','Path to qsub (sge,pbs)').
 
 parse_arg(['--qsub-args',X|L],L,qsub_args(X)).
-arg_info('--qsub-args ARGS','','Arguments for qsub (sge)').
+arg_info('--qsub-args ARGS','','Arguments for qsub (sge,pbs)').
 
 parse_arg(['--no-backtrace'|L],L,null) :- assert(no_backtrace), !.
 arg_info('-no-backtrace','','Do not print a backtrace on error').

@@ -9,21 +9,23 @@
 	      run_execs_in_queue/4
           ]).
 
+:- use_module(library(readutil)).
+
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/utils)).
 
+:- discontiguous queue_engine/1.
 :- discontiguous run_execs_in_queue/4.
 :- discontiguous default_qsub_exec/2.
 :- discontiguous qsub_dep_arg/3.
 :- discontiguous qsub_dep_prefix/2.
 :- discontiguous qsub_dep_separator/2.
+:- discontiguous qsub_script_headers/4.
+:- discontiguous qsub_job_id/3.
 
 % ----------------------------------------
 % SUPPORTED QUEUE ENGINES
 % ----------------------------------------
-
-queue_engine(test).
-queue_engine(sge).
 
 % ----------------------------------------
 % GENERIC JOB SUBMISSION
@@ -38,24 +40,24 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 	biomake_private_filename_dir_exists(T,Engine,JobFilename),
 	format(string(RemoveJobFile),"rm ~w",[JobFilename]),
 	append(Es,[RemoveJobFile],ExecsWithCleanup),
-	job_numbers(Engine,DL,DepJobs),
-	qsub_script_headers(Engine,DepJobs,Headers),
+	qsub_job_ids(Engine,DL,DepJobs),
+	qsub_script_headers(Engine,DepJobs,Opts,Headers),
 	qsub_dep_arg(Engine,DepJobs,DepArg),
 	write_script_file(T,Headers,ExecsWithCleanup,Opts,ScriptFilename),
 	format(string(QsubCmd),"~w ~w ~w ~w >~w",[QsubExec,QsubArgs,DepArg,ScriptFilename,JobFilename]),
 	report("Submitting job: ~w",[QsubCmd],SL,Opts),
 	shell(QsubCmd).
 
-job_numbers(Engine,[D|Ds],[N|Ns]) :-
-	job_number(Engine,D,N),
+qsub_job_ids(Engine,[D|Ds],[N|Ns]) :-
+	qsub_job_id(Engine,D,N),
 	!,
-	job_numbers(Engine,Ds,Ns).
-job_numbers(Engine,[_|Ds],Ns) :-
+	qsub_job_ids(Engine,Ds,Ns).
+qsub_job_ids(Engine,[_|Ds],Ns) :-
 	!,
-	job_numbers(Engine,Ds,Ns).
-job_numbers(_,[],[]).
+	qsub_job_ids(Engine,Ds,Ns).
+qsub_job_ids(_,[],[]).
 
-job_number(Engine,T,N) :-
+qsub_numeric_job_id(Engine,T,N) :-
 	biomake_private_filename(T,Engine,JobFilename),
 	exists_file(JobFilename),
 	phrase_from_file(first_int(N),JobFilename).
@@ -111,6 +113,8 @@ write_script_file_contents(T,Headers,Execs,_Opts,ScriptFilename) :-
 % Test queue engine (just runs shell)
 % ----------------------------------------
 
+queue_engine(test).
+
 run_execs_in_queue(test,Rule,SL,Opts) :-
 	run_execs_in_script(Rule,SL,Opts).
 
@@ -118,11 +122,33 @@ run_execs_in_queue(test,Rule,SL,Opts) :-
 % Sun Grid Engine
 % ----------------------------------------
 
+queue_engine(sge).
+
+run_execs_in_queue(sge,Rule,SL,Opts) :-
+	run_execs_with_qsub(sge,Rule,SL,Opts).
+
 default_qsub_exec(sge,"qsub").
 qsub_dep_prefix(sge,"-hold_jid ").
 qsub_dep_separator(sge,",").
 qsub_dep_arg(sge,DepJobs,Arg) :- qsub_make_dep_arg(sge,DepJobs,Arg).
-qsub_script_headers(sge,_,[]).
+qsub_script_headers(sge,_,_,[]).
+qsub_job_id(sge,T,N) :- qsub_numeric_job_id(sge,T,N).
 
-run_execs_in_queue(sge,Rule,SL,Opts) :-
-	run_execs_with_qsub(sge,Rule,SL,Opts).
+% ----------------------------------------
+% PBS
+% ----------------------------------------
+
+queue_engine(pbs).
+
+run_execs_in_queue(pbs,Rule,SL,Opts) :-
+	run_execs_with_qsub(pbs,Rule,SL,Opts).
+
+default_qsub_exec(pbs,"qsub").
+qsub_dep_prefix(pbs,"-W depend=afterok:").
+qsub_dep_separator(pbs,":").
+qsub_dep_arg(pbs,DepJobs,Arg) :- qsub_make_dep_arg(pbs,DepJobs,Arg).
+qsub_script_headers(pbs,_,_,[]).
+qsub_job_id(pbs,T,N) :-
+	biomake_private_filename(T,pbs,JobFilename),
+	exists_file(JobFilename),
+	read_file_to_string(JobFilename,N,[]).
