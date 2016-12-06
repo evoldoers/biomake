@@ -3,13 +3,28 @@
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/utils)).
 
-:- dynamic no_backtrace/0.
+% ----------------------------------------
+% EXCEPTIONS
+% ----------------------------------------
 
-user:prolog_exception_hook(_,
-                           _, _, _) :-
-        no_backtrace; backtrace(99),
+:- dynamic no_backtrace/0.
+:- dynamic prolog_exception_hook/4.
+
+% Intercept a couple of exceptions that are thrown by the threadpool library
+% This is kind of yucky, but only seems to affect our exception-handling code
+user:prolog_exception_hook(error(existence_error(thread,_),context(system:thread_property/2,_)),_,_,_) :- !, fail.
+user:prolog_exception_hook('$aborted',_,_,_) :- !, fail.
+
+% Default exception handler: show backtrace
+user:prolog_exception_hook(E,_,_,_) :-
+	format("Exception: ~w~n",[E]),
+        (no_backtrace; backtrace(99)),
         !,
         fail.
+
+% ----------------------------------------
+% MAIN PROGRAM
+% ----------------------------------------
 
 main :-
         current_prolog_flag(argv, Arguments),
@@ -26,8 +41,6 @@ main :-
 	(build_toplevel(Opts)
 	 -> halt(0)
 	 ;  halt(1)).
-
-rabbit(X,Y) :- string_concat(X,Y).
 
 build_toplevel(Opts) :-
 	member(toplevel(_),Opts),

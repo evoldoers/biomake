@@ -272,7 +272,7 @@ queue_engine(poolq).
 init_queue(poolq,Opts) :-
 	ensure_loaded(library(poolq/poolq)),
 	(member(poolq_threads(Size),Opts) ; default_poolq_threads(Size)),
-	poolq_create(Scheduler,Size,Opts),
+	poolq_create(Scheduler,Size,[]),
 	assert(poolq_scheduler(Scheduler)).
 release_queue(poolq) :-
 	poolq_scheduler(Scheduler),

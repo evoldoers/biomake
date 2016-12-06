@@ -165,6 +165,8 @@ debug_report(Topic,Fmt,Args,SL) :-
 % DEPENDENCY MANAGEMENT
 % ----------------------------------------
 
+% The interactions between the various options are a little tricky...
+% Essentially (simplifying a little): MD5 overrides timestamps, except when queues are used.
 rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
@@ -188,7 +190,7 @@ rebuild_required(T,DL,SL,Opts) :-
         member(queue(_),Opts),
 	has_rebuilt_dependency(T,DL,D,Opts),
 	!,
-        report('Target ~w has dependency ~w on rebuild queue - rebuilding',[T,D],SL,Opts).
+        report('Target ~w has dependency ~w on rebuild queue',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         member(md5(true),Opts),
 	\+ md5_hash_up_to_date(T,DL,Opts),
@@ -308,15 +310,6 @@ run_execs_in_script(Rule,SL,Opts) :-
 	report_run_exec(Script,SL,Opts),
 	update_hash(T,DL,Opts).
 
-run_execs_if_required(Rule,_SL,Opts) :-
-	member(md5(true),Opts),
-	rule_target(Rule,T,Opts),
-        rule_dependencies(Rule,DL,Opts),
-	md5_hash_up_to_date(T,DL,Opts),
-	!.
-run_execs_if_required(Rule,SL,Opts) :-
-	run_execs_now(Rule,SL,Opts).
-
 update_hash(T,DL,Opts) :-
     member(md5(true),Opts),
     !,
@@ -354,6 +347,32 @@ silent_run_exec(Exec,SL) :-
 
 silent_run_exec(Exec,_Opts) :-
         throw(error(run(Exec))).
+
+% run_execs_if_required tests the always_make and md5 options before running a recipe.
+% When biomake is run without queues, these tests happen in rebuild_required,
+% which is called at the time of rule-binding & dependency-testing.
+% When queues are used, the tests must be performed again at the time of job execution.
+% For external queueing engines, this is managed by wrapping the job in another call to biomake.
+% For the internal queue (poolq), we make a call back to run_execs_if_required.
+run_execs_if_required(Rule,SL,Opts) :-
+	member(always_make(true),Opts),
+	!,
+	report_build(Rule,SL,Opts),
+	run_execs_now(Rule,SL,Opts).
+run_execs_if_required(Rule,SL,Opts) :-
+	member(md5(true),Opts),
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	md5_hash_up_to_date(T,DL,Opts),
+        report('Target ~w has valid checksum - no rebuild required',[T],SL,Opts),
+	!.
+run_execs_if_required(Rule,SL,Opts) :-
+	report_build(Rule,SL,Opts),
+	run_execs_now(Rule,SL,Opts).
+
+report_build(Rule,SL,Opts) :-
+	rule_target(Rule,T,Opts),
+        report('Building target ~w',[T],SL,Opts).
 
 % ----------------------------------------
 % RULES AND PATTERN MATCHING
@@ -603,7 +622,7 @@ add_spec_clause(Rule,VNs) :-
         assert(with(Rule,VNs)).
 
 add_spec_clause(Term,_) :-
-        debug(makeprog,"assert ~w~n",Term),
+        debug(makeprog,"assert ~w",Term),
         assert(Term).
 
 set_default_target(_) :-
