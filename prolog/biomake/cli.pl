@@ -2,7 +2,6 @@
 
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/utils)).
-:- use_module(library(biomake/queue)).
 
 :- dynamic no_backtrace/0.
 
@@ -33,15 +32,19 @@ rabbit(X,Y) :- string_concat(X,Y).
 build_toplevel(Opts) :-
 	member(toplevel(_),Opts),
 	!,
+	start_queue(Opts),
 	forall(member(toplevel(T),Opts),
-               build(T,Opts)).
+               build(T,Opts)),
+        finish_queue(Opts).
 
 build_toplevel(Opts) :-
 	nonbuild_task_specified(Opts),
 	!.
 
 build_toplevel(Opts) :-
-	build_default(Opts).
+	start_queue(Opts),
+	build_default(Opts),
+        finish_queue(Opts).
 
 nonbuild_task_specified(Opts) :- member(translate_gnu_makefile(_),Opts).
 nonbuild_task_specified(Opts) :- member(goal(_),Opts).
@@ -151,7 +154,7 @@ arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
 
 parse_arg(['-T',F|L],L,translate_gnu_makefile(F)).
 parse_arg(['--translate',F|L],L,translate_gnu_makefile(F)).
-arg_info('-T,--translate','Translate GNU Makefile to Prolog Makeprog syntax').
+arg_info('-T,--translate','FILE','Translate GNU Makefile to Prolog Makeprog syntax').
 
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
@@ -196,28 +199,37 @@ arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
 % QUEUES
 % ----------------------------------------
 
-parse_arg(['-Q',Qs|L],L,queue(Q)) :- string_chars(Qs,Qc), atom_chars(Q,Qc), queue_engine(Q), !.
+parse_arg(['-Q',Qs|L],L,queue(Q)) :-
+        ensure_loaded(library(biomake/queue)),
+	string_chars(Qs,Qc),
+	atom_chars(Q,Qc),
+	queue_engine(Q),
+	!.
 parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
 arg_alias('-Q','--queue-engine').
-arg_info('-Q,--queue-engine ENGINE','','Queue recipes using ENGINE (supported engines: test,sge,pbs)').
+arg_info('-Q,--queue-engine','ENGINE','Queue recipes using ENGINE (supported: test,sge,pbs,slurm,poolq)').
+
+parse_arg(['-j',Jobs|L],L,poolq_threads(Jobs)).
+arg_alias('-j','--jobs').
+arg_info('-j,--jobs','JOBS','Number of job threads (poolq engine)').
 
 parse_arg(['--qsub-exec',X|L],L,qsub_exec(X)).
-arg_info('--qsub-exec PATH','','Path to qsub (sge,pbs) or sbatch (slurm)').
+arg_info('--qsub-exec','PATH','Path to qsub (sge,pbs) or sbatch (slurm)').
 
 parse_arg(['--qdel-exec',X|L],L,qsub_exec(X)).
-arg_info('--qdel-exec PATH','','Path to qdel (sge,pbs) or scancel (slurm)').
+arg_info('--qdel-exec','PATH','Path to qdel (sge,pbs) or scancel (slurm)').
 
 parse_arg(['--queue-args',X|L],L,queue_args(X)).
-arg_info('--queue-args "ARGS"','','Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)').
+arg_info('--queue-args','"ARGS"','Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)').
 
 parse_arg(['--qsub-args',X|L],L,qsub_args(X)).
-arg_info('--qsub-args "ARGS"','','Additional arguments for qsub (sge,pbs) or sbatch (slurm)').
+arg_info('--qsub-args','"ARGS"','Additional arguments for qsub (sge,pbs) or sbatch (slurm)').
 
 parse_arg(['--qdel-args',X|L],L,qdel_args(X)).
-arg_info('--qdel-args "ARGS"','','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
+arg_info('--qdel-args','"ARGS"','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
 
 parse_arg(['--flush',X|L],L,flush_queue(X)).
-arg_info('--qsub-flush <target or directory>','','Erase all jobs for given target/dir').
+arg_info('--qsub-flush','<target or directory>','Erase all jobs for given target/dir').
 
 % ----------------------------------------
 % DEBUGGING

@@ -5,8 +5,10 @@
            build_default/0,
            build_default/1,
 
+	   start_queue/1,
            build/1,
            build/2,
+	   finish_queue/1,
 
 	   report/3,
 	   report/4,
@@ -26,6 +28,7 @@
            rule_dependencies/3,
            rule_execs/3,
 
+	   run_execs_if_required/3,
 	   run_execs_in_script/3,
 
 	   global_binding/2,
@@ -34,7 +37,6 @@
 
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
-:- use_module(library(biomake/queue)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -56,6 +58,7 @@
 %% build(+Target, +Stack:list,+Opts:list)
 %
 % builds Target using rules
+% Call start_queue/1 beforehand and finish_queue/1 afterwards.
 
 build_default :-
 	build_default([]).
@@ -96,11 +99,9 @@ build(T,SL,Opts) :-
         build_targets(DL,[T|SL],Opts), % semidet
         (   rebuild_required(T,DL,SL,Opts)
         ->  run_execs_and_update(Rule,SL,Opts)
-        ;   true),
-        (member(dry_run(true),Opts) -> true;
-         report('~w is up to date',[T],SL,Opts)).
+        ;   report('~w is up to date',[T],SL,Opts)).
 build(T,SL,Opts) :-
-        debug_report(build,'  checking if rebuild required for ~w',[T],SL),
+        debug_report(build,'..checking if rebuild required for ~w',[T],SL),
         \+ rebuild_required(T,[],SL,Opts),
         !,
         report('Nothing to be done for ~w',[T],SL,Opts).
@@ -121,6 +122,20 @@ build_targets([],_,_).
 build_targets([T|TL],SL,Opts) :-
         build(T,SL,Opts),
         build_targets(TL,SL,Opts).
+
+% Queue setup/wrapup
+start_queue(Opts) :-
+	member(queue(Q),Opts),
+	!,
+	init_queue(Q,Opts).
+start_queue(_).
+
+finish_queue(Opts) :-
+	member(queue(Q),Opts),
+	!,
+	release_queue(Q).
+finish_queue(_).
+
 
 % ----------------------------------------
 % REPORTING
@@ -153,7 +168,7 @@ debug_report(Topic,Fmt,Args,SL) :-
 rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
-        report('Target ~w not materialized - will rebuild if required',[T],SL,Opts).
+        report('Target ~w not materialized - building',[T],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         member(D,DL),
         \+ exists_target(D,Opts),
@@ -161,24 +176,43 @@ rebuild_required(T,DL,SL,Opts) :-
         report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         \+ member(md5(true),Opts),
-	rebuild_required_by_time_stamp(T,DL,SL,Opts),
-	!.
+	has_newer_dependency(T,DL,D,Opts),
+	!,
+        report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
+rebuild_required(T,DL,SL,Opts) :-
+        \+ member(md5(true),Opts),
+	has_rebuilt_dependency(T,DL,D,Opts),
+	!,
+        report('Target ~w has rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+rebuild_required(T,DL,SL,Opts) :-
+        member(queue(_),Opts),
+	has_rebuilt_dependency(T,DL,D,Opts),
+	!,
+        report('Target ~w has dependency ~w on rebuild queue - rebuilding',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         member(md5(true),Opts),
 	\+ md5_hash_up_to_date(T,DL,Opts),
 	!,
-        report('Target ~w does not have an up-to-date MD5 hash - rebuilding',[T],SL,Opts).
+        report('Target ~w does not have an up-to-date checksum - rebuilding',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         member(always_make(true),Opts),
         target_bindrule(T,_),
         !,
         report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
 
+has_newer_dependency(T,DL,D,Opts) :-
+        member(D,DL),
+        has_newer_timestamp(D,T,Opts).
+
+has_rebuilt_dependency(T,DL,D,Opts) :-
+        member(D,DL),
+	was_built_after(D,T,Opts).
+
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         member(D,DL),
 	was_built_after(D,T,Opts),
 	!,
-        report('Target ~w has recently rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+        report('Target ~w has rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         \+ exists_directory(T),
         member(D,DL),
@@ -247,12 +281,19 @@ run_execs_and_update(Rule,SL,Opts) :-
 dispatch_run_execs(Rule,SL,Opts) :-
 	member(queue(Q),Opts),
 	!,
-	run_execs_in_queue(Q,Rule,SL,Opts).
+	run_execs_in_queue(Q,Rule,SL,Opts),
+	rule_target(Rule,T,Opts),
+	report('~w queued for rebuild',[T],SL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
+	run_execs_now(Rule,SL,Opts),
+	rule_target(Rule,T,Opts),
+	report('~w built',[T],SL,Opts).
+
+run_execs_now(Rule,SL,Opts) :-
 	member(oneshell(true),Opts),
 	!,
 	run_execs_in_script(Rule,SL,Opts).
-dispatch_run_execs(Rule,SL,Opts) :-
+run_execs_now(Rule,SL,Opts) :-
 	rule_target(Rule,T,Opts),
         rule_dependencies(Rule,DL,Opts),
 	rule_execs(Rule,Es,Opts),
@@ -266,6 +307,15 @@ run_execs_in_script(Rule,SL,Opts) :-
 	write_script_file(T,Es,Opts,Script),
 	report_run_exec(Script,SL,Opts),
 	update_hash(T,DL,Opts).
+
+run_execs_if_required(Rule,_SL,Opts) :-
+	member(md5(true),Opts),
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	md5_hash_up_to_date(T,DL,Opts),
+	!.
+run_execs_if_required(Rule,SL,Opts) :-
+	run_execs_now(Rule,SL,Opts).
 
 update_hash(T,DL,Opts) :-
     member(md5(true),Opts),

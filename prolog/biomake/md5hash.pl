@@ -22,8 +22,8 @@ md5_hash_up_to_date(T,DL,Opts) :-
     atom(T),
     !,
     atom_chars(T,Tc),
-    string_chars(Ts,Tc),
-    md5_hash_up_to_date(Ts,DL,Opts).
+    string_chars(Tstr,Tc),
+    md5_hash_up_to_date(Tstr,DL,Opts).
 md5_hash_up_to_date(T,DL,_Opts) :-
     !,
     debug(md5,"Checking MD5 hash validity for ~w <-- ~w",[T,DL]),

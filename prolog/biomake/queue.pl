@@ -3,6 +3,8 @@
 :- module(queue,
           [
               queue_engine/1,
+              init_queue/2,
+              release_queue/1,
 	      script_filename/2,
 	      write_script_file/4,
 	      write_script_file/5,
@@ -16,6 +18,8 @@
 :- use_module(library(biomake/utils)).
 
 :- discontiguous queue_engine/1.
+:- discontiguous init_queue/2.
+:- discontiguous release_queue/1.
 :- discontiguous run_execs_in_queue/4.
 :- discontiguous default_qsub_exec/2.
 :- discontiguous default_qdel_exec/2.
@@ -187,6 +191,8 @@ write_script_file_contents(T,Headers,Execs,_Opts,ScriptFilename) :-
 % ----------------------------------------
 
 queue_engine(test).
+init_queue(test,_).
+release_queue(test).
 
 run_execs_in_queue(test,Rule,SL,Opts) :-
 	run_execs_in_script(Rule,SL,Opts).
@@ -196,6 +202,8 @@ run_execs_in_queue(test,Rule,SL,Opts) :-
 % ----------------------------------------
 
 queue_engine(sge).
+init_queue(sge,_).
+release_queue(sge).
 
 run_execs_in_queue(sge,Rule,SL,Opts) :-
 	run_execs_with_qsub(sge,Rule,SL,Opts).
@@ -215,6 +223,8 @@ qsub_job_id(sge,T,N) :- qsub_numeric_job_id(sge,T,N).
 % ----------------------------------------
 
 queue_engine(pbs).
+init_queue(pbs,_).
+release_queue(pbs).
 
 run_execs_in_queue(pbs,Rule,SL,Opts) :-
 	run_execs_with_qsub(pbs,Rule,SL,Opts).
@@ -234,6 +244,8 @@ qsub_job_id(pbs,T,N) :- qsub_generic_job_id(pbs,T,N).
 % ----------------------------------------
 
 queue_engine(slurm).
+init_queue(slurm,_).
+release_queue(slurm).
 
 run_execs_in_queue(slurm,Rule,SL,Opts) :-
 	run_execs_with_qsub(slurm,Rule,SL,Opts).
@@ -247,3 +259,33 @@ qsub_dep_arg(slurm,DepJobs,Arg) :- qsub_make_dep_arg(slurm,DepJobs,Arg).
 qsub_extra_args(slurm,"-parsable").
 qsub_script_headers(slurm,_,_,[]).
 qsub_job_id(slurm,T,N) :- qsub_generic_job_id(slurm,T,N).
+
+% ----------------------------------------
+% POOLQ
+% ----------------------------------------
+
+:- dynamic poolq_scheduler/1.
+
+default_poolq_threads(4).
+
+queue_engine(poolq).
+init_queue(poolq,Opts) :-
+	ensure_loaded(library(poolq/poolq)),
+	(member(poolq_threads(Size),Opts) ; default_poolq_threads(Size)),
+	poolq_create(Scheduler,Size,Opts),
+	assert(poolq_scheduler(Scheduler)).
+release_queue(poolq) :-
+	poolq_scheduler(Scheduler),
+	poolq_wait(Scheduler,_Status).
+
+poolq_run_execs(Rule,_SL,Opts) :-
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	md5_hash_up_to_date(T,DL,Opts),
+	!.
+
+run_execs_in_queue(poolq,Rule,SL,Opts) :-
+	poolq_scheduler(Scheduler),
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	poolq_submit_job(Scheduler,run_execs_if_required(Rule,SL,Opts),T,DL,[]).
