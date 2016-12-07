@@ -28,8 +28,9 @@
 	   last_element/2,
 	   nth_element/3,
 	   slice/4,
-	   shell_quote/2,
+	   find_on_path/2,
 	   shell_path/1,
+	   shell_quote/2,
 	   shell_wrap/2,
 	   shell_comment/2,
 	   shell_eval/2,
@@ -130,10 +131,12 @@ type_of(X,"compound") :- compound(X), !.
 type_of(X,"atom") :- atom(X), !.
 type_of(_,"unknown").
 
-shell_path(Path) :-
-	expand_file_search_path(path(sh),Path),
+find_on_path(Exec,Path) :-
+	expand_file_search_path(path(Exec),Path),
 	exists_file(Path),
 	!.
+
+shell_path(Path) :- find_on_path(sh,Path).
 
 shell_wrap(Exec,ShellExec) :-
 	string_chars(Exec,['@'|SilentChars]),
@@ -169,10 +172,15 @@ shell_echo_wrap(Exec,Result) :-
 shell_comment(Comment,ShellComment) :-
 	format(string(ShellComment),"# ~w",[Comment]).
 
+% unfortunately, shell_eval does not seem to work within threads on OS X.
+% use a temporary file instead.
 shell_eval(Exec,CodeList) :-
-        process_create(path(sh),['-c',Exec],[stdout(pipe(Stream)),
-					     stderr(null),
-					     process(Pid)]),
+	shell_path(Sh),
+	working_directory(CWD,CWD),
+        process_create(Sh,['-c',Exec],[stdout(pipe(Stream)),
+					 stderr(null),
+					 cwd(CWD),
+					 process(Pid)]),
         read_stream_to_codes(Stream,CodeList),
 	process_wait(Pid,_Status),
         close(Stream).

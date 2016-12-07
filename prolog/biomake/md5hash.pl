@@ -7,13 +7,20 @@
           ]).
 
 :- use_module(library(readutil)).
+:- use_module(library(biomake/utils)).
 
 % ----------------------------------------
 % MD5 HASHES
 % ----------------------------------------
 
-md5_prog("md5sum").  % Ubuntu
-md5_prog("md5 -q").  % MacOS, BSD
+md5_prog("md5sum","").  % Ubuntu
+md5_prog("md5","-q").  % MacOS, BSD
+
+find_md5_prog(Exec) :-
+	md5_prog(Prog,Args),
+	find_on_path(Prog,Path),
+	atomic_list_concat([Path,Args]," ",Exec),
+	!.
 
 :- dynamic md5_hash/3.
 :- dynamic md5_valid/3.
@@ -70,14 +77,20 @@ compute_md5(T,Size,Hash) :-
     retract_md5_hash(T),
     assert(md5_hash(T,Size,Hash)).
 
-% try all the md5 executables specified with md5_prog
+% try the md5 executables findable with md5_prog
+% use a temporary file instead of a pipe, since process_create doesn't seem to play well with threads in OSX :-(
 try_md5_prog(Filename,Hash) :-
-    md5_prog(Md5Prog),
-    format(string(Exec),"~w ~w",[Md5Prog,Filename]),
+    find_md5_prog(Md5Prog),
+    biomake_private_filename_dir_exists(Filename,"tmp",TmpFile),
+    (exists_file(TmpFile) -> delete_file(TmpFile); true),
+    absolute_file_name(Filename,Path),
+    format(string(Exec),"~w ~w >~w",[Md5Prog,Path,TmpFile]),
     debug(md5,'computing hash: ~w',[Exec]),
-    shell_eval(Exec,ExecOut),
-    phrase(first_n(32,HashCodes),ExecOut),
+    shell(Exec),
+    phrase_from_file(first_n(32,HashCodes),TmpFile),
+    delete_file(TmpFile),
     string_codes(HashStr,HashCodes),
+    debug(md5,'output of ~w ~w: ~w',[Md5Prog,Filename,HashStr]),
     string_lower(HashStr,Hash).
 
 % fall back to using Prolog's in-memory MD5 implementation in the md5 library
