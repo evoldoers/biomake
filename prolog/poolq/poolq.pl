@@ -34,48 +34,48 @@ init_scheduler(Size,Options) :-
 	thread_self(Pool),
 	thread_pool_create(Pool,Size,Options),
 	debug(poolq,"Scheduler: created thread pool ~w with ~w threads, options ~w",[Pool,Size,Options]),
-	wait_for_message(Pool).
+	wait_for_message.
 
-wait_for_message(Pool) :-
+wait_for_message :-
 	receive_message(Msg),
-	process_message(Pool,Msg).
+	process_message(Msg).
 
 receive_message(Msg) :-
 	debug(poolq,"Scheduler: waiting for message",[]),
 	thread_get_message(Msg),
 	debug(poolq,"Scheduler: received message '~w'",[Msg]).
 
-process_message(Pool,Msg) :-
-	process_submit_message(Pool,Msg),
+process_message(Msg) :-
+	process_submit_message(Msg),
 	!,
-	wait_for_message(Pool).
+	wait_for_message.
 
-process_message(Pool,Msg) :-
-	process_complete_message(Pool,Msg),
+process_message(Msg) :-
+	process_complete_message(Msg),
 	!,
-	wait_for_message(Pool).
+	wait_for_message.
 
-process_message(Pool,finish) :-
+process_message(finish) :-
 	!,
-	finish_queued_jobs(Pool).
+	finish_queued_jobs.
 
-process_message(Pool,Msg) :-
+process_message(Msg) :-
 	process_error(Msg),
 	!,
-	wait_for_message(Pool).
+	wait_for_message.
 
-process_submit_message(Pool,submit(Goal,JobId,DepJobIds,Options)) :-
+process_submit_message(submit(Goal,JobId,DepJobIds,Options)) :-
 	none_waiting_or_running(DepJobIds),
 	!,
-	debug(poolq,"Scheduler: job ~w has no dependencies, starting immediately",[JobId]),
-	start_job(Pool,JobId,Goal,Options).
+	debug(poolq,"Scheduler: job ~w has no unmet dependencies, starting immediately",[JobId]),
+	start_job(JobId,Goal,Options).
 
-process_submit_message(_,submit(Goal,JobId,DepJobIds,Options)) :-
+process_submit_message(,submit(Goal,JobId,DepJobIds,Options)) :-
 	!,
 	debug(poolq,"Scheduler: job ~w has dependencies ~w; postponing",[JobId,DepJobIds]),
 	assert(job_waiting(JobId,DepJobIds,Goal,Options)).
 
-process_complete_message(Pool,complete(JobId,JobStatus)) :-
+process_complete_message(complete(JobId,JobStatus)) :-
 	job_running(JobId,Thread),
 	!,
 	debug(poolq,"Scheduler: job ~w on thread ~w finished with status ~w",[JobId,Thread,JobStatus]),
@@ -83,53 +83,54 @@ process_complete_message(Pool,complete(JobId,JobStatus)) :-
 	assert(job_complete(JobId,JobStatus)),
 	thread_join(Thread,ThreadStatus),
 	debug(poolq,"Scheduler: job thread ~w terminated with status ~w",[Thread,ThreadStatus]),
-	start_queued_jobs(Pool).
+	start_queued_jobs.
 
 process_error(Msg) :-
 	format("Error: couldn't process message '~w'~n",[Msg]).
 
-finish_queued_jobs(Pool) :-
-	start_queued_jobs(Pool),
-	wait_for_queue(Pool),
+finish_queued_jobs :-
+	start_queued_jobs,
+	wait_for_queue,
+	thread_self(Pool),
 	thread_pool_destroy(Pool),
-	debug(poolq,"Scheduler: destroyed thread pool ~w",[Pool]).
+	debug(poolq,"Scheduler: destroyed thread pool",[]).
 
-wait_for_queue(Pool) :-
+wait_for_queue :-
 	job_running(_,_),
 	!,
 	receive_message(Msg),
-	(process_complete_message(Pool,Msg) ; process_error(Msg)),
-	wait_for_queue(Pool).
-wait_for_queue(Pool) :-
+	(process_complete_message(Msg) ; process_error(Msg)),
+	wait_for_queue.
+wait_for_queue :-
 	job_waiting(_,_,_,_),
 	!,
 	bagof(JobId,job_waiting(JobId,_,_,_),AbandonedJobs),
-	format("Warning: unprocessed jobs ~w in thread pool ~w~n",[AbandonedJobs,Pool]),
+	format("Warning: unprocessed jobs ~w~n",[AbandonedJobs]),
 	fail.
-wait_for_queue(_).
+wait_for_queue.
 
-start_queued_jobs(Pool) :-
+start_queued_jobs :-
 	debug(poolq,"Scheduler: looking for postponed jobs",[]),
-	start_queued_job(Pool),
+	start_queued_job,
 	!,
-	start_queued_jobs(Pool).
-start_queued_jobs(_) :-
+	start_queued_jobs.
+start_queued_jobs :-
 	\+ job_waiting(_,_,_,_),
 	!,
 	debug(poolq,"Scheduler: no jobs waiting",[]).
-start_queued_jobs(_) :-
+start_queued_jobs :-
 	debug(poolq,"Scheduler: no jobs ready to run",[]).
 
-start_queued_job(Pool) :-
+start_queued_job :-
 	job_waiting(JobId,DepJobIds,Goal,Options),
 	none_waiting_or_running(DepJobIds),
 	retract(job_waiting(JobId,DepJobIds,Goal,Options)),
-	start_job(Pool,JobId,Goal,Options).
+	start_job(JobId,Goal,Options).
 
-start_job(Pool,JobId,Goal,Options) :-
+start_job(JobId,Goal,Options) :-
 	debug(poolq,"Scheduler: starting job ~w: ~w",[Goal,Options]),
 	thread_self(Self),
-	thread_create_in_pool(Pool,run_job(Self,JobId,Goal),Thread,Options),
+	thread_create_in_pool(Self,run_job(Self,JobId,Goal),Thread,Options),
 	assert(job_running(JobId,Thread)).
 
 run_job(Scheduler,JobId,Goal) :-
