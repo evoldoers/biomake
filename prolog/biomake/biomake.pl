@@ -29,8 +29,9 @@
            rule_execs/3,
 
 	   run_execs_if_required/3,
-	   run_execs_in_script/3,
-
+	   report_run_exec/3,
+	   update_hash/3,
+	   
 	   global_binding/2,
 	   expand_vars/3
            ]).
@@ -304,7 +305,8 @@ run_execs_now(Rule,SL,Opts) :-
 	update_hash(T,DL,Opts).
 
 run_execs_in_script(Rule,SL,Opts) :-
-	rule_target(Rule,T,Opts),
+        ensure_loaded(library(biomake/queue)),
+        rule_target(Rule,T,Opts),
         rule_dependencies(Rule,DL,Opts),
 	rule_execs(Rule,Es,Opts),
 	write_script_file(T,Es,Opts,Script),

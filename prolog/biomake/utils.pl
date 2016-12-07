@@ -28,13 +28,15 @@
 	   last_element/2,
 	   nth_element/3,
 	   slice/4,
+	   shell_quote/2,
 	   shell_path/1,
 	   shell_wrap/2,
 	   shell_comment/2,
 	   shell_eval/2,
 	   shell_eval_str/2,
+	   echo_wrap/2,
+	   shell_echo_wrap/2,
 	   file_directory_slash/2,
-	   quote_string/2,
 	   newlines_to_spaces/2,
 	   to_string/2,
 	   equal_as_strings/2,
@@ -134,9 +136,35 @@ shell_path(Path) :-
 	!.
 
 shell_wrap(Exec,ShellExec) :-
+	string_chars(Exec,['@'|SilentChars]),
+	!,
+	string_chars(SilentExec,SilentChars),
+	shell_wrap(SilentExec,ShellExec).
+
+shell_wrap(Exec,ShellExec) :-
 	shell_path(Sh),
 	!,
-	format(string(ShellExec),"~w -c ~q",[Sh,Exec]).
+	shell_quote(Exec,Escaped),
+	format(string(ShellExec),"~w -c ~w",[Sh,Escaped]).
+
+echo_wrap(Exec,Result) :-
+	string_chars(Exec,['@'|SilentChars]),
+	!,
+	string_chars(Result,SilentChars).
+
+echo_wrap(Exec,Result) :-
+        shell_quote(Exec,Escaped),
+        format(string(Result),"echo ~w; ~w",[Escaped,Exec]).
+
+shell_echo_wrap(Exec,Result) :-
+	string_chars(Exec,['@'|SilentChars]),
+	!,
+	string_chars(SilentChars,SilentExec),
+	shell_wrap(SilentExec,Result).
+
+shell_echo_wrap(Exec,Result) :-
+        echo_wrap(Exec,EchoExec),
+	shell_wrap(EchoExec,Result).
 
 shell_comment(Comment,ShellComment) :-
 	format(string(ShellComment),"# ~w",[Comment]).
@@ -154,6 +182,16 @@ shell_eval_str(Exec,Result) :-
 	newlines_to_spaces(Rnl,Rspc),
 	string_codes(Result,Rspc).
 
+shell_quote(S,QS) :-
+        string_chars(S,Cs),
+        phrase(escape_quotes(ECs),Cs),
+        append(['\''|ECs],['\''],QCs),
+        string_chars(QS,QCs).
+
+escape_quotes([]) --> [].
+escape_quotes(['\'','"','\'','"','\''|Cs]) --> ['\''], !, escape_quotes(Cs).  % ' --> '"'"'
+escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
+
 newlines_to_spaces([],[]).
 newlines_to_spaces([10|N],[32|S]) :- newlines_to_spaces(N,S).
 newlines_to_spaces([C|N],[C|S]) :- newlines_to_spaces(N,S).
@@ -161,17 +199,6 @@ newlines_to_spaces([C|N],[C|S]) :- newlines_to_spaces(N,S).
 file_directory_slash(Path,Result) :-
 	file_directory_name(Path,D),
 	string_concat(D,"/",Result).  % GNU make adds the trailing '/'
-
-quote_string(S,QS) :-
-    string_chars(S,Cs),
-    phrase(escape_quotes(ECs),Cs),
-    append(['"'|ECs],['"'],QCs),
-    string_chars(QS,QCs).
-
-escape_quotes([]) --> [].
-escape_quotes(['\\','\\'|Cs]) --> ['\\'], !, escape_quotes(Cs).
-escape_quotes(['\\','"'|Cs]) --> ['"'], !, escape_quotes(Cs).
-escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
 
 to_string(A,S) :- atomics_to_string([A],S).
 equal_as_strings(X,Y) :-

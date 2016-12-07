@@ -142,6 +142,7 @@ test :-
 
 	% Queues are a bit under-served by tests at the moment...
 	run_test("-f Makefile.queue","i.am.the.garbage.flower"),
+	run_test("-f Makefile.queue --one-shell","love.will.tear.us.apart"),
 	run_test("-f Makefile.queue -Q test","what.difference.does.it.make"),
 	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
 	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),

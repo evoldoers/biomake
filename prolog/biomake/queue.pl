@@ -168,10 +168,11 @@ write_script_file(T,Es,Opts,ScriptFilename) :-
 write_script_file(T,Headers,Es,Opts,ScriptFilename) :-
 	member(oneshell(true),Opts),
 	!,
-	write_script_file_contents(T,Headers,Es,Opts,ScriptFilename).
+	maplist(echo_wrap,Es,EchoedEs),
+	write_script_file_contents(T,Headers,EchoedEs,Opts,ScriptFilename).
 
 write_script_file(T,Headers,Es,Opts,ScriptFilename) :-
-	maplist(shell_wrap,Es,Execs),
+	maplist(shell_echo_wrap,Es,Execs),
 	write_script_file_contents(T,Headers,Execs,Opts,ScriptFilename).
 
 write_script_file_contents(T,Headers,Execs,_Opts,ScriptFilename) :-
@@ -185,6 +186,7 @@ write_script_file_contents(T,Headers,Execs,_Opts,ScriptFilename) :-
 	close(IO),
 	format(string(Chmod),"chmod +x ~w",[ScriptFilename]),
 	shell(Chmod).
+	
 
 % ----------------------------------------
 % Test queue engine (just runs shell)
@@ -195,7 +197,12 @@ init_queue(test,_).
 release_queue(test).
 
 run_execs_in_queue(test,Rule,SL,Opts) :-
-	run_execs_in_script(Rule,SL,Opts).
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	qsub_rule_execs(Rule,Es,Opts),
+	write_script_file(T,Es,Opts,Script),
+	report_run_exec(Script,SL,Opts),
+	update_hash(T,DL,Opts).
 
 % ----------------------------------------
 % Sun Grid Engine
