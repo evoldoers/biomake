@@ -70,7 +70,7 @@ process_submit_message(submit(Goal,JobId,DepJobIds,Options)) :-
 	debug(poolq,"Scheduler: job ~w has no unmet dependencies, starting immediately",[JobId]),
 	start_job(JobId,Goal,Options).
 
-process_submit_message(,submit(Goal,JobId,DepJobIds,Options)) :-
+process_submit_message(submit(Goal,JobId,DepJobIds,Options)) :-
 	!,
 	debug(poolq,"Scheduler: job ~w has dependencies ~w; postponing",[JobId,DepJobIds]),
 	assert(job_waiting(JobId,DepJobIds,Goal,Options)).
