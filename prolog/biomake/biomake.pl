@@ -526,6 +526,12 @@ write_clause(IO,rule(Ts,Ds,Es)) :-
     !,
     format(IO,"~q <-- ~q, ~q.~n",[Ts,Ds,Es]).
 
+write_clause(_,assignment(Var,_,_)) :-
+    atom_codes(Var,[V|_]),
+    V @>= 97, V @=< 122,   % a through z
+    format("Prolog will not recognize `~w' as a variable, as it does not begin with an upper-case letter.~nStubbornly refusing to translate unless you fix this outrageous affront!~n",[Var]),
+    halt(1).
+
 write_clause(IO,assignment(Var,Op,Val)) :-
     format(IO,"~w ~w ~q.~n",[Var,Op,Val]).
 
@@ -559,6 +565,14 @@ add_spec_clause( Ass ,_VNs) :-
         global_cmdline_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w ~w ~w since ~w was bound to ~w on the command-line",[Var,Op,X,Var,Oldval]).
+
+add_spec_clause( Ass , []) :-
+	Ass =.. [Op,Var,_],
+	is_assignment_op(Op),
+	atom_codes(Var,[V|_]),
+	V @>= 97, V @=< 122,   % a through z
+        format("Warning: Prolog will not recognize ~w as a variable as it does not begin with an upper-case letter. Use at your own peril!~n",[Var]),
+	fail.
 
 add_spec_clause( (Var = X) ,VNs) :-
 	!,

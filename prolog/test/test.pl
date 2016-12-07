@@ -33,7 +33,10 @@ test :-
 	
 	announce("PROLOG SYNTAX"),
 	run_test("-p Prolog.makespec","simple_prolog"),
+	run_test("-p Prolog.makespec","lower_case_variable.pltest"),
+	run_test("-p Prolog.makespec","upper_case_var_assignment"),
 	run_test("ref/prolog","target/prolog",["rm [hmz]*"],"",""),
+	run_test("ref","target",[],"-f Makefile.translate -T Makefile.translated","Makefile.translated"),
 	
 	announce("BASIC GNU MAKEFILE SYNTAX"),
 	run_test("simple"),

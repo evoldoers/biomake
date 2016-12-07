@@ -1,0 +1,15 @@
+MAKEFILE_LIST += 'Makefile.translate'.
+["simple"] <-- [], ["echo Simple test >simple"].
+["uptodate"] <-- [], ["echo Not up to date >$@"].
+["target1","target2"] <-- [], ["echo $@ >$@"].
+["%.echo"] <-- [], ["echo $* >$@"].
+["first_dep"] <-- ["a.echo","b.echo","c.echo"], ["echo $< >$@"].
+["all_deps"] <-- ["a.echo","b.echo","c.echo"], ["echo $^ >$@"].
+FOO = ".foo".
+["%.bar"] <-- ["%$(FOO)"], ["perl -pe 'tr/a-z/A-Z/' $< > $@"].
+["$A.baz"] <-- ["$A.bar"], ["echo \"Baz!\" >$@","cat $< >>$@","echo \"I said Baz!\" >> $@"].
+["$A.$B.foo"] <-- [], ["echo b= $B a= $A >$@"].
+XYZ := "$(ABC) xyz".
+DEF ?= "$(ABC)".
+ABC = "abc".
+["Makefile.translated"] <-- [], [].
