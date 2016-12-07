@@ -83,9 +83,10 @@ build(T,SL,Opts) :-
 	member(Dep,SL),
 	equal_as_strings(Dep,T),
 	!,
-	concat_string_list(SL,Chain," <-- "),
-	report("Cyclic dependency detected: ~w <-- ~w",[T,Chain],SL,Opts),
-        report('~w FAILED',[T],SL,Opts).
+	reverse(SL,SLrev),
+	concat_string_list(SLrev,Chain," <-- "),
+	report("Cyclic dependency detected: ~w <-- ~w",[Chain,T],SL,Opts),
+        halt(1).
 
 build(T,SL,Opts) :-
         %show_global_bindings,

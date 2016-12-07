@@ -222,7 +222,7 @@ parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
 arg_alias('-Q','--queue-engine').
 arg_info('-Q,--queue-engine','ENGINE','Queue recipes using ENGINE (supported: test,sge,pbs,slurm,poolq)').
 
-parse_arg(['-j',Jobs|L],L,poolq_threads(Jobs)).
+parse_arg(['-j',Jobs|L],L,(atom_codes(Jobs,Jc),number_codes(NJobs,Jc),poolq_threads(NJobs))).
 arg_alias('-j','--jobs').
 arg_info('-j,--jobs','JOBS','Number of job threads (poolq engine)').
 
@@ -250,6 +250,9 @@ arg_info('--qsub-flush','<target or directory>','Erase all jobs for given target
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
 arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
+
+parse_arg(['--trace',Pred|L],L,null) :- trace(Pred), !.
+arg_info('--trace','predicate','Print debugging trace for given predicate').
 
 parse_arg(['--no-backtrace'|L],L,null) :- assert(no_backtrace), !.
 arg_info('--no-backtrace','','Do not print a backtrace on error').

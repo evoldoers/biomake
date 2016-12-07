@@ -23,7 +23,7 @@ user:prolog_exception_hook(_,
 
 test :-
 	init_counts,
-	
+
 	announce("FAILURE TESTS"),
 	run_failure_test("-f Makefile.cyclic","test1"),
 	run_failure_test("--no-backtrace -f Makefile.err","empty"),
@@ -138,6 +138,16 @@ test :-
 	% hello_world, on which it depends, since that has the right length and its MD5 looks OK.
 	run_test("ref/md5.len","target/md5.len",["echo wrong >hello","echo wrong length >world","echo wrong_wrong >hello_world"],"-H","hello_world"),
 
+	announce("QUEUES"),
+
+	% Queues are a bit under-served by tests at the moment...
+	run_test("-f Makefile.queue","I.am.the.garbage.flower"),
+	run_test("-f Makefile.queue -Q test","What.difference.does.it.make"),
+	run_test("-f Makefile.queue -Q poolq","They.made.you.a.moron"),
+	run_test("-f Makefile.queue -Q test -H","Under.blue.moon.I.saw.you"),
+	run_test("-f Makefile.queue -Q poolq -H","The.head.on.the.door"),
+
+	% All done
 	report_counts,
         (   failed_test(_,_)
         ->  halt(1)
