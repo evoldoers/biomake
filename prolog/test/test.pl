@@ -144,7 +144,7 @@ test :-
 	run_test("-f Makefile.queue","i.am.the.garbage.flower"),
 	run_test("-f Makefile.queue -Q test","what.difference.does.it.make"),
 	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
-	run_test("-f Makefile.queue -Q test -H","under.blue.moon.I.saw.you"),
+	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),
 	run_test("-f Makefile.queue -Q poolq -H","the.head.on.the.door"),
 
 	% All done
