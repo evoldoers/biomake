@@ -255,9 +255,9 @@ biomake_private_filename(Target,Subdir,Filename) :-
 
 biomake_private_filename_dir_exists(Target,Subdir,Filename) :-
 	biomake_private_dir(Target,Path),
-	(exists_directory(Path); make_directory(Path)),
+	(exists_directory(Path); make_directory(Path); true),  % guard against race between threads
 	biomake_private_subdir(Target,Subdir,SubPath),
-	(exists_directory(SubPath); make_directory(SubPath)),
+	(exists_directory(SubPath); make_directory(SubPath); true),  % guard against race between threads
 	biomake_private_filename(Target,Subdir,Filename).
 
 open_biomake_private_file(Target,Subdir,Filename,Stream) :-

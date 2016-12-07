@@ -81,8 +81,7 @@ compute_md5(T,Size,Hash) :-
 % use a temporary file instead of a pipe, since process_create doesn't seem to play well with threads in OSX :-(
 try_md5_prog(Filename,Hash) :-
     find_md5_prog(Md5Prog),
-    biomake_private_filename_dir_exists(Filename,"tmp",TmpFile),
-    (exists_file(TmpFile) -> delete_file(TmpFile); true),
+    tmp_file("md5",TmpFile),
     absolute_file_name(Filename,Path),
     format(string(Exec),"~w ~w >~w",[Md5Prog,Path,TmpFile]),
     debug(md5,'computing hash: ~w',[Exec]),

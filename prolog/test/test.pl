@@ -264,7 +264,6 @@ not_special(File) :-
     \+ special(File).
 special('.').
 special('..').
-special('tmp').
 
 compare_files(TestPath,RefPath,File) :-
     format(string(TestFilePath),"~s/~s",[TestPath,File]),
