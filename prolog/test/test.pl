@@ -141,11 +141,11 @@ test :-
 	announce("QUEUES"),
 
 	% Queues are a bit under-served by tests at the moment...
-	run_test("-f Makefile.queue","I.am.the.garbage.flower"),
-	run_test("-f Makefile.queue -Q test","What.difference.does.it.make"),
-	run_test("-f Makefile.queue -Q poolq","They.made.you.a.moron"),
-	run_test("-f Makefile.queue -Q test -H","Under.blue.moon.I.saw.you"),
-	run_test("-f Makefile.queue -Q poolq -H","The.head.on.the.door"),
+	run_test("-f Makefile.queue","i.am.the.garbage.flower"),
+	run_test("-f Makefile.queue -Q test","what.difference.does.it.make"),
+	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
+	run_test("-f Makefile.queue -Q test -H","under.blue.moon.I.saw.you"),
+	run_test("-f Makefile.queue -Q poolq -H","the.head.on.the.door"),
 
 	% All done
 	report_counts,
