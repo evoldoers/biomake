@@ -8,13 +8,16 @@
 :- use_module(library(pio)).
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
+:- use_module(library(biomake/biomake)).
 
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M) :-
     debug(makefile,'reading: ~w~n',[F]),
-    phrase_from_file(makefile_rules(Mf,1,F),F),
     atom_string(MAKEFILE_LIST,"MAKEFILE_LIST"),
-    M = [assignment(MAKEFILE_LIST,"+=",F)|Mf],
+    Assignment = assignment(MAKEFILE_LIST,"+=",F),
+    add_gnumake_clause(Assignment),
+    phrase_from_file(makefile_rules(Mf,1,F),F),
+    M = [Assignment|Mf],
     debug(makefile,"rules: ~w\n",[M]).
 
 % Grammar for reading GNU Makefile
@@ -25,8 +28,8 @@ makefile_rules(Rules,Line,File) --> info_line, !, {Lnext is Line + 1}, makefile_
 makefile_rules(Rules,Line,File) --> warning_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> error_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
 makefile_rules(Rules,Line,File) --> include_line(Included), !, {Lnext is Line + 1, append(Included,Next,Rules)}, makefile_rules(Next,Lnext,File).
-makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment,Lass), !, {Lnext is Line + Lass}, makefile_rules(Rules,Lnext,File).
-makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
+makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment,Lass), !, {add_gnumake_clause(Assignment), Lnext is Line + Lass}, makefile_rules(Rules,Lnext,File).
+makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {add_gnumake_clause(Rule), Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
 makefile_rules(_,Line,File) --> opt_space, "\t", !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: unexpected tab character",[Line,File]),syntax_error(Err)}.
 makefile_rules(_,Line,File) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),syntax_error(Err)}.
 

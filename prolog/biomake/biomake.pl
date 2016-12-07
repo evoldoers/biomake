@@ -483,8 +483,7 @@ consult_gnu_makefile(F,Opts) :-
         ensure_loaded(library(biomake/gnumake_parser)),
         parse_gnu_makefile(F,M),
 	(member(translate_gnu_makefile(P),Opts)
-	 -> translate_gnu_makefile(M,P); true),
-        forall(member(C,M), add_gnumake_clause(C)).
+	 -> translate_gnu_makefile(M,P); true).
 
 consult_makeprog(F,_Opts) :-
         debug(makeprog,'reading: ~w',[F]),
@@ -571,7 +570,7 @@ add_spec_clause( Ass , []) :-
 	is_assignment_op(Op),
 	atom_codes(Var,[V|_]),
 	V @>= 97, V @=< 122,   % a through z
-        format("Warning: Prolog will not recognize ~w as a variable as it does not begin with an upper-case letter. Use at your own peril!~n",[Var]),
+        debug(makeprog,"Warning: Prolog will not recognize ~w as a variable as it does not begin with an upper-case letter. Use at your own peril!~n",[Var]),
 	fail.
 
 add_spec_clause( (Var = X) ,VNs) :-

@@ -228,12 +228,18 @@ exec_test(RefDir,TestDir,Setup,Args,Target) :-
 	make_test_path(TestDir,Target,TargetPath),
 	biomake_path(Make),
 	format(string(Exec),"~s ~s ~s",[Make,Args,Target]),
-	format("Running '~s' in ~s~n",[Exec,TestPath]),
-	working_directory(CWD,TestPath),
 	% If no "Setup" shell commands were specified, remove the target file.
 	% If Setup commands were specified, let the caller take care of this.
-	(Setup = [] -> (exists_file(TargetPath) -> delete_file(TargetPath); true);
-	 (forall(member(Cmd,Setup), (format("~s~n",[Cmd]), shell(Cmd); true)))),
+	(Setup = []
+         -> (exists_file(TargetPath)
+             -> (format("Deleting ~w~n",[TargetPath]),
+                 delete_file(TargetPath))
+             ; true)
+         ; (forall(member(Cmd,Setup),
+	          (format("~s~n",[Cmd]),
+                   shell(Cmd); true)))),
+	format("Running '~s' in ~s~n",[Exec,TestPath]),
+	working_directory(CWD,TestPath),
 	shell(Exec,Err),
 	!,
 	(Err = 0 -> true; format("Error code ~w~n",Err), fail),
@@ -317,7 +323,6 @@ compare_files(_,RefPath) :-
 
 lists_equal([],[]) :- !.
 lists_equal([X|Xs],[X|Ys]) :- !, lists_equal(Xs,Ys).
-%lists_equal(Xs,Ys) :- format("mismatch: ~w ~w~n",[Xs,Ys]), fail.
     
 file_missing(Path) :-
 	\+ exists_file(Path),
