@@ -4,6 +4,7 @@ default_ref_dir("ref").
 default_test_dir("target").
 
 :- dynamic failed_test/2.
+:- dynamic only_test/1.
 
 base_path(Dir) :-
 	prolog_load_context(directory,SrcDir),
@@ -20,6 +21,10 @@ user:prolog_exception_hook(_,
         backtrace(99),
         !,
         fail.
+
+test(N) :-
+	assert(only_test(N)),
+	test.
 
 test :-
 	init_counts,
@@ -151,6 +156,10 @@ test :-
 	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),
 	run_test("-f Makefile.queue -Q poolq -H","the.head.on.the.door"),
 
+	announce("COMMAND-LINE OPTIONS"),
+	run_test("--file=Makefile.argval","arg_equals_val"),
+	run_test("-f Makefile.subdir.include -I subdir","include_dir"),
+
 	% All done
 	report_counts,
         (   failed_test(_,_)
@@ -167,6 +176,10 @@ announce(X) :-
     n_chars(L,'=',Bc),
     string_chars(Banner,Bc),
     format("~w~n~w~n~w~n~n",[Banner,X,Banner]).
+
+report_counts :-
+	only_test(_),
+	!.
 
 report_counts :-
 	nb_getval(tests,T),
@@ -192,15 +205,25 @@ run_test(RefDir,TestDir,Setup,Args,Target) :-
 report_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
 	start_test(Fmt,Vars,Desc),
+	!,
 	(exec_test(RefDir,TestDir,Setup,Args,Target)
          -> pass_test(Desc); fail_test(Desc)),
 	working_directory(_,CWD).
 
+report_test(_,_,_,_,_,Fmt,Vars) :-
+	skip_test(Fmt,Vars).
+
 start_test(Fmt,Vars,Desc) :-
 	inc(tests),
 	nb_getval(tests,T),
+	(only_test(N) -> N = T; true),
 	format(string(Desc),Fmt,Vars),
 	format("Starting test #~d: ~s~n",[T,Desc]).
+
+skip_test(Fmt,Vars) :-
+	nb_getval(tests,T),
+	format(string(Desc),Fmt,Vars),
+	format("Skipping test #~d: ~s~n",[T,Desc]).
 
 pass_test(Desc) :-
         nb_getval(tests,T),
@@ -345,9 +368,13 @@ run_failure_test(RefDir,TestDir,Setup,Args,Target) :-
 report_failure_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
 	start_test(Fmt,Vars,Desc),
+	!,
 	(exec_test(RefDir,TestDir,Setup,Args,Target)
          -> fail_test(Desc); pass_test(Desc)),
 	working_directory(_,CWD).
+
+report_failure_test(_,_,_,_,_,Fmt,Vars) :-
+	skip_test(Fmt,Vars).
 
 n_chars(N,_,[]) :- N =< 0, !.
 n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.

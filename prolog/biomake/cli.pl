@@ -33,12 +33,12 @@ main :-
         parse_args(Args,TmpOpts),
 	get_cmd_args(TmpOpts,Opts),
  	add_assignments(Opts),
-	consult_makefile(Opts),
-        forall(member(goal(G),Opts),
+	consult_makefile(AllOpts,Opts),
+        forall(member(goal(G),AllOpts),
                G),
-        forall(member(flush_queue(T),Opts),
-	       flush_queue_recursive(T,Opts)),
-	(build_toplevel(Opts)
+        forall(member(flush_queue(T),AllOpts),
+	       flush_queue_recursive(T,AllOpts)),
+	(build_toplevel(AllOpts)
 	 -> halt(0)
 	 ;  halt(1)).
 
@@ -67,17 +67,17 @@ add_assignments(Opts) :-
         forall(member(assignment(Var,Val),Opts),
 	       add_cmdline_assignment((Var = Val))).
 
-consult_makefile(Opts) :-
+consult_makefile(AllOpts,Opts) :-
 	DefaultMakeprogs = ['makespec.pro','Makespec.pro'],
 	DefaultGnuMakefiles = ['Makefile'],
 	(member(makeprog(BF),Opts)
-	 -> consult_makeprog(BF,Opts);
+	 -> consult_makeprog(BF,AllOpts,Opts);
 	 (member(gnu_makefile(F),Opts)
-	  -> consult_gnu_makefile(F,Opts);
+	  -> consult_gnu_makefile(F,AllOpts,Opts);
 	  (find_file(DefaultMakeprog,DefaultMakeprogs)
-	   -> consult_makeprog(DefaultMakeprog,Opts);
+	   -> consult_makeprog(DefaultMakeprog,AllOpts,Opts);
 	   (find_file(DefaultGnuMakefile,DefaultGnuMakefiles)
-	    -> consult_gnu_makefile(DefaultGnuMakefile,Opts))))).
+	    -> consult_gnu_makefile(DefaultGnuMakefile,AllOpts,Opts))))).
 
 find_file(File,List) :-
     member(File,List),
@@ -93,17 +93,27 @@ parse_args([Alias|Rest],Opt) :-
 	arg_alias(Arg,Alias),
 	!,
 	parse_args([Arg|Rest],Opt).
+parse_args([ArgEqualsVal|Rest],Opts) :-
+        string_chars(ArgEqualsVal,C),
+        phrase(arg_equals_val(Arg,Val),C),
+	!,
+	parse_args([Arg,Val|Rest],Opts).
+parse_args([MultiArgs|Args],Opts) :-
+        string_codes(MultiArgs,C),
+        phrase(multi_args(MultiOpts),C),
+	!,
+        append(MultiOpts,RestOpts,Opts),
+        parse_args(Args,RestOpts).
 parse_args(Args,[Opt|Opts]) :-
         parse_arg(Args,Rest,Opt),
         !,
         parse_args(Rest,Opts).
-parse_args([MultiArgs|Args],Opts) :-
-        string_codes(MultiArgs,C),
-        phrase(multi_args(MultiOpts),C),
-        append(MultiOpts,RestOpts,Opts),
-        parse_args(Args,RestOpts).
 parse_args([A|Args],[toplevel(A)|Opts]) :-
         parse_args(Args,Opts).
+
+arg_equals_val(Arg,Val) --> arg_chars(Arg), ['='], !, val_chars(Val).
+arg_chars(A) --> ['-','-'], char_list(Ac,"="), {atom_chars(A,['-','-'|Ac])}.
+val_chars(V) --> atom_from_chars(V,"").
 
 get_cmd_args(FlatOpts,Opts) :-
 	(bagof(Arg,arg_from_opts(Arg,FlatOpts),LumpyCore);
@@ -120,7 +130,7 @@ arg_from_opts(Arg,Opts) :-
 	recover_arg(Arg,Opt).
 
 multi_args(Opts) --> "-", multi_arg(Opts).
-multi_arg([Opt|Rest]) --> [C], {string_codes("-",[H]),C\=H,atom_codes(Arg,[H,C]),parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
+multi_arg([Opt|Rest]) --> [C], {string_codes("-",[H]),C\=H,atom_codes(Arg,[H,C])}, !, {parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
 multi_arg([]) --> !.
 
 :- discontiguous parse_arg/3.
@@ -134,14 +144,16 @@ multi_arg([]) --> !.
 
 parse_arg(['-h'|L],L,null) :- show_help, !.
 arg_alias('-h','--help').
-arg_info('-h,--help','','Show help').
+arg_info('-h','','Show help').
 
 show_help :-
         writeln('biomake [OPTION...] target1 target2...'),
         nl,
         writeln('Options:'),
 	forall(arg_info(X,Args,Info),
-	       format("~w ~w~n    ~w~n",[X,Args,Info])),
+	       ((bagof(Alias,arg_alias(X,Alias),AliasList); AliasList = []),
+	        atomic_list_concat([X|AliasList],",",AliasStr),
+	        format("~w ~w~n    ~w~n",[AliasStr,Args,Info]))),
         nl,
         writeln('For more info see http://github.com/cmungall/biomake'),
         nl,
@@ -151,23 +163,32 @@ parse_arg(['-n'|L],L,dry_run(true)).
 arg_alias('-n','--dry-run').
 arg_alias('-n','--recon').
 arg_alias('-n','--just-print').
-arg_info('-n,--dry-run,--recon,--just-print','','Print the commands that would be executed, but do not execute them').
+arg_info('-n','','Print the commands that would be executed, but do not execute them').
 
 parse_arg(['-B'|L],L,always_make(true)).
 arg_alias('-B','--always-make').
-arg_info('-B,--always-make','','Always build fresh target even if dependency is up to date').
+arg_info('-B','','Always build fresh target even if dependency is up to date').
 
 parse_arg(['-p',F|L],L,makeprog(F)).
+arg_alias('-p','--prog').
+arg_alias('-p','--makeprog').
 recover_arg(Arg,makeprog(F)) :- absolute_file_name(F,Fabs), format(string(Arg),"-p ~w",[Fabs]).
 arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]').
 
 parse_arg(['-f',F|L],L,gnu_makefile(F)).
+arg_alias('-f','--file').
+arg_alias('-f','--makefile').
 recover_arg(Arg,gnu_makefile(F)) :- absolute_file_name(F,Fabs), format(string(Arg),"-f ~w",[Fabs]).
 arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
 
+parse_arg(['-I',D|L],L,include_dir(D)).
+arg_alias('-I','--include-dir').
+recover_arg(Arg,include_dir(D)) :- absolute_file_name(D,Dabs), format(string(Arg),"-I ~w",[Dabs]).
+arg_info('-I','DIR','Specify search directory for included Makefiles').
+
 parse_arg(['-T',F|L],L,translate_gnu_makefile(F)).
 parse_arg(['--translate',F|L],L,translate_gnu_makefile(F)).
-arg_info('-T,--translate','FILE','Translate GNU Makefile to Prolog Makeprog syntax').
+arg_info('-T','FILE','Translate GNU Makefile to Prolog Makeprog syntax').
 
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
@@ -194,7 +215,9 @@ parse_arg(['-l',F|L],L,
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
 parse_arg(['-q'|L],L,silent(true)).
-arg_info('-q,--quiet,--silent','','Silent operation; do not print recipes as they are executed').
+arg_alias('-q','--quiet').
+arg_alias('-q','--silent').
+arg_info('-q','','Silent operation; do not print recipes as they are executed').
 
 parse_arg(['--one-shell'|L],L,oneshell(true)).
 arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'s .ONESHELL)').
@@ -206,7 +229,7 @@ arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'
 parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
 arg_alias('-H','--md5-hash').
 recover_arg(['-H'],md5(true)).
-arg_info('-H,--md5-hash','','Use MD5 hashes instead of timestamps').
+arg_info('-H','','Use MD5 hashes instead of timestamps').
 
 % ----------------------------------------
 % QUEUES
@@ -220,11 +243,11 @@ parse_arg(['-Q',Qs|L],L,queue(Q)) :-
 	!.
 parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
 arg_alias('-Q','--queue-engine').
-arg_info('-Q,--queue-engine','ENGINE','Queue recipes using ENGINE (supported: test,sge,pbs,slurm,poolq)').
+arg_info('-Q','ENGINE','Queue recipes using ENGINE (supported: test,sge,pbs,slurm,poolq)').
 
 parse_arg(['-j',Jobs|L],L,(atom_codes(Jobs,Jc),number_codes(NJobs,Jc),poolq_threads(NJobs))).
 arg_alias('-j','--jobs').
-arg_info('-j,--jobs','JOBS','Number of job threads (poolq engine)').
+arg_info('-j','JOBS','Number of job threads (poolq engine)').
 
 parse_arg(['--qsub-exec',X|L],L,qsub_exec(X)).
 arg_info('--qsub-exec','PATH','Path to qsub (sge,pbs) or sbatch (slurm)').
@@ -242,7 +265,8 @@ parse_arg(['--qdel-args',X|L],L,qdel_args(X)).
 arg_info('--qdel-args','"ARGS"','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
 
 parse_arg(['--flush',X|L],L,flush_queue(X)).
-arg_info('--qsub-flush','<target or directory>','Erase all jobs for given target/dir').
+arg_alias('--flush','--qsub-flush').
+arg_info('--flush','<target or directory>','Erase all jobs for given target/dir').
 
 % ----------------------------------------
 % DEBUGGING

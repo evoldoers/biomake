@@ -2,7 +2,7 @@
 
 :- module(gnumake_parser,
           [
-              parse_gnu_makefile/2
+              parse_gnu_makefile/4
 	  ]).
 
 :- use_module(library(pio)).
@@ -11,27 +11,50 @@
 :- use_module(library(biomake/biomake)).
 
 % Wrapper for reading GNU Makefile
-parse_gnu_makefile(F,M) :-
+parse_gnu_makefile(F,M,OptsOut,OptsIn) :-
+	parse_gnu_makefile('',F,M,OptsOut,OptsIn).
+
+parse_gnu_makefile(DirSlash,F,M,OptsOut,OptsIn) :-
     debug(makefile,'reading: ~w~n',[F]),
     atom_string(MAKEFILE_LIST,"MAKEFILE_LIST"),
     Assignment = assignment(MAKEFILE_LIST,"+=",F),
-    add_gnumake_clause(Assignment),
-    phrase_from_file(makefile_rules(Mf,1,F),F),
+    add_gnumake_clause(Assignment,OptsIn,OptsIn),
+    format(string(Path),"~w~w",[DirSlash,F]),
+    phrase_from_file(makefile_rules(Mf,OptsOut,OptsIn,1,Path),Path),
     M = [Assignment|Mf],
-    debug(makefile,"rules: ~w\n",[M]).
+    debug(makefile,"rules: ~w~noptions: ~w",[M,OptsOut]).
 
 % Grammar for reading GNU Makefile
-makefile_rules([],_,_) --> call(eos), !.
-makefile_rules(Rules,Line,File) --> comment, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
-makefile_rules(Rules,Line,File) --> blank_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
-makefile_rules(Rules,Line,File) --> info_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
-makefile_rules(Rules,Line,File) --> warning_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
-makefile_rules(Rules,Line,File) --> error_line, !, {Lnext is Line + 1}, makefile_rules(Rules,Lnext,File).
-makefile_rules(Rules,Line,File) --> include_line(Included), !, {Lnext is Line + 1, append(Included,Next,Rules)}, makefile_rules(Next,Lnext,File).
-makefile_rules([Assignment|Rules],Line,File) --> makefile_assignment(Assignment,Lass), !, {add_gnumake_clause(Assignment), Lnext is Line + Lass}, makefile_rules(Rules,Lnext,File).
-makefile_rules([Rule|Rules],Line,File) --> makefile_rule(Rule,Lrule), !, {add_gnumake_clause(Rule), Lnext is Line + Lrule}, makefile_rules(Rules,Lnext,File).
-makefile_rules(_,Line,File) --> opt_space, "\t", !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: unexpected tab character",[Line,File]),syntax_error(Err)}.
-makefile_rules(_,Line,File) --> line_as_string(L), !, {format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),syntax_error(Err)}.
+makefile_rules([],Opts,Opts,_,_) --> call(eos), !.
+makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
+	comment, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
+makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
+	blank_line, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
+makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
+	info_line, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
+makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
+	warning_line, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
+makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
+	error_line, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
+makefile_rules([option(Opt)|Rules],OptsOut,OptsIn,Line,File) -->
+	makefile_special_target(Opt,Lt), !, {Lnext is Line + Lt}, makefile_rules(Rules,OptsOut,[Opt|OptsIn],Lnext,File).
+makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
+	include_line(Included,Opts,OptsIn), !, {Lnext is Line + 1, append(Included,Next,Rules)},
+	makefile_rules(Next,OptsOut,Opts,Lnext,File).
+makefile_rules([Assignment|Rules],OptsOut,OptsIn,Line,File) -->
+	makefile_assignment(Assignment,Lass), !, {add_gnumake_clause(Assignment,OptsIn,OptsIn), Lnext is Line + Lass},
+	makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
+makefile_rules([Rule|Rules],OptsOut,OptsIn,Line,File) -->
+	makefile_rule(Rule,Lrule), !, {add_gnumake_clause(Rule,OptsIn,OptsIn), Lnext is Line + Lrule},
+	makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
+makefile_rules(_,_,_,Line,File) -->
+	opt_space, "\t", !,
+	{format(string(Err),"GNU makefile parse error at line ~d of file ~w: unexpected tab character",[Line,File]),
+	syntax_error(Err)}.
+makefile_rules(_,_,_,Line,File) -->
+	line_as_string(L), !,
+	{format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),
+	syntax_error(Err)}.
 
 eos([], []).
 
@@ -71,14 +94,41 @@ info_line -->
     !,
     {format("~w~n",[W])}.
 
-include_line(Rules) -->
+include_line(Rules,OptsOut,OptsIn) -->
     opt_space,
     "include",
     whitespace,
-    include_makefiles(Rules).
+    include_makefiles(Rules,OptsOut,OptsIn).
 
-include_makefiles(Rules) --> makefile_filename_string(F), opt_whitespace, "\n", !, {parse_gnu_makefile(F,Rules)}.
-include_makefiles(Rules) --> makefile_filename_string(F), whitespace, !, {parse_gnu_makefile(F,R)}, include_makefiles(Next), {append(R,Next,Rules)}.
+include_makefiles(Rules,OptsOut,OptsIn) -->
+	makefile_filename_string(F), opt_whitespace, "\n", !,
+	{include_gnu_makefile(F,Rules,OptsOut,OptsIn)}.
+include_makefiles(Rules,OptsOut,OptsIn) -->
+	makefile_filename_string(F), whitespace, !,
+	{include_gnu_makefile(F,R,Opts,OptsIn)},
+	include_makefiles(Next,OptsOut,Opts),
+	{append(R,Next,Rules)}.
+
+include_gnu_makefile(F,R,Opts,OptsIn) :-
+	(bagof(Dslash,
+	       (member(include_dir(D),OptsIn),
+	        format(atom(Dslash),"~w/",[D])),
+	       RevDirs)
+	 ; RevDirs = []),
+	reverse(RevDirs,Dirs),
+	search_include_dirs(F,['','./'|Dirs],R,Opts,OptsIn).
+
+search_include_dirs(F,[],_,_,_) :-
+	format(string(Err),"Couldn't find included makefile ~w~n",[F]),
+	throw(Err).
+search_include_dirs(F,[Dir|_],R,Opts,OptsIn) :-
+	format(string(Path),"~w/~w",[Dir,F]),
+	exists_file(Path),
+	format("Found ~w~n",Path),
+	!,
+	parse_gnu_makefile(Dir,F,R,Opts,OptsIn).
+search_include_dirs(F,[_|Dirs],R,Opts,OptsIn) :-
+	search_include_dirs(F,Dirs,R,Opts,OptsIn).
 
 makefile_assignment(assignment(Var,Op,Val),Lines) -->
     opt_space,
@@ -111,6 +161,9 @@ makefile_assignment(assignment(Var,Op,Val),1) -->
     op_string(Op),
     opt_whitespace,
     line_as_string(Val).
+
+makefile_special_target(queue(none),Lines) -->
+    makefile_rule(rule([".NOTPARALLEL"],_,_),Lines).
 
 makefile_rule(rule(Head,Deps,Exec),Lines) -->
     makefile_targets(Head),

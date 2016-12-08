@@ -13,13 +13,13 @@
 	   report/3,
 	   report/4,
 	   
-           consult_makeprog/2,
-           consult_gnu_makefile/2,
+           consult_makeprog/3,
+           consult_gnu_makefile/3,
 
-	   add_spec_clause/1,
-	   add_spec_clause/2,
+	   add_spec_clause/3,
+	   add_spec_clause/4,
 	   add_cmdline_assignment/1,
-	   add_gnumake_clause/1,
+	   add_gnumake_clause/3,
 	   
            target_bindrule/2,
            rebuild_required/4,
@@ -29,6 +29,7 @@
            rule_execs/3,
 
 	   run_execs_if_required/3,
+	   run_execs_now/3,
 	   report_run_exec/3,
 	   update_hash/3,
 	   
@@ -129,6 +130,7 @@ build_targets([T|TL],SL,Opts) :-
 start_queue(Opts) :-
 	member(queue(Q),Opts),
 	!,
+	ensure_loaded(library(biomake/queue)),
 	init_queue(Q,Opts).
 start_queue(_).
 
@@ -479,26 +481,30 @@ is_assignment_op(:=).
 is_assignment_op(+=).
 is_assignment_op(=*).
 
-consult_gnu_makefile(F,Opts) :-
+consult_gnu_makefile(F,AllOpts,Opts) :-
         ensure_loaded(library(biomake/gnumake_parser)),
-        parse_gnu_makefile(F,M),
-	(member(translate_gnu_makefile(P),Opts)
+        parse_gnu_makefile(F,M,AllOpts,Opts),
+	(member(translate_gnu_makefile(P),AllOpts)
 	 -> translate_gnu_makefile(M,P); true).
 
-consult_makeprog(F,_Opts) :-
+consult_makeprog(F,AllOpts,Opts) :-
         debug(makeprog,'reading: ~w',[F]),
         open(F,read,IO,[]),
-        repeat,
-        (   at_end_of_stream(IO)
-        ->  !
-        ;   read_term(IO,Term,[variable_names(VNs),
-                               syntax_errors(error),
-                               module(biomake)]),
-            debug(makeprog,'adding: ~w',[Term]),
-            add_spec_clause(Term,VNs),
-            fail),
-        debug(makeprog,'read: ~w',[F]),
-        close(IO).
+	read_makeprog_stream(IO,AllOpts,Opts),
+        debug(makeprog,'read: ~w',[F]).
+
+read_makeprog_stream(IO,Opts,Opts) :-
+        at_end_of_stream(IO),
+	!,
+	close(IO).
+
+read_makeprog_stream(IO,OptsOut,OptsIn) :-
+        read_term(IO,Term,[variable_names(VNs),
+                           syntax_errors(error),
+                           module(biomake)]),
+        debug(makeprog,'adding: ~w',[Term]),
+        add_spec_clause(Term,VNs,Opts,OptsIn),
+	read_makeprog_stream(IO,OptsOut,Opts).
 
 translate_gnu_makefile(M,P) :-
     debug(makeprog,"Writing translated makefile to ~w",[P]),
@@ -506,9 +512,9 @@ translate_gnu_makefile(M,P) :-
     forall(member(G,M), write_clause(IO,G)),
     close(IO).
 
-add_gnumake_clause(G) :-
+add_gnumake_clause(G,OptsOut,OptsIn) :-
     translate_gnumake_clause(G,P),
-    add_spec_clause(P).
+    add_spec_clause(P,OptsOut,OptsIn).
     
 translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)).
 translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)).
@@ -520,6 +526,10 @@ translate_gnumake_clause(C,_) :-
     format("Error translating ~w~n",[C]),
 	backtrace(20),
     fail.
+
+write_clause(IO,option(Opt)) :-
+    !,
+    format(IO,"option(~w).~n",[Opt]).
 
 write_clause(IO,rule(Ts,Ds,Es)) :-
     !,
@@ -539,33 +549,37 @@ add_cmdline_assignment((Var = X)) :-
         assert(global_cmdline_binding(Var,X)),
         debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
 
-add_spec_clause(Ass) :-
+add_spec_clause(Ass,Opts,Opts) :-
 	Ass =.. [Op,Var,_],
 	is_assignment_op(Op),
 	!,
-	add_spec_clause(Ass, [Var=Var]).
+	add_spec_clause(Ass, [Var=Var], Opts, Opts).
 
-add_spec_clause( (Head <-- Deps, Exec) ) :-
+add_spec_clause( (Head <-- Deps, Exec), Opts, Opts ) :-
         !,
-        add_spec_clause( (Head <-- Deps, Exec), [] ).
+        add_spec_clause( (Head <-- Deps, Exec), [], Opts, Opts ).
 
-add_spec_clause( (Var ?= X) ,_VNs) :-
+add_spec_clause( option(Opts), OptsOut, OptsIn ) :-
+	!,
+	append(Opts,OptsIn,OptsOut).
+
+add_spec_clause( (Var ?= X) , _VNs, Opts, Opts) :-
         global_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w = ~w since ~w is already bound to ~w",[Var,X,Var,Oldval]).
 
 
-add_spec_clause( (Var ?= X) ,VNs) :-
-        add_spec_clause((Var = X),VNs).
+add_spec_clause( (Var ?= X), VNs, Opts, Opts) :-
+        add_spec_clause((Var = X),VNs,Opts,Opts).
 
-add_spec_clause( Ass ,_VNs) :-
+add_spec_clause( Ass, _VNs, Opts, Opts) :-
 	Ass =.. [Op,Var,X],
 	is_assignment_op(Op),
         global_cmdline_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w ~w ~w since ~w was bound to ~w on the command-line",[Var,Op,X,Var,Oldval]).
 
-add_spec_clause( Ass , []) :-
+add_spec_clause( Ass, [], Opts, Opts) :-
 	Ass =.. [Op,Var,_],
 	is_assignment_op(Op),
 	atom_codes(Var,[V|_]),
@@ -573,14 +587,14 @@ add_spec_clause( Ass , []) :-
         debug(makeprog,"Warning: Prolog will not recognize ~w as a variable as it does not begin with an upper-case letter. Use at your own peril!~n",[Var]),
 	fail.
 
-add_spec_clause( (Var = X) ,VNs) :-
+add_spec_clause( (Var = X), VNs, Opts, Opts) :-
 	!,
         member(Var=Var,VNs),
         global_unbind(Var),
         assert(global_lazy_binding(Var,X)),
         debug(makeprog,'assign: ~w = ~w',[Var,X]).
 
-add_spec_clause( (Var := X,{Goal}) ,VNs) :-
+add_spec_clause( (Var := X,{Goal}), VNs, Opts, Opts) :-
         !,
         member(Var=Var,VNs),
         normalize_pattern(X,Y,v(_,_,_,VNs)),
@@ -591,11 +605,11 @@ add_spec_clause( (Var := X,{Goal}) ,VNs) :-
         assert(global_simple_binding(Var,Yflat)),
         debug(makeprog,'assign: ~w := ~w',[Var,Yflat]).
 
-add_spec_clause( (Var := X) ,VNs) :-
+add_spec_clause( (Var := X), VNs, Opts, Opts) :-
         !,
-        add_spec_clause( (Var := X,{true}) ,VNs).
+        add_spec_clause( (Var := X,{true}), VNs, Opts, Opts).
 
-add_spec_clause( (Var += X) ,VNs) :-
+add_spec_clause( (Var += X), VNs, Opts, Opts) :-
         !,
         member(Var=Var,VNs),
         normalize_pattern(X,Y,v(_,_,_,VNs)),
@@ -608,7 +622,7 @@ add_spec_clause( (Var += X) ,VNs) :-
         assert(global_simple_binding(Var,New)),
         debug(makeprog,'assign: ~w := ~w',[Var,New]).
 
-add_spec_clause( (Var =* X) ,VNs) :-
+add_spec_clause( (Var =* X), VNs, Opts, Opts) :-
         !,
         member(Var=Var,VNs),
 	shell_eval_str(X,Y),
@@ -617,27 +631,27 @@ add_spec_clause( (Var =* X) ,VNs) :-
         assert(global_lazy_binding(Var,Y)),
         debug(makeprog,'assign: ~w =* ~w  ==>  ~w',[Var,X,Y]).
 
-add_spec_clause( (Head <-- Deps,{Goal},Exec) ,VNs) :-
+add_spec_clause( (Head <-- Deps,{Goal},Exec), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,Exec,Goal),VNs).
-add_spec_clause( (Head <-- Deps,{Goal}) ,VNs) :-
+        add_spec_clause(mkrule(Head,Deps,Exec,Goal),VNs,Opts,Opts).
+add_spec_clause( (Head <-- Deps,{Goal}), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,[],Goal),VNs).
-add_spec_clause( (Head <-- Deps, Exec) ,VNs) :-
+        add_spec_clause(mkrule(Head,Deps,[],Goal),VNs,Opts,Opts).
+add_spec_clause( (Head <-- Deps, Exec), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,Exec),VNs).
-add_spec_clause( (Head <-- Deps) ,VNs) :-
+        add_spec_clause(mkrule(Head,Deps,Exec),VNs,Opts,Opts).
+add_spec_clause( (Head <-- Deps), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,[]),VNs).
+        add_spec_clause(mkrule(Head,Deps,[]),VNs,Opts,Opts).
 
-add_spec_clause(Rule,VNs) :-
+add_spec_clause(Rule,VNs,Opts,Opts) :-
         Rule =.. [mkrule,T|_],
         !,
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
 	set_default_target(T),
         assert(with(Rule,VNs)).
 
-add_spec_clause(Term,_) :-
+add_spec_clause(Term,_,Opts,Opts) :-
         debug(makeprog,"assert ~w",Term),
         assert(Term).
 

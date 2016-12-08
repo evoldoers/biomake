@@ -189,7 +189,18 @@ write_script_file_contents(T,Headers,Execs,_Opts,ScriptFilename) :-
 	
 
 % ----------------------------------------
-% Test queue engine (just runs shell)
+% No queue engine (runs execs immediately)
+% ----------------------------------------
+
+queue_engine(none).
+init_queue(none,_).
+release_queue(none).
+
+run_execs_in_queue(none,Rule,SL,Opts) :-
+	run_execs_now(Rule,SL,Opts).
+
+% ----------------------------------------
+% Test queue engine (just runs script)
 % ----------------------------------------
 
 queue_engine(test).
