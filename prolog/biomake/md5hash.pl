@@ -3,18 +3,24 @@
 :- module(md5hash,
           [
 	      md5_hash_up_to_date/3,
+	      ensure_md5_directory_exists/1,
 	      update_md5_file/2
           ]).
 
-:- use_module(library(md5), [ md5_hash/3 as library_md5_hash ]).
 :- use_module(library(readutil)).
+:- use_module(library(biomake/utils)).
 
 % ----------------------------------------
 % MD5 HASHES
 % ----------------------------------------
 
-md5_prog("md5sum").  % Ubuntu
-md5_prog("md5 -q").  % MacOS, BSD
+md5_prog("md5sum",[]).  % Ubuntu
+md5_prog("md5",["-q"]).  % MacOS, BSD
+
+find_md5_prog(Path,Args) :-
+	md5_prog(Prog,Args),
+	find_on_path(Prog,Path),
+	!.
 
 :- dynamic md5_hash/3.
 :- dynamic md5_valid/3.
@@ -23,8 +29,8 @@ md5_hash_up_to_date(T,DL,Opts) :-
     atom(T),
     !,
     atom_chars(T,Tc),
-    string_chars(Ts,Tc),
-    md5_hash_up_to_date(Ts,DL,Opts).
+    string_chars(Tstr,Tc),
+    md5_hash_up_to_date(Tstr,DL,Opts).
 md5_hash_up_to_date(T,DL,_Opts) :-
     !,
     debug(md5,"Checking MD5 hash validity for ~w <-- ~w",[T,DL]),
@@ -71,21 +77,51 @@ compute_md5(T,Size,Hash) :-
     retract_md5_hash(T),
     assert(md5_hash(T,Size,Hash)).
 
-% try all the md5 executables specified with md5_prog
+% clauses of try_md5_prog/2 are discontiguous, due to a couple of renamed versions that don't work,
+% but are kept in here because it'd be a better world if they did work, and maybe they will one day.
+:- discontiguous md5hash:try_md5_prog/2.
+
+% try the md5 executables findable with md5_prog, using a temporary file to stash the hash
 try_md5_prog(Filename,Hash) :-
-    md5_prog(Md5Prog),
-    format(string(Exec),"~w ~w",[Md5Prog,Filename]),
+    find_md5_prog(Md5Prog,Args),
+    append(Args,[Filename],Md5Args),
+    atomic_list_concat(Md5Args," ",Md5ArgStr),
+    biomake_private_filename_dir_exists(Filename,"tmp",TmpFile),
+    absolute_file_name(Filename,Path),
+    format(string(Exec),"~w ~w >~w",[Md5Prog,Md5ArgStr,TmpFile]),
     debug(md5,'computing hash: ~w',[Exec]),
-    shell_eval(Exec,ExecOut),
-    phrase(first_n(32,HashCodes),ExecOut),
+    shell(Exec),
+    phrase_from_file(first_n(32,HashCodes),TmpFile),
     string_codes(HashStr,HashCodes),
+    debug(md5,'output of ~w ~w: ~w',[Md5Prog,Filename,HashStr]),
     string_lower(HashStr,Hash).
 
-% fall back to using Prolog's in-memory MD5 implementation
+% this version uses pipes; unfortunately, that crashes on some Macs :-(
+try_md5_prog_using_pipes(Filename,Hash) :-
+    find_md5_prog(Md5Prog,Args),
+    append(Args,[Filename],Md5Args),
+    setup_call_cleanup(process_create(Md5Prog,Md5Args,[stdout(pipe(Stream))]),
+		       read_stream_to_codes(Stream,CodeList),
+		       close(Stream)),
+    phrase(first_n(32,HashCodes),CodeList),
+    string_codes(HashStr,HashCodes),
+    debug(md5,'output of ~w ~w: ~w',[Md5Prog,Filename,HashStr]),
+    string_lower(HashStr,Hash).
+
+% fall back to using Prolog's deprecated in-memory MD5 implementation in the rdf_db library
 try_md5_prog(Filename,Hash) :-
+    use_module(library(semweb/rdf_db)),
+    debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
+    read_file_to_string(Filename,Str,[]),
+    rdf_atom_md5(Str,1,Hash).
+
+% this version uses the in-memory MD5 implementation in the md5 library, which is recommended over rdf_atom_md5, but not present in all implementations
+try_md5_prog_in_memory_md5_library(Filename,Hash) :-
+    use_module(library(md5), [ md5_hash/3 as library_md5_hash ]),
     debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
     read_file_to_string(Filename,Str,[]),
     library_md5_hash(Str,Hash,[]).
+
 
 first_n(0,[]) --> [].
 first_n(0,[]) --> [_], first_n(0,[]).
@@ -98,26 +134,24 @@ delete_md5_file(T) :-
     delete_file(F).
 delete_md5_file(_).
 
-md5_filename(Target,Filename) :-
-    absolute_file_name(Target,F),
-    file_directory_name(F,D),
-    file_base_name(F,N),
-    format(string(Filename),"~w/.biomake/md5/~w",[D,N]).
+ensure_md5_directory_exists(Target) :-
+    biomake_private_filename_dir_exists(Target,"md5",_),
+    biomake_private_filename_dir_exists(Target,"tmp",_).
 
-md5_filename_mkdir(Target,Filename) :-
-    md5_filename(Target,Filename),
-    file_directory_name(Filename,D),
-    format(string(MkDir),"mkdir -p ~w",[D]),
-    shell(MkDir).
+md5_filename(Target,Filename) :-
+    biomake_private_filename(Target,"md5",Filename).
+
+open_md5_file(Target,Stream) :-
+    open_biomake_private_file(Target,"md5",_,Stream).
 
 make_md5_hash_term(T,S,H,Str) :-
-    format(string(Str),"md5_hash(\"~w\",~d,~q)",[T,S,H]).
+    format(string(Str),"md5_hash(\"~w\",~d,\"~w\")",[T,S,H]).
 
 make_md5_valid_term(T,S,H,Str) :-
-    format(string(Str),"md5_valid(\"~w\",~d,~q)",[T,S,H]).
+    format(string(Str),"md5_valid(\"~w\",~d,\"~w\")",[T,S,H]).
 
 make_md5_check_term(T,S,H,Str) :-
-    format(string(Str),"md5_check(\"~w\",~d,~q)",[T,S,H]).
+    format(string(Str),"md5_check(\"~w\",~d,\"~w\")",[T,S,H]).
 
 make_md5_valid_goal_list([Dep|Deps],[Goal|Goals]) :-
     md5_check(Dep,Size,Hash),
@@ -134,8 +168,7 @@ update_md5_file(T,DL) :-
     make_md5_hash_term(T,SizeT,HashT,HashTerm),
     make_md5_valid_term(T,SizeT,HashT,ValidTerm),
     make_md5_valid_goal_list(DL,ValidGoals),
-    md5_filename_mkdir(T,F),
-    open(F,write,IO,[]),
+    open_md5_file(T,IO),
     format(IO,"~w.~n",[HashTerm]),
     debug(md5,' ~w',[HashTerm]),
     (ValidGoals = [] -> format(IO,"~w.~n",[ValidTerm]), debug(md5,' ~w.',[ValidTerm]);

@@ -4,6 +4,7 @@ default_ref_dir("ref").
 default_test_dir("target").
 
 :- dynamic failed_test/2.
+:- dynamic only_test/1.
 
 base_path(Dir) :-
 	prolog_load_context(directory,SrcDir),
@@ -21,9 +22,13 @@ user:prolog_exception_hook(_,
         !,
         fail.
 
+test(N) :-
+	assert(only_test(N)),
+	test.
+
 test :-
 	init_counts,
-	
+
 	announce("FAILURE TESTS"),
 	run_failure_test("-f Makefile.cyclic","test1"),
 	run_failure_test("--no-backtrace -f Makefile.err","empty"),
@@ -33,7 +38,10 @@ test :-
 	
 	announce("PROLOG SYNTAX"),
 	run_test("-p Prolog.makespec","simple_prolog"),
+	run_test("-p Prolog.makespec","lower_case_variable.pltest"),
+	run_test("-p Prolog.makespec","upper_case_var_assignment"),
 	run_test("ref/prolog","target/prolog",["rm [hmz]*"],"",""),
+	run_test("ref","target",[],"-f Makefile.translate -T Makefile.translated","Makefile.translated"),
 	
 	announce("BASIC GNU MAKEFILE SYNTAX"),
 	run_test("simple"),
@@ -138,6 +146,31 @@ test :-
 	% hello_world, on which it depends, since that has the right length and its MD5 looks OK.
 	run_test("ref/md5.len","target/md5.len",["echo wrong >hello","echo wrong length >world","echo wrong_wrong >hello_world"],"-H","hello_world"),
 
+	announce("QUEUES"),
+
+	% Queues are a bit under-served by tests at the moment...
+	run_test("-f Makefile.queue","i.am.the.garbage.flower"),
+	run_test("-f Makefile.queue --one-shell","love.will.tear.us.apart"),
+	run_test("-f Makefile.queue -Q test","what.difference.does.it.make"),
+	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
+	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),
+	run_test("-f Makefile.queue -Q poolq -H","the.head.on.the.door"),
+
+	announce("COMMAND-LINE OPTIONS"),
+
+	run_test("--file=Makefile.argval","arg_equals_val"),
+	run_test("-f Makefile.subdir.include -I subdir","include_dir"),
+	% could do with more here
+	
+	announce("CONDITIONAL SYNTAX"),
+
+	run_test("-f Makefile.cond","ifdef_true"),
+	run_test("-f Makefile.cond","ifdef_false"),
+	run_test("-f Makefile.cond","ifeq_true"),
+	run_test("-f Makefile.cond","ifeq_false"),
+	% TODO: ifndef, ifneq, nesting of includes & ifs inside reachable & unreachable clauses
+	
+	% All done
 	report_counts,
         (   failed_test(_,_)
         ->  halt(1)
@@ -147,12 +180,20 @@ init_counts :-
 	nb_setval(tests,0),
 	nb_setval(passed,0).
 
+announce(_) :-
+    only_test(_),
+    !.
+
 announce(X) :-
     string_chars(X,C),
     length(C,L),
     n_chars(L,'=',Bc),
     string_chars(Banner,Bc),
     format("~w~n~w~n~w~n~n",[Banner,X,Banner]).
+
+report_counts :-
+	only_test(_),
+	!.
 
 report_counts :-
 	nb_getval(tests,T),
@@ -178,13 +219,17 @@ run_test(RefDir,TestDir,Setup,Args,Target) :-
 report_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
 	start_test(Fmt,Vars,Desc),
+	!,
 	(exec_test(RefDir,TestDir,Setup,Args,Target)
          -> pass_test(Desc); fail_test(Desc)),
 	working_directory(_,CWD).
 
+report_test(_,_,_,_,_,_,_).
+
 start_test(Fmt,Vars,Desc) :-
 	inc(tests),
 	nb_getval(tests,T),
+	(only_test(N) -> N = T; true),
 	format(string(Desc),Fmt,Vars),
 	format("Starting test #~d: ~s~n",[T,Desc]).
 
@@ -214,12 +259,18 @@ exec_test(RefDir,TestDir,Setup,Args,Target) :-
 	make_test_path(TestDir,Target,TargetPath),
 	biomake_path(Make),
 	format(string(Exec),"~s ~s ~s",[Make,Args,Target]),
-	format("Running '~s' in ~s~n",[Exec,TestPath]),
 	working_directory(CWD,TestPath),
 	% If no "Setup" shell commands were specified, remove the target file.
 	% If Setup commands were specified, let the caller take care of this.
-	(Setup = [] -> (exists_file(TargetPath) -> delete_file(TargetPath); true);
-	 (forall(member(Cmd,Setup), (format("~s~n",[Cmd]), shell(Cmd); true)))),
+	(Setup = []
+         -> (exists_file(Target)
+             -> (format("Deleting ~w~n",[Target]),
+                 delete_file(Target))
+             ; true)
+         ; (forall(member(Cmd,Setup),
+	          (format("~s~n",[Cmd]),
+                   shell(Cmd); true)))),
+	format("Running '~s' in ~s~n",[Exec,TestPath]),
 	shell(Exec,Err),
 	!,
 	(Err = 0 -> true; format("Error code ~w~n",Err), fail),
@@ -245,14 +296,15 @@ compare_output(TestDir,RefDir,_) :-
     make_test_path(RefDir,RefPath),
     compare_files(TestPath,RefPath).
 
-actual_files(Dir,List) :-
+non_ignored_files(Dir,List) :-
     directory_files(Dir,Files),
-    include(not_special,Files,List).
+    include(not_ignored,Files,List).
 
-not_special(File) :-
-    \+ special(File).
-special(.).
-special(..).
+not_ignored(File) :-
+    \+ ignored(File).
+ignored('.').
+ignored('..').
+ignored('tmp').
 
 compare_files(TestPath,RefPath,File) :-
     format(string(TestFilePath),"~s/~s",[TestPath,File]),
@@ -265,8 +317,8 @@ compare_files(TestPath,RefPath) :-
     exists_directory(RefPath),
     !,
     format("Comparing directory ~s to ~s~n",[TestPath,RefPath]),
-    actual_files(TestPath,TestFiles),
-    actual_files(RefPath,RefFiles),
+    non_ignored_files(TestPath,TestFiles),
+    non_ignored_files(RefPath,RefFiles),
     (lists_equal(TestFiles,RefFiles);
      (format("File lists do not match~n~w: ~w~n~w: ~w~n",[TestPath,TestFiles,RefPath,RefFiles]),
       fail)),
@@ -303,7 +355,6 @@ compare_files(_,RefPath) :-
 
 lists_equal([],[]) :- !.
 lists_equal([X|Xs],[X|Ys]) :- !, lists_equal(Xs,Ys).
-%lists_equal(Xs,Ys) :- format("mismatch: ~w ~w~n",[Xs,Ys]), fail.
     
 file_missing(Path) :-
 	\+ exists_file(Path),
@@ -326,9 +377,12 @@ run_failure_test(RefDir,TestDir,Setup,Args,Target) :-
 report_failure_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
 	start_test(Fmt,Vars,Desc),
+	!,
 	(exec_test(RefDir,TestDir,Setup,Args,Target)
          -> fail_test(Desc); pass_test(Desc)),
 	working_directory(_,CWD).
+
+report_failure_test(_,_,_,_,_,_,_).
 
 n_chars(N,_,[]) :- N =< 0, !.
 n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.

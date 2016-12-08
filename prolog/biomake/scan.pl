@@ -1,6 +1,6 @@
 % * -*- Mode: Prolog -*- */
 
-:- module(biomake_db,
+:- module(scan,
           [
            show_stored_targets/0,
            collect_stored_targets/1,

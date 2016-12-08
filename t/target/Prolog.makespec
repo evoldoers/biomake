@@ -1,2 +1,5 @@
 % * -*- Mode: Prolog -*- */
 'simple_prolog' <-- [], 'echo Simple Prolog makespec test >simple_prolog'.
+'$a.pltest' <-- [], 'echo $a >$@'.
+Xyz = "an upper-case variable".
+'upper_case_var_assignment' <-- [], 'echo $(Xyz) >$@'.

@@ -5,28 +5,40 @@
            build_default/0,
            build_default/1,
 
+	   start_queue/1,
            build/1,
            build/2,
-	   
-           consult_makeprog/2,
-           consult_gnu_makefile/2,
+	   finish_queue/1,
 
-	   add_spec_clause/1,
-	   add_spec_clause/2,
+	   report/3,
+	   report/4,
+	   
+           consult_makeprog/3,
+           consult_gnu_makefile/3,
+
+	   add_spec_clause/3,
+	   add_spec_clause/4,
 	   add_cmdline_assignment/1,
-	   add_gnumake_clause/1,
+	   add_gnumake_clause/3,
 	   
            target_bindrule/2,
-           rule_dependencies/3,
            rebuild_required/4,
 
+           rule_target/3,
+           rule_dependencies/3,
+           rule_execs/3,
+
+	   run_execs_if_required/3,
+	   run_execs_now/3,
+	   report_run_exec/3,
+	   update_hash/3,
+	   
 	   global_binding/2,
 	   expand_vars/3
            ]).
 
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
-:- use_module(library(biomake/gnumake_parser)).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -48,6 +60,7 @@
 %% build(+Target, +Stack:list,+Opts:list)
 %
 % builds Target using rules
+% Call start_queue/1 beforehand and finish_queue/1 afterwards.
 
 build_default :-
 	build_default([]).
@@ -72,9 +85,10 @@ build(T,SL,Opts) :-
 	member(Dep,SL),
 	equal_as_strings(Dep,T),
 	!,
-	concat_string_list(SL,Chain," <-- "),
-	report("Cyclic dependency detected: ~w <-- ~w",[T,Chain],SL,Opts),
-        report('~w FAILED',[T],SL,Opts).
+	reverse(SL,SLrev),
+	concat_string_list(SLrev,Chain," <-- "),
+	report("Cyclic dependency detected: ~w <-- ~w",[Chain,T],SL,Opts),
+        halt(1).
 
 build(T,SL,Opts) :-
         %show_global_bindings,
@@ -88,11 +102,9 @@ build(T,SL,Opts) :-
         build_targets(DL,[T|SL],Opts), % semidet
         (   rebuild_required(T,DL,SL,Opts)
         ->  run_execs_and_update(Rule,SL,Opts)
-        ;   true),
-        (member(dry_run(true),Opts) -> true;
-         report('~w is up to date',[T],SL,Opts)).
+        ;   report('~w is up to date',[T],SL,Opts)).
 build(T,SL,Opts) :-
-        debug_report(build,'  checking if rebuild required for ~w',[T],SL),
+        debug_report(build,'..checking if rebuild required for ~w',[T],SL),
         \+ rebuild_required(T,[],SL,Opts),
         !,
         report('Nothing to be done for ~w',[T],SL,Opts).
@@ -113,6 +125,21 @@ build_targets([],_,_).
 build_targets([T|TL],SL,Opts) :-
         build(T,SL,Opts),
         build_targets(TL,SL,Opts).
+
+% Queue setup/wrapup
+start_queue(Opts) :-
+	member(queue(Q),Opts),
+	!,
+	ensure_loaded(library(biomake/queue)),
+	init_queue(Q,Opts).
+start_queue(_).
+
+finish_queue(Opts) :-
+	member(queue(Q),Opts),
+	!,
+	release_queue(Q).
+finish_queue(_).
+
 
 % ----------------------------------------
 % REPORTING
@@ -142,10 +169,12 @@ debug_report(Topic,Fmt,Args,SL) :-
 % DEPENDENCY MANAGEMENT
 % ----------------------------------------
 
+% The interactions between the various options are a little tricky...
+% Essentially (simplifying a little): MD5 overrides timestamps, except when queues are used.
 rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
-        report('Target ~w not materialized - will rebuild if required',[T],SL,Opts).
+        report('Target ~w not materialized - building',[T],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         member(D,DL),
         \+ exists_target(D,Opts),
@@ -153,24 +182,43 @@ rebuild_required(T,DL,SL,Opts) :-
         report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         \+ member(md5(true),Opts),
-	rebuild_required_by_time_stamp(T,DL,SL,Opts),
-	!.
+	has_newer_dependency(T,DL,D,Opts),
+	!,
+        report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
+rebuild_required(T,DL,SL,Opts) :-
+        \+ member(md5(true),Opts),
+	has_rebuilt_dependency(T,DL,D,Opts),
+	!,
+        report('Target ~w has rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+rebuild_required(T,DL,SL,Opts) :-
+        member(queue(_),Opts),
+	has_rebuilt_dependency(T,DL,D,Opts),
+	!,
+        report('Target ~w has dependency ~w on rebuild queue',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         member(md5(true),Opts),
 	\+ md5_hash_up_to_date(T,DL,Opts),
 	!,
-        report('Target ~w does not have an up-to-date MD5 hash - rebuilding',[T],SL,Opts).
+        report('Target ~w does not have an up-to-date checksum - rebuilding',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         member(always_make(true),Opts),
         target_bindrule(T,_),
         !,
         report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
 
+has_newer_dependency(T,DL,D,Opts) :-
+        member(D,DL),
+        has_newer_timestamp(D,T,Opts).
+
+has_rebuilt_dependency(T,DL,D,Opts) :-
+        member(D,DL),
+	was_built_after(D,T,Opts).
+
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         member(D,DL),
 	was_built_after(D,T,Opts),
 	!,
-        report('Target ~w has recently rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+        report('Target ~w has rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         \+ exists_directory(T),
         member(D,DL),
@@ -223,28 +271,74 @@ next_build_counter(1) :-
 % ----------------------------------------
 
 run_execs_and_update(Rule,SL,Opts) :-
+    member(dry_run(true),Opts),
+    !,
     rule_target(Rule,T,Opts),
-    rule_dependencies(Rule,DL,Opts),
     rule_execs(Rule,Execs,Opts),
-    run_execs(Execs,SL,Opts),
-    (member(md5(true),Opts) -> update_md5_file(T,DL); true),
+    forall(member(Exec,Execs),
+           report('~w',[Exec],SL,Opts)),
     flag_as_rebuilt(T).
+
+run_execs_and_update(Rule,SL,Opts) :-
+    rule_target(Rule,T,Opts),
+    dispatch_run_execs(Rule,SL,Opts),
+    flag_as_rebuilt(T).
+
+dispatch_run_execs(Rule,SL,Opts) :-
+	member(queue(Q),Opts),
+	!,
+	rule_target(Rule,T,Opts),
+	(member(md5(true),Opts) -> ensure_md5_directory_exists(T) ; true),
+	run_execs_in_queue(Q,Rule,SL,Opts),
+	report('~w queued for rebuild',[T],SL,Opts).
+dispatch_run_execs(Rule,SL,Opts) :-
+	run_execs_now(Rule,SL,Opts),
+	rule_target(Rule,T,Opts),
+	report('~w built',[T],SL,Opts).
+
+run_execs_now(Rule,SL,Opts) :-
+	member(oneshell(true),Opts),
+	!,
+	run_execs_in_script(Rule,SL,Opts).
+run_execs_now(Rule,SL,Opts) :-
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	rule_execs(Rule,Es,Opts),
+	run_execs(Es,SL,Opts),
+	update_hash(T,DL,Opts).
+
+run_execs_in_script(Rule,SL,Opts) :-
+        ensure_loaded(library(biomake/queue)),
+        rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	rule_execs(Rule,Es,Opts),
+	write_script_file(T,Es,Opts,Script),
+	report_run_exec(Script,SL,Opts),
+	update_hash(T,DL,Opts).
+
+update_hash(T,DL,Opts) :-
+    member(md5(true),Opts),
+    !,
+    update_md5_file(T,DL).
+update_hash(_,_,_).
 
 run_execs([],_,_).
 run_execs([E|Es],SL,Opts) :-
         run_exec(E,SL,Opts),
         run_execs(Es,SL,Opts).
 
-run_exec(Exec,SL,Opts) :-
-        member(dry_run(true),Opts),
-        !,
-        report('~w',[Exec],SL,Opts).
 run_exec(Exec,SL,_Opts) :-
 	string_chars(Exec,['@'|SilentChars]),
 	!,
 	string_chars(Silent,SilentChars),
 	silent_run_exec(Silent,SL).
 run_exec(Exec,SL,Opts) :-
+	member(silent(true),Opts),
+	silent_run_exec(Exec,SL).
+run_exec(Exec,SL,Opts) :-
+	report_run_exec(Exec,SL,Opts).
+
+report_run_exec(Exec,SL,Opts) :-
         report('~w',[Exec],SL,Opts),
 	silent_run_exec(Exec,SL).
 
@@ -259,6 +353,32 @@ silent_run_exec(Exec,SL) :-
 
 silent_run_exec(Exec,_Opts) :-
         throw(error(run(Exec))).
+
+% run_execs_if_required tests the always_make and md5 options before running a recipe.
+% When biomake is run without queues, these tests happen in rebuild_required,
+% which is called at the time of rule-binding & dependency-testing.
+% When queues are used, the tests must be performed again at the time of job execution.
+% For external queueing engines, this is managed by wrapping the job in another call to biomake.
+% For the internal queue (poolq), we make a call back to run_execs_if_required.
+run_execs_if_required(Rule,SL,Opts) :-
+	member(always_make(true),Opts),
+	!,
+	report_build(Rule,SL,Opts),
+	run_execs_now(Rule,SL,Opts).
+run_execs_if_required(Rule,SL,Opts) :-
+	member(md5(true),Opts),
+	rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	md5_hash_up_to_date(T,DL,Opts),
+        report('Target ~w has valid checksum - no rebuild required',[T],SL,Opts),
+	!.
+run_execs_if_required(Rule,SL,Opts) :-
+	report_build(Rule,SL,Opts),
+	run_execs_now(Rule,SL,Opts).
+
+report_build(Rule,SL,Opts) :-
+	rule_target(Rule,T,Opts),
+        report('Building target ~w',[T],SL,Opts).
 
 % ----------------------------------------
 % RULES AND PATTERN MATCHING
@@ -362,27 +482,30 @@ is_assignment_op(:=).
 is_assignment_op(+=).
 is_assignment_op(=*).
 
-consult_gnu_makefile(F,Opts) :-
+consult_gnu_makefile(F,AllOpts,Opts) :-
         ensure_loaded(library(biomake/gnumake_parser)),
-        parse_gnu_makefile(F,M),
-	(member(translate_gnu_makefile(P),Opts)
-	 -> translate_gnu_makefile(M,P); true),
-        forall(member(C,M), add_gnumake_clause(C)).
+        parse_gnu_makefile(F,M,AllOpts,Opts),
+	(member(translate_gnu_makefile(P),AllOpts)
+	 -> translate_gnu_makefile(M,P); true).
 
-consult_makeprog(F,_Opts) :-
+consult_makeprog(F,AllOpts,Opts) :-
         debug(makeprog,'reading: ~w',[F]),
         open(F,read,IO,[]),
-        repeat,
-        (   at_end_of_stream(IO)
-        ->  !
-        ;   read_term(IO,Term,[variable_names(VNs),
-                               syntax_errors(error),
-                               module(biomake)]),
-            debug(makeprog,'adding: ~w',[Term]),
-            add_spec_clause(Term,VNs),
-            fail),
-        debug(makeprog,'read: ~w',[F]),
-        close(IO).
+	read_makeprog_stream(IO,AllOpts,Opts),
+        debug(makeprog,'read: ~w',[F]).
+
+read_makeprog_stream(IO,Opts,Opts) :-
+        at_end_of_stream(IO),
+	!,
+	close(IO).
+
+read_makeprog_stream(IO,OptsOut,OptsIn) :-
+        read_term(IO,Term,[variable_names(VNs),
+                           syntax_errors(error),
+                           module(biomake)]),
+        debug(makeprog,'adding: ~w',[Term]),
+        add_spec_clause(Term,VNs,Opts,OptsIn),
+	read_makeprog_stream(IO,OptsOut,Opts).
 
 translate_gnu_makefile(M,P) :-
     debug(makeprog,"Writing translated makefile to ~w",[P]),
@@ -390,9 +513,9 @@ translate_gnu_makefile(M,P) :-
     forall(member(G,M), write_clause(IO,G)),
     close(IO).
 
-add_gnumake_clause(G) :-
+add_gnumake_clause(G,OptsOut,OptsIn) :-
     translate_gnumake_clause(G,P),
-    add_spec_clause(P).
+    add_spec_clause(P,OptsOut,OptsIn).
     
 translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)).
 translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)).
@@ -405,9 +528,19 @@ translate_gnumake_clause(C,_) :-
 	backtrace(20),
     fail.
 
+write_clause(IO,option(Opt)) :-
+    !,
+    format(IO,"option(~w).~n",[Opt]).
+
 write_clause(IO,rule(Ts,Ds,Es)) :-
     !,
     format(IO,"~q <-- ~q, ~q.~n",[Ts,Ds,Es]).
+
+write_clause(_,assignment(Var,_,_)) :-
+    atom_codes(Var,[V|_]),
+    V @>= 97, V @=< 122,   % a through z
+    format("Prolog will not recognize `~w' as a variable, as it does not begin with an upper-case letter.~nStubbornly refusing to translate unless you fix this outrageous affront!~n",[Var]),
+    halt(1).
 
 write_clause(IO,assignment(Var,Op,Val)) :-
     format(IO,"~w ~w ~q.~n",[Var,Op,Val]).
@@ -417,40 +550,52 @@ add_cmdline_assignment((Var = X)) :-
         assert(global_cmdline_binding(Var,X)),
         debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
 
-add_spec_clause(Ass) :-
+add_spec_clause(Ass,Opts,Opts) :-
 	Ass =.. [Op,Var,_],
 	is_assignment_op(Op),
 	!,
-	add_spec_clause(Ass, [Var=Var]).
+	add_spec_clause(Ass, [Var=Var], Opts, Opts).
 
-add_spec_clause( (Head <-- Deps, Exec) ) :-
+add_spec_clause( (Head <-- Deps, Exec), Opts, Opts ) :-
         !,
-        add_spec_clause( (Head <-- Deps, Exec), [] ).
+        add_spec_clause( (Head <-- Deps, Exec), [], Opts, Opts ).
 
-add_spec_clause( (Var ?= X) ,_VNs) :-
+add_spec_clause( option(Opts), OptsOut, OptsIn ) :-
+	!,
+	append(Opts,OptsIn,OptsOut).
+
+add_spec_clause( (Var ?= X) , _VNs, Opts, Opts) :-
         global_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w = ~w since ~w is already bound to ~w",[Var,X,Var,Oldval]).
 
 
-add_spec_clause( (Var ?= X) ,VNs) :-
-        add_spec_clause((Var = X),VNs).
+add_spec_clause( (Var ?= X), VNs, Opts, Opts) :-
+        add_spec_clause((Var = X),VNs,Opts,Opts).
 
-add_spec_clause( Ass ,_VNs) :-
+add_spec_clause( Ass, _VNs, Opts, Opts) :-
 	Ass =.. [Op,Var,X],
 	is_assignment_op(Op),
         global_cmdline_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w ~w ~w since ~w was bound to ~w on the command-line",[Var,Op,X,Var,Oldval]).
 
-add_spec_clause( (Var = X) ,VNs) :-
+add_spec_clause( Ass, [], Opts, Opts) :-
+	Ass =.. [Op,Var,_],
+	is_assignment_op(Op),
+	atom_codes(Var,[V|_]),
+	V @>= 97, V @=< 122,   % a through z
+        debug(makeprog,"Warning: Prolog will not recognize ~w as a variable as it does not begin with an upper-case letter. Use at your own peril!~n",[Var]),
+	fail.
+
+add_spec_clause( (Var = X), VNs, Opts, Opts) :-
 	!,
         member(Var=Var,VNs),
         global_unbind(Var),
         assert(global_lazy_binding(Var,X)),
         debug(makeprog,'assign: ~w = ~w',[Var,X]).
 
-add_spec_clause( (Var := X,{Goal}) ,VNs) :-
+add_spec_clause( (Var := X,{Goal}), VNs, Opts, Opts) :-
         !,
         member(Var=Var,VNs),
         normalize_pattern(X,Y,v(_,_,_,VNs)),
@@ -461,11 +606,11 @@ add_spec_clause( (Var := X,{Goal}) ,VNs) :-
         assert(global_simple_binding(Var,Yflat)),
         debug(makeprog,'assign: ~w := ~w',[Var,Yflat]).
 
-add_spec_clause( (Var := X) ,VNs) :-
+add_spec_clause( (Var := X), VNs, Opts, Opts) :-
         !,
-        add_spec_clause( (Var := X,{true}) ,VNs).
+        add_spec_clause( (Var := X,{true}), VNs, Opts, Opts).
 
-add_spec_clause( (Var += X) ,VNs) :-
+add_spec_clause( (Var += X), VNs, Opts, Opts) :-
         !,
         member(Var=Var,VNs),
         normalize_pattern(X,Y,v(_,_,_,VNs)),
@@ -478,7 +623,7 @@ add_spec_clause( (Var += X) ,VNs) :-
         assert(global_simple_binding(Var,New)),
         debug(makeprog,'assign: ~w := ~w',[Var,New]).
 
-add_spec_clause( (Var =* X) ,VNs) :-
+add_spec_clause( (Var =* X), VNs, Opts, Opts) :-
         !,
         member(Var=Var,VNs),
 	shell_eval_str(X,Y),
@@ -487,28 +632,28 @@ add_spec_clause( (Var =* X) ,VNs) :-
         assert(global_lazy_binding(Var,Y)),
         debug(makeprog,'assign: ~w =* ~w  ==>  ~w',[Var,X,Y]).
 
-add_spec_clause( (Head <-- Deps,{Goal},Exec) ,VNs) :-
+add_spec_clause( (Head <-- Deps,{Goal},Exec), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,Exec,Goal),VNs).
-add_spec_clause( (Head <-- Deps,{Goal}) ,VNs) :-
+        add_spec_clause(mkrule(Head,Deps,Exec,Goal),VNs,Opts,Opts).
+add_spec_clause( (Head <-- Deps,{Goal}), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,[],Goal),VNs).
-add_spec_clause( (Head <-- Deps, Exec) ,VNs) :-
+        add_spec_clause(mkrule(Head,Deps,[],Goal),VNs,Opts,Opts).
+add_spec_clause( (Head <-- Deps, Exec), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,Exec),VNs).
-add_spec_clause( (Head <-- Deps) ,VNs) :-
+        add_spec_clause(mkrule(Head,Deps,Exec),VNs,Opts,Opts).
+add_spec_clause( (Head <-- Deps), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,[]),VNs).
+        add_spec_clause(mkrule(Head,Deps,[]),VNs,Opts,Opts).
 
-add_spec_clause(Rule,VNs) :-
+add_spec_clause(Rule,VNs,Opts,Opts) :-
         Rule =.. [mkrule,T|_],
         !,
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
 	set_default_target(T),
         assert(with(Rule,VNs)).
 
-add_spec_clause(Term,_) :-
-        debug(makeprog,"assert ~w~n",Term),
+add_spec_clause(Term,_,Opts,Opts) :-
+        debug(makeprog,"assert ~w",Term),
         assert(Term).
 
 set_default_target(_) :-

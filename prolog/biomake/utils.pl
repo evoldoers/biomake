@@ -17,6 +17,8 @@
 	   blank_line/2,
 	   alphanum_char/3,
 	   alphanum_code/3,
+	   parse_num_char/3,
+	   parse_num_code/3,
 	   n_chars/3,
 	   concat_string_list/2,
 	   concat_string_list/3,
@@ -26,13 +28,31 @@
 	   last_element/2,
 	   nth_element/3,
 	   slice/4,
+	   find_on_path/2,
+	   shell_path/1,
+	   shell_quote/2,
+	   shell_wrap/2,
+	   shell_comment/2,
 	   shell_eval/2,
 	   shell_eval_str/2,
+	   echo_wrap/2,
+	   shell_echo_wrap/2,
 	   file_directory_slash/2,
-	   quote_string/2,
 	   newlines_to_spaces/2,
 	   to_string/2,
-	   equal_as_strings/2
+	   equal_as_strings/2,
+	   makefile_var_char/3,
+	   makefile_var_chars/3,
+	   makefile_var_atom_from_chars/3,
+	   makefile_var_string_from_chars/3,
+	   makefile_var_code/3,
+	   makefile_var_codes/3,
+	   makefile_var_atom_from_codes/3,
+	   makefile_var_string_from_codes/3,
+	   biomake_private_filename/3,
+	   biomake_private_filename_dir_exists/3,
+	   open_biomake_private_file/4,
+	   open_biomake_private_file/5
 	  ]).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
@@ -65,11 +85,13 @@ blank_line --> space, opt_whitespace, "\n", !.
 
 alphanum_char(X) --> [X],{X@>='A',X@=<'Z'},!.
 alphanum_char(X) --> [X],{X@>='a',X@=<'z'},!.
-alphanum_char(X) --> [X],{X@>='0',X@=<'9'},!.
+alphanum_char(X) --> parse_num_char(X),!.
+parse_num_char(X) --> [X],{X@>='0',X@=<'9'}.
 
 alphanum_code(X) --> [X],{X@>=65,X@=<90},!.  % A through Z
 alphanum_code(X) --> [X],{X@>=97,X@=<122},!.  % a through z
-alphanum_code(X) --> [X],{X@>=48,X@=<57},!.  % 0 through 9
+alphanum_code(X) --> parse_num_code(X),!.
+parse_num_code(X) --> [X],{X@>=48,X@=<57}.  % 0 through 9
 
 n_chars(N,_,[]) :- N =< 0, !.
 n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.
@@ -109,18 +131,72 @@ type_of(X,"compound") :- compound(X), !.
 type_of(X,"atom") :- atom(X), !.
 type_of(_,"unknown").
 
+find_on_path(Exec,Path) :-
+	expand_file_search_path(path(Exec),Path),
+	exists_file(Path),
+	!.
+
+shell_path(Path) :- find_on_path(sh,Path).
+
+shell_wrap(Exec,ShellExec) :-
+	string_chars(Exec,['@'|SilentChars]),
+	!,
+	string_chars(SilentExec,SilentChars),
+	shell_wrap(SilentExec,ShellExec).
+
+shell_wrap(Exec,ShellExec) :-
+	shell_path(Sh),
+	!,
+	shell_quote(Exec,Escaped),
+	format(string(ShellExec),"~w -c ~w",[Sh,Escaped]).
+
+echo_wrap(Exec,Result) :-
+	string_chars(Exec,['@'|SilentChars]),
+	!,
+	string_chars(Result,SilentChars).
+
+echo_wrap(Exec,Result) :-
+        shell_quote(Exec,Escaped),
+        format(string(Result),"echo ~w; ~w",[Escaped,Exec]).
+
+shell_echo_wrap(Exec,Result) :-
+	string_chars(Exec,['@'|SilentChars]),
+	!,
+	string_chars(SilentChars,SilentExec),
+	shell_wrap(SilentExec,Result).
+
+shell_echo_wrap(Exec,Result) :-
+        echo_wrap(Exec,EchoExec),
+	shell_wrap(EchoExec,Result).
+
+shell_comment(Comment,ShellComment) :-
+	format(string(ShellComment),"# ~w",[Comment]).
+
 shell_eval(Exec,CodeList) :-
-        process_create(path(sh),['-c',Exec],[stdout(pipe(Stream)),
-					     stderr(null),
-					     process(Pid)]),
-        read_stream_to_codes(Stream,CodeList),
-	process_wait(Pid,_Status),
-        close(Stream).
+	shell_path(Sh),
+	working_directory(CWD,CWD),
+        setup_call_cleanup(process_create(Sh,['-c',Exec],[stdout(pipe(Stream)),
+							  stderr(null),
+							  cwd(CWD),
+							  process(Pid)]),
+			   (read_stream_to_codes(Stream,CodeList),
+			    process_wait(Pid,_Status)),
+			   close(Stream)).
 
 shell_eval_str(Exec,Result) :-
         shell_eval(Exec,Rnl),
 	newlines_to_spaces(Rnl,Rspc),
 	string_codes(Result,Rspc).
+
+shell_quote(S,QS) :-
+        string_chars(S,Cs),
+        phrase(escape_quotes(ECs),Cs),
+        append(['\''|ECs],['\''],QCs),
+        string_chars(QS,QCs).
+
+escape_quotes([]) --> [].
+escape_quotes(['\'','"','\'','"','\''|Cs]) --> ['\''], !, escape_quotes(Cs).  % ' --> '"'"'
+escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
 
 newlines_to_spaces([],[]).
 newlines_to_spaces([10|N],[32|S]) :- newlines_to_spaces(N,S).
@@ -130,18 +206,74 @@ file_directory_slash(Path,Result) :-
 	file_directory_name(Path,D),
 	string_concat(D,"/",Result).  % GNU make adds the trailing '/'
 
-quote_string(S,QS) :-
-    string_chars(S,Cs),
-    phrase(escape_quotes(ECs),Cs),
-    append(['"'|ECs],['"'],QCs),
-    string_chars(QS,QCs).
-
-escape_quotes([]) --> [].
-escape_quotes(['\\','\\'|Cs]) --> ['\\'], !, escape_quotes(Cs).
-escape_quotes(['\\','"'|Cs]) --> ['"'], !, escape_quotes(Cs).
-escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
-
 to_string(A,S) :- atomics_to_string([A],S).
 equal_as_strings(X,Y) :-
 	to_string(X,S),
 	to_string(Y,S).
+
+
+% We allow only a restricted subset of characters in variable names,
+% compared to the GNU make specification.
+% (seriously, does anyone use makefile variable names containing brackets, commas, colons, etc?)
+makefile_var_char(C) --> alphanum_char(C).
+makefile_var_char('_') --> ['_'].
+makefile_var_char('-') --> ['-'].
+
+makefile_var_chars([]) --> [].
+makefile_var_chars([C|Cs]) --> makefile_var_char(C), makefile_var_chars(Cs).
+
+makefile_var_atom_from_chars(A) --> makefile_var_chars(Cs), {atom_chars(A,Cs)}.
+makefile_var_string_from_chars(S) --> makefile_var_chars(Cs), {string_chars(S,Cs)}.
+
+% define these again as character codes, because Prolog is so annoying
+makefile_var_code(C) --> alphanum_code(C).
+makefile_var_code(95) --> [95].  % underscore '_'
+makefile_var_code(45) --> [45].  % hyphen '-'
+
+makefile_var_codes([]) --> [].
+makefile_var_codes([C|Cs]) --> makefile_var_code(C), makefile_var_codes(Cs).
+
+makefile_var_atom_from_codes(A) --> makefile_var_codes(Cs), {atom_codes(A,Cs)}.
+makefile_var_string_from_codes(S) --> makefile_var_codes(Cs), {string_codes(S,Cs)}.
+
+biomake_private_dir(Target,Path) :-
+	absolute_file_name(Target,F),
+	file_directory_name(F,D),
+	format(string(Path),"~w/.biomake",[D]).
+
+biomake_private_subdir(Target,Subdir,Path) :-
+	biomake_private_dir(Target,Private),
+	format(string(Path),"~w/~w",[Private,Subdir]).
+
+biomake_private_filename(Target,Subdir,Filename) :-
+	biomake_private_subdir(Target,Subdir,Private),
+	absolute_file_name(Target,F),
+	file_base_name(F,N),
+	format(string(Filename),"~w/~w",[Private,N]).
+
+biomake_private_filename_dir_exists(Target,Subdir,Filename) :-
+	biomake_private_dir(Target,Path),
+	safe_make_directory(Path),
+	biomake_private_subdir(Target,Subdir,SubPath),
+	safe_make_directory(SubPath),
+	biomake_private_filename(Target,Subdir,Filename).
+
+safe_make_directory(Path) :-
+        exists_directory(Path),
+	!.
+
+safe_make_directory(Path) :-
+        catch(make_directory(Path),_,fail),
+        !.
+
+safe_make_directory(Path) :-
+        absolute_file_name(Path,AbsPath),
+	format(string(Exec),"mkdir -p ~w",[AbsPath]),
+	shell(Exec).
+
+open_biomake_private_file(Target,Subdir,Filename,Stream) :-
+	open_biomake_private_file(Target,Subdir,Filename,Stream,[]).
+
+open_biomake_private_file(Target,Subdir,Filename,Stream,Options) :-
+	biomake_private_filename_dir_exists(Target,Subdir,Filename),
+	open(Filename,write,Stream,Options).

@@ -1,0 +1,21 @@
+%.bar: %.foo
+	perl -pe 'tr/a-z/A-Z/' $< > $@
+
+$A.baz: $A.bar
+	echo "Baz!" >$@
+	cat $< >>$@
+	echo "I said Baz!" >> $@
+
+$A.bo: $A.bar
+	echo "Bo!" >$@
+	cat $< >>$@
+	echo "Did you hear me say Bo!" >> $@
+
+$A.$B.$C.foo:
+	@echo c= $C b= $B a= $A >$@
+
+$A.$B.foo:
+	echo b= $B a= $A >$@
+
+$A.$B.$C.$D.$E: $A.$B.$C.baz $D.$E.bo
+	cat $^ >$@

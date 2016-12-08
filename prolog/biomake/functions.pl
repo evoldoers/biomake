@@ -7,7 +7,8 @@
            makefile_subst_ref/3,
            makefile_subst_ref/4,
 	   makefile_computed_var/3,
-	   makefile_computed_var/4
+	   makefile_computed_var/4,
+	   eval_var/3
            ]).
 
 :- use_module(library(readutil)).

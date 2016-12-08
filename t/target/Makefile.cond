@@ -1,0 +1,38 @@
+
+ABC = blah
+
+ifdef ABC
+ifdef_true:
+	echo 'Correct, ABC is defined' >$@
+else
+ifdef_true:
+	echo 'Incorrect, ABC is defined' >$@
+endif
+
+ifdef XYZ
+ifdef_false:
+	echo 'Incorrect, XYZ is undefined' >$@
+else
+ifdef_false:
+	echo 'Correct, XYZ is undefined' >$@
+endif
+
+FOO = blah
+BAR = meh
+
+ifeq ($(FOO),$(ABC))
+ifeq_true:
+	echo 'Correct, FOO = ABC' >$@
+else
+ifeq_true:
+	echo 'Incorrect, FOO = ABC' >$@
+endif
+
+ifeq ($(FOO),$(BAR))
+ifeq_false:
+	echo 'Incorrect, FOO \= BAR' >$@
+else
+ifeq_false:
+	echo 'Correct, FOO \= BAR' >$@
+endif
+

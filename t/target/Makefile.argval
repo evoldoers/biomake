@@ -1,0 +1,3 @@
+
+arg_equals_val:
+	echo Found Makefile.argval >$@
