@@ -38,8 +38,8 @@ makefile_block([],Opts,Opts,_,_,1) --> blank_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> info_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> warning_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> error_line, !.
-makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(Rules,OptsOut,OptsIn,Line,File,Lines), !.
-makefile_block(Rules,OptsOut,OptsIn,_,_,1) --> include_line(Rules,OptsOut,OptsIn), !.
+makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(true,Rules,OptsOut,OptsIn,Line,File,Lines), !.
+makefile_block(Rules,OptsOut,OptsIn,_,_,1) --> include_line(true,Rules,OptsOut,OptsIn), !.
 makefile_block([Assignment],Opts,Opts,_,_,Lines) --> makefile_assignment(Assignment,Lines), !,
 	{add_gnumake_clause(Assignment,Opts,Opts)}.
 makefile_block([option(Opt)],[Opt|Opts],Opts,_,_,Lines) --> makefile_special_target(Opt,Lines), !.
@@ -54,8 +54,8 @@ makefile_block(_,_,_,Line,File,_) -->
 	{format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),
 	syntax_error(Err)}.
 
-ignore_makefile_block(Opts,Line,File,Lines) --> makefile_conditional(_,_,Opts,Line,File,Lines), !.
-ignore_makefile_block(Opts,_,_,1) --> include_line(_,Opts,Opts), !.
+ignore_makefile_block(Opts,Line,File,Lines) --> makefile_conditional(false,_,_,Opts,Line,File,Lines), !.
+ignore_makefile_block(Opts,_,_,1) --> include_line(false,_,Opts,Opts), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_assignment(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_special_target(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_recipe(_,Lines), !.
@@ -97,18 +97,18 @@ info_line -->
     !,
     {format("~w~n",[W])}.
 
-include_line(Rules,OptsOut,OptsIn) -->
+include_line(Active,Rules,OptsOut,OptsIn) -->
     opt_space,
     "include",
     whitespace,
-    include_makefiles(Rules,OptsOut,OptsIn).
+    include_makefiles(Active,Rules,OptsOut,OptsIn).
 
-include_makefiles(Rules,OptsOut,OptsIn) -->
+include_makefiles(Active,Rules,OptsOut,OptsIn) -->
 	makefile_filename_string(F), opt_whitespace, "\n", !,
-	{include_gnu_makefile(F,Rules,OptsOut,OptsIn)}.
-include_makefiles(Rules,OptsOut,OptsIn) -->
+	{Active -> include_gnu_makefile(F,Rules,OptsOut,OptsIn) ; true}.
+include_makefiles(Active,Rules,OptsOut,OptsIn) -->
 	makefile_filename_string(F), whitespace, !,
-	{include_gnu_makefile(F,R,Opts,OptsIn)},
+	{Active -> include_gnu_makefile(F,R,Opts,OptsIn) ; true},
 	include_makefiles(Next,OptsOut,Opts),
 	{append(R,Next,Rules)}.
 
@@ -165,24 +165,24 @@ makefile_assignment(assignment(Var,Op,Val),1) -->
     opt_whitespace,
     line_as_string(Val).
 
-makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
+makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifeq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
-    !, {Arg1 = Arg2 -> Status = true; Status = false},
+    !, {Active -> (Arg1 = Arg2 -> Status = true; Status = false) ; Status = null},
     eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
 
-makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
+makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifneq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
-    !, {Arg1 \= Arg2 -> Status = true; Status = false},
+    !, {Active -> (Arg1 \= Arg2 -> Status = true; Status = false) ; Status = null},
     eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
 
-makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
+makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifdef", whitespace, xvar(Arg),
-    !, {Arg \= '' -> Status = true; Status = false},
+    !, {Active -> (Arg \= '' -> Status = true; Status = false) ; Status = null},
     eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
 
-makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
+makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifndef", whitespace, xvar(Arg),
-    !, {Arg = '' -> Status = true; Status = false},
+    !, {Active -> (Arg = '' -> Status = true; Status = false) ; Status = null},
     eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
 
 conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", xbracket(Arg2), ")".
@@ -199,9 +199,14 @@ eval_true_false_rules(false,FalseRules,FalseOptsOut,OptsIn,Line,File,Lines) -->
     show_true_false_rules(false,_TrueRules,FalseRules,_TrueOptsOut,OptsIn,FalseOptsOut,OptsIn,Lnext,File,Ltf),
     { Lines is Ltf + 1 }.
 
+eval_true_false_rules(null,[],OptsIn,OptsIn,Line,File,Lines) -->
+    { Lnext is Line + 1 },
+    show_true_false_rules(null,_TrueRules,_FalseRules,_TrueOptsOut,OptsIn,_FalseOptsOut,OptsIn,Lnext,File,Ltf),
+    { Lines is Ltf + 1 }.
+
 show_true_false_rules(Status,TrueRules,FalseRules,TrueOptsOut,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
     true_false_rules(Status,TrueRules,FalseRules,TrueOptsOut,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines),
-    {debug(makefile,"Status=~w TrueRules=~w FalseRules=~w TrueOptsOut=~w FalseOptsOut=~w Lines=~w~n",[TrueRules,FalseRules,TrueOptsOut,FalseOptsOut,Lines])}.
+    {debug(makefile,"Status=~w TrueRules=~w FalseRules=~w TrueOptsOut=~w FalseOptsOut=~w Lines=~w~n",[Status,TrueRules,FalseRules,TrueOptsOut,FalseOptsOut,Lines])}.
 
 true_false_rules(_,[],[],TrueOptsIn,TrueOptsIn,FalseOptsIn,FalseOptsIn,_,_,1) -->
     opt_space, "endif", !, opt_whitespace, "\n".
@@ -218,10 +223,11 @@ true_false_rules(true,TrueRules,[],TrueOptsOut,TrueOptsIn,FalseOptsIn,FalseOptsI
     true_false_rules(true,NextRules,[],TrueOptsOut,BlockOptsOut,FalseOptsIn,FalseOptsIn,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
-true_false_rules(false,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+true_false_rules(Status,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+    { Status \= true },
     ignore_makefile_block(TrueOptsIn,Line,File,BlockLines),
     !, { Lnext is Line + BlockLines },
-    true_false_rules(false,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Lnext,File,NextLines),
+    true_false_rules(Status,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
 true_false_rules(_,_,_,_,_,_,_,Line,File,_) -->
@@ -238,7 +244,8 @@ false_rules(false,Rules,OptsOut,OptsIn,Line,File,Lines) -->
     false_rules(false,NextRules,OptsOut,BlockOptsOut,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
-false_rules(true,[],OptsIn,OptsIn,Line,File,Lines) -->
+false_rules(Status,[],OptsIn,OptsIn,Line,File,Lines) -->
+    { Status \= false },
     ignore_makefile_block(OptsIn,Line,File,BlockLines),
     !, { Lnext is Line + BlockLines },
     false_rules(true,[],OptsIn,OptsIn,Lnext,File,NextLines),
