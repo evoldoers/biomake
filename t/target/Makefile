@@ -274,3 +274,9 @@ stop_on_error1:
 
 stop_on_error2:
 	echo Should not get here either >$@
+
+touch:
+	echo Updated touch >$@
+
+multi_arg:
+	echo Updated multi_arg >$@

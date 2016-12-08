@@ -313,6 +313,15 @@ run_execs_and_update(Rule,SL,Opts) :-
     flag_as_rebuilt(T).
 
 dispatch_run_execs(Rule,SL,Opts) :-
+        member(touch_only(true),Opts),
+	!,
+        rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	format(string(Cmd),"touch ~w",[T]),
+	shell(Cmd),
+	(member(silent(true),Opts) -> true; report('~w',[Cmd],SL,Opts)),
+	update_hash(T,DL,Opts).
+dispatch_run_execs(Rule,SL,Opts) :-
 	member(queue(Q),Opts),
 	!,
 	rule_target(Rule,T,Opts),

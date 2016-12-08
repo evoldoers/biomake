@@ -172,6 +172,8 @@ test :-
 	run_test("-k nonexistent_target","keep_going"),
 	run_failure_test("another_nonexistent_target","stop_on_error1"),
 	run_failure_test("-k -S yet_another_nonexistent_target","stop_on_error2"),
+	run_test("ref","target",["echo Pre-update >touch"],"-B -t","touch"),
+	run_test("ref","target",["echo Pre-update >multi_arg"],"-Bk still_another_nonexistent_target","multi_arg"),
 	
 	announce("CONDITIONAL SYNTAX"),
 

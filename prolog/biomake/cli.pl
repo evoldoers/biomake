@@ -220,6 +220,10 @@ arg_alias('-S','--no-keep-going').
 arg_alias('-S','--stop').
 arg_info('-S','','Stop after error').
 
+simple_arg('-t',touch_only(true)).
+arg_alias('-t','--touch').
+arg_info('-t','','Touch files (and update MD5 hashes, if appropriate) instead of running recipes').
+
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
