@@ -5,6 +5,10 @@
            build_default/0,
            build_default/1,
 
+	   halt_success/0,
+	   halt_error/0,
+
+	   bind_special_variables/1,
 	   start_queue/1,
            build/1,
            build/2,
@@ -88,7 +92,7 @@ build(T,SL,Opts) :-
 	reverse(SL,SLrev),
 	concat_string_list(SLrev,Chain," <-- "),
 	report("Cyclic dependency detected: ~w <-- ~w",[Chain,T],SL,Opts),
-        halt(1).
+        halt_error.
 
 build(T,SL,Opts) :-
         %show_global_bindings,
@@ -110,13 +114,10 @@ build(T,SL,Opts) :-
         report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
         \+ target_bindrule(T,_),
-        report('Don\'t know how to make ~w',[T],SL,Opts),
-        !,
-        fail.
+        handle_error('Don\'t know how to make ~w',[T],SL,Opts),
+	!.
 build(T,SL,Opts) :-
-        report('~w FAILED',[T],SL,Opts),
-        !,
-        fail.
+        handle_error('~w FAILED',[T],SL,Opts).
 
 % potentially split this into two steps:
 %  phase 1 iterates through targets and initiates any jobs
@@ -125,6 +126,14 @@ build_targets([],_,_).
 build_targets([T|TL],SL,Opts) :-
         build(T,SL,Opts),
         build_targets(TL,SL,Opts).
+
+% Special vars
+bind_special_variables(Opts) :-
+        member(biomake_prog(Prog),Opts),
+	add_spec_clause(('MAKE' = Prog),[],[]),
+	bagof(Arg,member(biomake_args(Arg),Opts),Args),
+	atomic_list_concat(Args," ",ArgStr),
+	add_spec_clause(('MAKEFLAGS' = ArgStr),[],[]).
 
 % Queue setup/wrapup
 start_queue(Opts) :-
@@ -139,6 +148,11 @@ finish_queue(Opts) :-
 	!,
 	release_queue(Q).
 finish_queue(_).
+
+
+% finish
+halt_success :- halt(0).
+halt_error :- halt(2).
 
 
 % ----------------------------------------
@@ -171,6 +185,17 @@ debug_report(Topic,Fmt,Args,SL) :-
 
 % The interactions between the various options are a little tricky...
 % Essentially (simplifying a little): MD5 overrides timestamps, except when queues are used.
+rebuild_required(T,DL,SL,Opts) :-
+	member(what_if(D),Opts),
+        member(D,DL),
+        !,
+        report('Target ~w has dependency ~w marked as modified from the command-line - building',[T,D],SL,Opts).
+rebuild_required(T,_,SL,Opts) :-
+        atom_string(T,Ts),
+        member(old_file(Ts),Opts),
+        !,
+        report('Target ~w marked as old from the command-line - will not rebuild',[T],SL,Opts),
+	fail.
 rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
@@ -178,6 +203,7 @@ rebuild_required(T,_,SL,Opts) :-
 rebuild_required(T,DL,SL,Opts) :-
         member(D,DL),
         \+ exists_target(D,Opts),
+	\+ member(old_file(D),Opts),
         !,
         report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
@@ -208,10 +234,12 @@ rebuild_required(T,_,SL,Opts) :-
 
 has_newer_dependency(T,DL,D,Opts) :-
         member(D,DL),
+	\+ member(old_file(D),Opts),
         has_newer_timestamp(D,T,Opts).
 
 has_rebuilt_dependency(T,DL,D,Opts) :-
         member(D,DL),
+	\+ member(old_file(D),Opts),
 	was_built_after(D,T,Opts).
 
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
@@ -327,32 +355,42 @@ run_execs([E|Es],SL,Opts) :-
         run_exec(E,SL,Opts),
         run_execs(Es,SL,Opts).
 
-run_exec(Exec,SL,_Opts) :-
+run_exec(Exec,SL,Opts) :-
 	string_chars(Exec,['@'|SilentChars]),
 	!,
 	string_chars(Silent,SilentChars),
-	silent_run_exec(Silent,SL).
+	silent_run_exec(Silent,SL,Opts).
 run_exec(Exec,SL,Opts) :-
 	member(silent(true),Opts),
-	silent_run_exec(Exec,SL).
+	silent_run_exec(Exec,SL,Opts).
 run_exec(Exec,SL,Opts) :-
 	report_run_exec(Exec,SL,Opts).
 
 report_run_exec(Exec,SL,Opts) :-
         report('~w',[Exec],SL,Opts),
-	silent_run_exec(Exec,SL).
+	silent_run_exec(Exec,SL,Opts).
 
-silent_run_exec(Exec,SL) :-
+silent_run_exec(Exec,SL,Opts) :-
         get_time(T1),
         shell(Exec,Err),
         get_time(T2),
         DT is T2-T1,
         debug_report(build,'  Return: ~w Time: ~w',[Err,DT],SL),
-        Err=0,
+	handle_exec_error(Exec,Err,SL,Opts),
         !.
 
-silent_run_exec(Exec,_Opts) :-
-        throw(error(run(Exec))).
+handle_exec_error(_,0,_,_) :- !.
+handle_exec_error(Exec,Err,SL,Opts) :-
+        handle_error('Error ~w executing ~w',[Err,Exec],SL,Opts).
+
+handle_error(Fmt,Args,SL,Opts) :-
+        report(Fmt,Args,SL),
+        member(keep_going_on_error(true),Opts),
+        \+ member(stop_on_error(true),Opts),
+        !.
+handle_error(_,_,_,_) :-
+        halt_error.
+
 
 % run_execs_if_required tests the always_make and md5 options before running a recipe.
 % When biomake is run without queues, these tests happen in rebuild_required,
@@ -540,7 +578,7 @@ write_clause(_,assignment(Var,_,_)) :-
     atom_codes(Var,[V|_]),
     V @>= 97, V @=< 122,   % a through z
     format("Prolog will not recognize `~w' as a variable, as it does not begin with an upper-case letter.~nStubbornly refusing to translate unless you fix this outrageous affront!~n",[Var]),
-    halt(1).
+    halt_error.
 
 write_clause(IO,assignment(Var,Op,Val)) :-
     format(IO,"~w ~w ~q.~n",[Var,Op,Val]).

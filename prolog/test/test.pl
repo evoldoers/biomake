@@ -54,6 +54,8 @@ test :-
 	run_test("-f Makefile.include","makefile_list"),
 	run_test("-f Makefile.dir1","relative_include_path"),
 	run_test("forced_rebuild"),
+	run_test("ref","target",["touch old_dep","echo Pre-update >older_dep"],"","older_dep"),
+	run_test("ref","target",["echo Pre-update >newer_dep","sleep 1","touch new_dep"],"","newer_dep"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),
@@ -164,7 +166,12 @@ test :-
 
 	run_test("--file=Makefile.argval","arg_equals_val"),
 	run_test("-f Makefile.subdir.include -I subdir","include_dir"),
-	% could do with more here
+	run_test("ref","target",["touch what_if_dep","sleep 1","echo Pre-update >what_if"],"-W what_if_dep","what_if"),
+	run_test("ref","target",["echo Pre-update >old_file_target","sleep 1","touch old_file_target_dep"],"-o old_file_target","old_file_target"),
+	run_test("ref","target",["echo Pre-update >old_file_dep","sleep 1","touch old_file_dep_dep"],"-o old_file_dep_dep","old_file_dep"),
+	run_test("-k nonexistent_target","keep_going"),
+	run_failure_test("another_nonexistent_target","stop_on_error1"),
+	run_failure_test("-k -S yet_another_nonexistent_target","stop_on_error2"),
 	
 	announce("CONDITIONAL SYNTAX"),
 

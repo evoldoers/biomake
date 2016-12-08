@@ -19,6 +19,12 @@ first_dep: a.echo b.echo c.echo
 all_deps: a.echo b.echo c.echo
 	echo $^ >$@
 
+newer_dep: new_dep
+	echo Updated newer_dep >$@
+
+older_dep: old_dep
+	echo Updated older_dep >$@
+
 FOO = .foo
 
 %.bar: %$(FOO)
@@ -250,3 +256,21 @@ and1:
 
 and2:
 	echo $(and abc,,ghi) >$@
+
+what_if: what_if_dep
+	echo Updated what_if >$@
+
+old_file_target: old_file_target_dep
+	echo Updated old_file_target >$@
+
+old_file_dep: old_file_dep_dep
+	echo Updated old_file_dep >$@
+
+keep_going:
+	echo Bravely, in the face of all odds >$@
+
+stop_on_error1:
+	echo Should not get here >$@
+
+stop_on_error2:
+	echo Should not get here either >$@

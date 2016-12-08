@@ -33,14 +33,15 @@ main :-
         parse_args(Args,TmpOpts),
 	get_cmd_args(TmpOpts,Opts),
  	add_assignments(Opts),
+	bind_special_variables(Opts),
 	consult_makefile(AllOpts,Opts),
         forall(member(goal(G),AllOpts),
                G),
         forall(member(flush_queue(T),AllOpts),
 	       flush_queue_recursive(T,AllOpts)),
 	(build_toplevel(AllOpts)
-	 -> halt(0)
-	 ;  halt(1)).
+	 -> halt_success
+	 ;  halt_error).
 
 build_toplevel(Opts) :-
 	member(toplevel(_),Opts),
@@ -130,13 +131,17 @@ arg_from_opts(Arg,Opts) :-
 	recover_arg(Arg,Opt).
 
 multi_args(Opts) --> "-", multi_arg(Opts).
-multi_arg([Opt|Rest]) --> [C], {string_codes("-",[H]),C\=H,atom_codes(Arg,[H,C])}, !, {parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
+multi_arg([Opt|Rest]) --> [C], {char_code('-',H),C\=H,atom_codes(Arg,[H,C])}, !, {parse_arg([Arg],[],Opt)}, !, multi_arg(Rest).
 multi_arg([]) --> !.
 
-:- discontiguous parse_arg/3.
-:- discontiguous recover_arg/2.
-:- discontiguous arg_alias/2.
-:- discontiguous arg_info/3.
+:- discontiguous parse_arg/3.   % describes how to parse a cmdline arg into an option
+:- discontiguous recover_arg/2. % describes how to recover the cmdline arg from the option (finding canonical paths, etc)
+:- discontiguous simple_arg/2.  % combines parse_arg & recover_arg for simple options with no parameters
+:- discontiguous arg_alias/2.   % specifies an alias for a cmdline arg
+:- discontiguous arg_info/3.    % specifies the help text for a cmdline arg
+
+parse_arg([Arg|L],L,Opt) :- simple_arg(Arg,Opt).
+recover_arg(Arg,Opt) :- simple_arg(Arg,Opt).
 
 % ----------------------------------------
 % COMMON OPERATIONS
@@ -157,43 +162,68 @@ show_help :-
         nl,
         writeln('For more info see http://github.com/cmungall/biomake'),
         nl,
-        halt.
+        halt_success.
 
-parse_arg(['-n'|L],L,dry_run(true)).
+simple_arg('-n',dry_run(true)).
 arg_alias('-n','--dry-run').
 arg_alias('-n','--recon').
 arg_alias('-n','--just-print').
 arg_info('-n','','Print the commands that would be executed, but do not execute them').
 
-parse_arg(['-B'|L],L,always_make(true)).
+simple_arg('-B',always_make(true)).
 arg_alias('-B','--always-make').
 arg_info('-B','','Always build fresh target even if dependency is up to date').
 
 parse_arg(['-p',F|L],L,makeprog(F)).
 arg_alias('-p','--prog').
 arg_alias('-p','--makeprog').
-recover_arg(Arg,makeprog(F)) :- absolute_file_name(F,Fabs), format(string(Arg),"-p ~w",[Fabs]).
+recover_arg(['-p',Fabs],makeprog(F)) :- absolute_file_name(F,Fabs).
 arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]').
 
 parse_arg(['-f',F|L],L,gnu_makefile(F)).
 arg_alias('-f','--file').
 arg_alias('-f','--makefile').
-recover_arg(Arg,gnu_makefile(F)) :- absolute_file_name(F,Fabs), format(string(Arg),"-f ~w",[Fabs]).
+recover_arg(['-f',Fabs],gnu_makefile(F)) :- absolute_file_name(F,Fabs).
 arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
 
 parse_arg(['-I',D|L],L,include_dir(D)).
 arg_alias('-I','--include-dir').
-recover_arg(Arg,include_dir(D)) :- absolute_file_name(D,Dabs), format(string(Arg),"-I ~w",[Dabs]).
+recover_arg(['-I',Dabs],include_dir(D)) :- absolute_file_name(D,Dabs).
 arg_info('-I','DIR','Specify search directory for included Makefiles').
+
+parse_arg(['--target',T|L],L,toplevel(T)).
+arg_info('--target','TARGET','Force biomake to recognize a target even if it looks like an option').
 
 parse_arg(['-T',F|L],L,translate_gnu_makefile(F)).
 parse_arg(['--translate',F|L],L,translate_gnu_makefile(F)).
 arg_info('-T','FILE','Translate GNU Makefile to Prolog Makeprog syntax').
 
+parse_arg(['-W',F|L],L,what_if(Fs)) :- atom_string(F,Fs).
+arg_alias('-W','--what-if').
+arg_alias('-W','--new-file').
+arg_alias('-W','--assume-new').
+recover_arg(['-W',F],what_if(F)).
+arg_info('-W','TARGET','Pretend that TARGET has been modified').
+
+parse_arg(['-o',F|L],L,old_file(Fs)) :- atom_string(F,Fs).
+arg_alias('-o','--old-file').
+arg_alias('-o','--assume-old').
+recover_arg(['-o',F],old_file(F)).
+arg_info('-o','TARGET','Do not remake TARGET, or remake anything on account of it').
+
+simple_arg('-k',keep_going_on_error(true)).
+arg_alias('-k','--keep-going').
+arg_info('-k','','Keep going after error').
+
+simple_arg('-S',stop_on_error(true)).
+arg_alias('-S','--no-keep-going').
+arg_alias('-S','--stop').
+arg_info('-S','','Stop after error').
+
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
-recover_arg([VarEqualsVal],assignment(Var,Val)) :-
+recover_arg(VarEqualsVal,assignment(Var,Val)) :-
     format(string(VarEqualsVal),"~w=~q",[Var,Val]).
 arg_info('Var=Val','','Assign Makefile variables from command line').
 
@@ -214,12 +244,12 @@ parse_arg(['-l',F|L],L,
         !.
 arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
 
-parse_arg(['-q'|L],L,silent(true)).
-arg_alias('-q','--quiet').
-arg_alias('-q','--silent').
-arg_info('-q','','Silent operation; do not print recipes as they are executed').
+simple_arg('-s',silent(true)).
+arg_alias('-s','--quiet').
+arg_alias('-s','--silent').
+arg_info('-s','','Silent operation; do not print recipes as they are executed').
 
-parse_arg(['--one-shell'|L],L,oneshell(true)).
+simple_arg('--one-shell',oneshell(true)).
 arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'s .ONESHELL)').
 
 % ----------------------------------------
@@ -237,15 +267,14 @@ arg_info('-H','','Use MD5 hashes instead of timestamps').
 
 parse_arg(['-Q',Qs|L],L,queue(Q)) :-
         ensure_loaded(library(biomake/queue)),
-	string_chars(Qs,Qc),
-	atom_chars(Q,Qc),
+	atom_string(Q,Qs),
 	queue_engine(Q),
 	!.
 parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
 arg_alias('-Q','--queue-engine').
 arg_info('-Q','ENGINE','Queue recipes using ENGINE (supported: test,sge,pbs,slurm,poolq)').
 
-parse_arg(['-j',Jobs|L],L,(atom_codes(Jobs,Jc),number_codes(NJobs,Jc),poolq_threads(NJobs))).
+parse_arg(['-j',Jobs|L],L,(atom_number(Jobs,NJobs),poolq_threads(NJobs))).
 arg_alias('-j','--jobs').
 arg_info('-j','JOBS','Number of job threads (poolq engine)').
 
