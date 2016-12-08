@@ -39,7 +39,7 @@ makefile_block([],Opts,Opts,_,_,1) --> info_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> warning_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> error_line, !.
 makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(true,Rules,OptsOut,OptsIn,Line,File,Lines), !.
-makefile_block(Rules,OptsOut,OptsIn,_,_,1) --> include_line(true,Rules,OptsOut,OptsIn), !.
+makefile_block(Rules,OptsOut,OptsIn,_,File,1) --> include_line(true,File,Rules,OptsOut,OptsIn), !.
 makefile_block([Assignment],Opts,Opts,_,_,Lines) --> makefile_assignment(Assignment,Lines), !,
 	{add_gnumake_clause(Assignment,Opts,Opts)}.
 makefile_block([option(Opt)],[Opt|Opts],Opts,_,_,Lines) --> makefile_special_target(Opt,Lines), !.
@@ -55,7 +55,7 @@ makefile_block(_,_,_,Line,File,_) -->
 	syntax_error(Err)}.
 
 ignore_makefile_block(Opts,Line,File,Lines) --> makefile_conditional(false,_,_,Opts,Line,File,Lines), !.
-ignore_makefile_block(Opts,_,_,1) --> include_line(false,_,Opts,Opts), !.
+ignore_makefile_block(Opts,_,_,1) --> include_line(false,null,_,Opts,Opts), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_assignment(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_special_target(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_recipe(_,Lines), !.
@@ -97,41 +97,42 @@ info_line -->
     !,
     {format("~w~n",[W])}.
 
-include_line(Active,Rules,OptsOut,OptsIn) -->
+include_line(Active,CurrentFile,Rules,OptsOut,OptsIn) -->
     opt_space,
     "include",
     whitespace,
-    include_makefiles(Active,Rules,OptsOut,OptsIn).
+    include_makefiles(Active,CurrentFile,Rules,OptsOut,OptsIn).
 
-include_makefiles(Active,Rules,OptsOut,OptsIn) -->
+include_makefiles(Active,CurrentFile,Rules,OptsOut,OptsIn) -->
 	makefile_filename_string(F), opt_whitespace, "\n", !,
-	{Active -> include_gnu_makefile(F,Rules,OptsOut,OptsIn) ; true}.
-include_makefiles(Active,Rules,OptsOut,OptsIn) -->
+	{Active -> include_gnu_makefile(F,CurrentFile,Rules,OptsOut,OptsIn) ; true}.
+include_makefiles(Active,CurrentFile,Rules,OptsOut,OptsIn) -->
 	makefile_filename_string(F), whitespace, !,
-	{Active -> include_gnu_makefile(F,R,Opts,OptsIn) ; true},
-	include_makefiles(Next,OptsOut,Opts),
+	{Active -> include_gnu_makefile(F,CurrentFile,R,Opts,OptsIn) ; true},
+	include_makefiles(Next,CurrentFile,OptsOut,Opts),
 	{append(R,Next,Rules)}.
 
-include_gnu_makefile(F,R,Opts,OptsIn) :-
+include_gnu_makefile(F,CurrentFile,R,Opts,OptsIn) :-
 	(bagof(Dslash,
 	       (member(include_dir(D),OptsIn),
 	        format(atom(Dslash),"~w/",[D])),
 	       RevDirs)
 	 ; RevDirs = []),
 	reverse(RevDirs,Dirs),
-	search_include_dirs(F,['','./'|Dirs],R,Opts,OptsIn).
+	file_directory_name(CurrentFile,CurrentFileDir),
+	format(atom(CurrentFileDirSlash),"~w/",[CurrentFileDir]),
+	search_include_dirs(F,CurrentFile,['','./',CurrentFileDirSlash|Dirs],R,Opts,OptsIn).
 
-search_include_dirs(F,[],_,_,_) :-
-	format(string(Err),"Couldn't find included makefile ~w~n",[F]),
+search_include_dirs(F,CurrentFile,[],_,_,_) :-
+	format(string(Err),"Couldn't find makefile ~w included from ~w",[F,CurrentFile]),
 	throw(Err).
-search_include_dirs(F,[Dir|_],R,Opts,OptsIn) :-
+search_include_dirs(F,_,[Dir|_],R,Opts,OptsIn) :-
 	format(string(Path),"~w/~w",[Dir,F]),
 	exists_file(Path),
-	format("Found ~w~n",Path),
 	!,
 	parse_gnu_makefile(Dir,F,R,Opts,OptsIn).
-search_include_dirs(F,[_|Dirs],R,Opts,OptsIn) :-
-	search_include_dirs(F,Dirs,R,Opts,OptsIn).
+search_include_dirs(F,CurrentFile,[_|Dirs],R,Opts,OptsIn) :-
+	search_include_dirs(F,CurrentFile,Dirs,R,Opts,OptsIn).
 
 makefile_assignment(assignment(Var,Op,Val),Lines) -->
     opt_space,

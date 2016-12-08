@@ -52,6 +52,7 @@ test :-
 	run_test("one_line_with_deps"),
 	run_test("-f Makefile.include","inc2.test"),
 	run_test("-f Makefile.include","makefile_list"),
+	run_test("-f Makefile.dir1","relative_include_path"),
 	run_test("forced_rebuild"),
 
 	announce("AUTOMATIC VARIABLES"),
@@ -149,8 +150,11 @@ test :-
 	announce("QUEUES"),
 
 	% Queues are a bit under-served by tests at the moment...
+	% The first two tests just test that the Makefile is working and that commands can be run from a script.
 	run_test("-f Makefile.queue","i.am.the.garbage.flower"),
 	run_test("-f Makefile.queue --one-shell","love.will.tear.us.apart"),
+	% The remaining tests use the test queue (which just runs commands in a script)
+	% and the thread-pool queue, with and without MD5 hashes.
 	run_test("-f Makefile.queue -Q test","what.difference.does.it.make"),
 	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
 	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),
@@ -168,7 +172,14 @@ test :-
 	run_test("-f Makefile.cond","ifdef_false"),
 	run_test("-f Makefile.cond","ifeq_true"),
 	run_test("-f Makefile.cond","ifeq_false"),
-	% TODO: ifndef, ifneq, nesting of includes & ifs inside reachable & unreachable clauses
+	run_test("-f Makefile.cond","ifndef_true"),
+	run_test("-f Makefile.cond","ifndef_false"),
+	run_test("-f Makefile.cond","ifneq_true"),
+	run_test("-f Makefile.cond","ifneq_false"),
+	run_test("-f Makefile.cond","ifeq_true_ifneq_false"),
+	run_test("-f Makefile.cond","ifeq_false_ifneq_true"),
+	run_test("-f Makefile.cond","nested_ifeq_ifneq"),
+	run_test("-f Makefile.cond","nested_ifeq_include"),
 	
 	% All done
 	report_counts,
