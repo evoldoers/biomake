@@ -88,7 +88,7 @@ try_md5_prog(Filename,Hash) :-
     atomic_list_concat(Md5Args," ",Md5ArgStr),
     biomake_private_filename_dir_exists(Filename,"tmp",TmpFile),
     absolute_file_name(Filename,Path),
-    format(string(Exec),"~w ~w ~w >~w",[Md5Prog,Md5ArgStr,Path,TmpFile]),
+    format(string(Exec),"~w ~w >~w",[Md5Prog,Md5ArgStr,TmpFile]),
     debug(md5,'computing hash: ~w',[Exec]),
     shell(Exec),
     phrase_from_file(first_n(32,HashCodes),TmpFile),
