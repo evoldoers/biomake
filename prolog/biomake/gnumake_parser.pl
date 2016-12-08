@@ -27,36 +27,32 @@ parse_gnu_makefile(DirSlash,F,M,OptsOut,OptsIn) :-
 % Grammar for reading GNU Makefile
 makefile_rules([],Opts,Opts,_,_) --> call(eos), !.
 makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
-	comment, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
-makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
-	blank_line, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
-makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
-	info_line, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
-makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
-	warning_line, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
-makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
-	error_line, !, {Lnext is Line + 1}, makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
-makefile_rules([option(Opt)|Rules],OptsOut,OptsIn,Line,File) -->
-	makefile_special_target(Opt,Lt), !, {Lnext is Line + Lt}, makefile_rules(Rules,OptsOut,[Opt|OptsIn],Lnext,File).
-makefile_rules(Rules,OptsOut,OptsIn,Line,File) -->
-	include_line(Included,Opts,OptsIn), !, {Lnext is Line + 1, append(Included,Next,Rules)},
-	makefile_rules(Next,OptsOut,Opts,Lnext,File).
-makefile_rules([Assignment|Rules],OptsOut,OptsIn,Line,File) -->
-	makefile_assignment(Assignment,Lass), !, {add_gnumake_clause(Assignment,OptsIn,OptsIn), Lnext is Line + Lass},
-	makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
-makefile_rules([Rule|Rules],OptsOut,OptsIn,Line,File) -->
-	makefile_rule(Rule,Lrule), !, {add_gnumake_clause(Rule,OptsIn,OptsIn), Lnext is Line + Lrule},
-	makefile_rules(Rules,OptsOut,OptsIn,Lnext,File).
-makefile_rules(_,_,_,Line,File) -->
+	makefile_block(BlockRules,BlockOptsOut,OptsIn,Line,File,BlockLines),
+	!, { Lnext is Line + BlockLines, append(BlockRules,NextRules,Rules)},
+	makefile_rules(NextRules,OptsOut,BlockOptsOut,Lnext,File).
+
+eos([], []).
+
+makefile_block([],Opts,Opts,_,_,1) --> comment, !.
+makefile_block([],Opts,Opts,_,_,1) --> blank_line, !.
+makefile_block([],Opts,Opts,_,_,1) --> info_line, !.
+makefile_block([],Opts,Opts,_,_,1) --> warning_line, !.
+makefile_block([],Opts,Opts,_,_,1) --> error_line, !.
+makefile_block([option(Opt)],[Opt|Opts],Opts,_,_,Lines) --> makefile_special_target(Opt,Lines), !.
+makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(Rules,OptsOut,OptsIn,Line,File,Lines), !.
+makefile_block(Rules,OptsOut,OptsIn,_,_,1) --> include_line(Rules,OptsOut,OptsIn), !.
+makefile_block([Assignment],Opts,Opts,_,_,Lines) --> makefile_assignment(Assignment,Lines), !,
+	{add_gnumake_clause(Assignment,Opts,Opts)}.
+makefile_block([Rule],Opts,Opts,_,_,Lines) --> makefile_recipe(Rule,Lines), !,
+	{add_gnumake_clause(Rule,Opts,Opts)}.
+makefile_block(_,_,_,Line,File,_) -->
 	opt_space, "\t", !,
 	{format(string(Err),"GNU makefile parse error at line ~d of file ~w: unexpected tab character",[Line,File]),
 	syntax_error(Err)}.
-makefile_rules(_,_,_,Line,File) -->
+makefile_block(_,_,_,Line,File,_) -->
 	line_as_string(L), !,
 	{format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),
 	syntax_error(Err)}.
-
-eos([], []).
 
 error_line -->
     opt_space,
@@ -162,10 +158,71 @@ makefile_assignment(assignment(Var,Op,Val),1) -->
     opt_whitespace,
     line_as_string(Val).
 
-makefile_special_target(queue(none),Lines) -->
-    makefile_rule(rule([".NOTPARALLEL"],_,_),Lines).
+makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
+    opt_space, "ifeq", whitespace, "(", xstr_arg(Arg1), ",", xstr_arg(Arg2), ")", opt_whitespace, "\n",
+    !, {Arg1 = Arg2 -> Status = true; Status = false},
+    eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
 
-makefile_rule(rule(Head,Deps,Exec),Lines) -->
+eval_true_false_rules(true,TrueResult,TrueOptsOut,OptsIn,Line,File,Lines) -->
+    { Lnext is Line + 1 },
+    true_false_rules(TrueResult,_FalseResult,TrueOptsOut,OptsIn,_FalseOptsOut,OptsIn,Lnext,File,Ltf),
+    { Lines is Ltf + 1 }.
+
+eval_true_false_rules(false,FalseResult,FalseOptsOut,OptsIn,Line,File,Lines) -->
+    { Lnext is Line + 1 },
+    true_false_rules(_TrueResult,FalseResult,_TrueOptsOut,OptsIn,FalseOptsOut,OptsIn,Lnext,File,Ltf),
+    { Lines is Ltf + 1 }.
+
+true_false_rules([],[],TrueOptsIn,TrueOptsIn,FalseOptsIn,FalseOptsIn,_,_,1) -->
+    opt_space, "endif", !, opt_whitespace, "\n".
+
+true_false_rules([],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+    opt_space, "else", !, opt_whitespace, "\n",
+    { Lnext is Line + 1 },
+    false_rules(FalseRules,FalseOptsOut,FalseOptsIn,Lnext,File,FalseLines),
+    { Lines is FalseLines + 1}.
+
+true_false_rules(TrueRules,FalseRules,TrueOptsOut,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+    makefile_block(BlockRules,BlockOptsOut,TrueOptsIn,Line,File,BlockLines),
+    !, { Lnext is Line + BlockLines, append(BlockRules,NextRules,TrueRules) },
+    true_false_rules(NextRules,FalseRules,TrueOptsOut,BlockOptsOut,FalseOptsOut,FalseOptsIn,Lnext,File,NextLines),
+    { Lines is BlockLines + NextLines }.
+
+true_false_rules(_,_,_,_,_,_,Line,File,_) -->
+    line_as_string(L), !,
+    {format(string(Err),"GNU makefile parse error (expected else/endif) at line ~d of file ~w: ~w",[Line,File,L]),
+    syntax_error(Err)}.
+
+false_rules([],OptsIn,OptsIn,_,_,1) -->
+    opt_space, "endif", !, opt_whitespace, "\n".
+
+false_rules(Rules,OptsOut,OptsIn,Line,File,Lines) -->
+    makefile_block(BlockRules,BlockOptsOut,OptsIn,Line,File,BlockLines),
+    !, { Lnext is Line + BlockLines, append(BlockRules,NextRules,Rules) },
+    false_rules(NextRules,OptsOut,BlockOptsOut,Lnext,File,NextLines),
+    { Lines is BlockLines + NextLines }.
+
+false_rules(_,_,_,Line,File,_) -->
+    line_as_string(L), !,
+    {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
+    syntax_error(Err)}.
+
+
+% the following code is essentially duplicated from functions.pl, with codes instead of chars... ugh
+xstr_arg(Sx) --> str_arg(S), !, {expand_vars(S,Sx,v(null,null,null,[]))}.
+str_arg(S) --> opt_whitespace, str_arg_outer(S).
+str_arg_outer(S) --> ['('], !, str_arg_inner(Si), [')'], str_arg_outer(Rest), {concat_string_list(["(",Si,")",Rest],S)}.
+str_arg_outer(S) --> string_from_codes(Start,"(),"), !, str_arg_outer(Rest), {string_concat(Start,Rest,S)}.
+str_arg_outer("") --> !.
+str_arg_inner(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(",Si,")"],S)}.
+str_arg_inner(S) --> string_from_codes(Start,"()"), !, str_arg_inner(Rest), {string_concat(Start,Rest,S)}.
+str_arg_inner("") --> !.
+    
+
+makefile_special_target(queue(none),Lines) -->
+    makefile_recipe(rule([".NOTPARALLEL"],_,_),Lines).
+
+makefile_recipe(rule(Head,Deps,Exec),Lines) -->
     makefile_targets(Head),
     ":",
     opt_makefile_targets(Deps),
@@ -174,7 +231,7 @@ makefile_rule(rule(Head,Deps,Exec),Lines) -->
     makefile_execs(Exec,Lexecs),
     {Lines is 1 + Lexecs}.
 
-makefile_rule(rule(Head,Deps,[Efirst|Erest]),Lines) -->
+makefile_recipe(rule(Head,Deps,[Efirst|Erest]),Lines) -->
     makefile_targets(Head),
     ":",
     opt_makefile_targets(Deps),
