@@ -296,14 +296,15 @@ compare_output(TestDir,RefDir,_) :-
     make_test_path(RefDir,RefPath),
     compare_files(TestPath,RefPath).
 
-actual_files(Dir,List) :-
+non_ignored_files(Dir,List) :-
     directory_files(Dir,Files),
-    include(not_special,Files,List).
+    include(not_ignored,Files,List).
 
-not_special(File) :-
-    \+ special(File).
-special('.').
-special('..').
+not_ignored(File) :-
+    \+ ignored(File).
+ignored('.').
+ignored('..').
+ignored('tmp').
 
 compare_files(TestPath,RefPath,File) :-
     format(string(TestFilePath),"~s/~s",[TestPath,File]),
@@ -316,8 +317,8 @@ compare_files(TestPath,RefPath) :-
     exists_directory(RefPath),
     !,
     format("Comparing directory ~s to ~s~n",[TestPath,RefPath]),
-    actual_files(TestPath,TestFiles),
-    actual_files(RefPath,RefFiles),
+    non_ignored_files(TestPath,TestFiles),
+    non_ignored_files(RefPath,RefFiles),
     (lists_equal(TestFiles,RefFiles);
      (format("File lists do not match~n~w: ~w~n~w: ~w~n",[TestPath,TestFiles,RefPath,RefFiles]),
       fail)),

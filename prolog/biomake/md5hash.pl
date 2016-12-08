@@ -77,8 +77,23 @@ compute_md5(T,Size,Hash) :-
     retract_md5_hash(T),
     assert(md5_hash(T,Size,Hash)).
 
-% try the md5 executables findable with md5_prog
+% try the md5 executables findable with md5_prog, using a temporary file to stash the hash
 try_md5_prog(Filename,Hash) :-
+    find_md5_prog(Md5Prog,Args),
+    append(Args,[Filename],Md5Args),
+    atomic_list_concat(Md5Args," ",Md5ArgStr),
+    biomake_private_filename_dir_exists(Filename,"tmp",TmpFile),
+    absolute_file_name(Filename,Path),
+    format(string(Exec),"~w ~w ~w >~w",[Md5Prog,Md5ArgStr,Path,TmpFile]),
+    debug(md5,'computing hash: ~w',[Exec]),
+    shell(Exec),
+    phrase_from_file(first_n(32,HashCodes),TmpFile),
+    string_codes(HashStr,HashCodes),
+    debug(md5,'output of ~w ~w: ~w',[Md5Prog,Filename,HashStr]),
+    string_lower(HashStr,Hash).
+
+% this version uses pipes; unfortunately, that crashes on some Macs :-(
+try_md5_prog_using_pipes(Filename,Hash) :-
     find_md5_prog(Md5Prog,Args),
     append(Args,[Filename],Md5Args),
     setup_call_cleanup(process_create(Md5Prog,Md5Args,[stdout(pipe(Stream))]),
@@ -89,19 +104,20 @@ try_md5_prog(Filename,Hash) :-
     debug(md5,'output of ~w ~w: ~w',[Md5Prog,Filename,HashStr]),
     string_lower(HashStr,Hash).
 
-% fall back to using Prolog's in-memory MD5 implementation in the md5 library
-%try_md5_prog(Filename,Hash) :-
-%    use_module(library(md5), [ md5_hash/3 as library_md5_hash ]),
-%    debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
-%    read_file_to_string(Filename,Str,[]),
-%    library_md5_hash(Str,Hash,[]).
-
 % fall back to using Prolog's deprecated in-memory MD5 implementation in the rdf_db library
 try_md5_prog(Filename,Hash) :-
     use_module(library(semweb/rdf_db)),
     debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
     read_file_to_string(Filename,Str,[]),
     rdf_atom_md5(Str,1,Hash).
+
+% this version uses the in-memory MD5 implementation in the md5 library, which is recommended over rdf_atom_md5, but not present in all implementations
+try_md5_prog_in_memory_md5_library(Filename,Hash) :-
+    use_module(library(md5), [ md5_hash/3 as library_md5_hash ]),
+    debug(md5,'reading ~w into memory for native SWI-Prolog MD5 implementation',[Filename]),
+    read_file_to_string(Filename,Str,[]),
+    library_md5_hash(Str,Hash,[]).
+
 
 first_n(0,[]) --> [].
 first_n(0,[]) --> [_], first_n(0,[]).
@@ -115,7 +131,8 @@ delete_md5_file(T) :-
 delete_md5_file(_).
 
 ensure_md5_directory_exists(Target) :-
-    biomake_private_filename_dir_exists(Target,"md5",_).
+    biomake_private_filename_dir_exists(Target,"md5",_),
+    biomake_private_filename_dir_exists(Target,"tmp",_).
 
 md5_filename(Target,Filename) :-
     biomake_private_filename(Target,"md5",Filename).
