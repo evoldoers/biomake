@@ -287,8 +287,9 @@ run_execs_and_update(Rule,SL,Opts) :-
 dispatch_run_execs(Rule,SL,Opts) :-
 	member(queue(Q),Opts),
 	!,
-	run_execs_in_queue(Q,Rule,SL,Opts),
 	rule_target(Rule,T,Opts),
+	(member(md5(true),Opts) -> ensure_md5_directory_exists(T) ; true),
+	run_execs_in_queue(Q,Rule,SL,Opts),
 	report('~w queued for rebuild',[T],SL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
 	run_execs_now(Rule,SL,Opts),

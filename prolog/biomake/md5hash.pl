@@ -3,6 +3,7 @@
 :- module(md5hash,
           [
 	      md5_hash_up_to_date/3,
+	      ensure_md5_directory_exists/1,
 	      update_md5_file/2
           ]).
 
@@ -81,7 +82,11 @@ compute_md5(T,Size,Hash) :-
 % use a temporary file instead of a pipe, since process_create doesn't seem to play well with threads in OSX :-(
 try_md5_prog(Filename,Hash) :-
     find_md5_prog(Md5Prog),
-    tmp_file("md5",TmpFile),
+    % the following is not infallible: if two targets with the same base name are built at the same time, we'll get a tempfile name clash
+    % TODO: come up with a better scheme here
+    file_base_name(Filename,Base),
+    format(string(TmpPrefix),"md5_~w",[Base]),
+    tmp_file(TmpPrefix,TmpFile),
     absolute_file_name(Filename,Path),
     format(string(Exec),"~w ~w >~w",[Md5Prog,Path,TmpFile]),
     debug(md5,'computing hash: ~w',[Exec]),
@@ -116,6 +121,9 @@ delete_md5_file(T) :-
     !,
     delete_file(F).
 delete_md5_file(_).
+
+ensure_md5_directory_exists(Target) :-
+    biomake_private_filename_dir_exists(Target,"md5",_).
 
 md5_filename(Target,Filename) :-
     biomake_private_filename(Target,"md5",Filename).
