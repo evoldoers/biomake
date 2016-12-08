@@ -157,15 +157,19 @@ test :-
 	run_test("-f Makefile.queue -Q poolq -H","the.head.on.the.door"),
 
 	announce("COMMAND-LINE OPTIONS"),
+
 	run_test("--file=Makefile.argval","arg_equals_val"),
 	run_test("-f Makefile.subdir.include -I subdir","include_dir"),
-
+	% could do with more here
+	
 	announce("CONDITIONAL SYNTAX"),
+
 	run_test("-f Makefile.cond","ifdef_true"),
 	run_test("-f Makefile.cond","ifdef_false"),
 	run_test("-f Makefile.cond","ifeq_true"),
 	run_test("-f Makefile.cond","ifeq_false"),
-
+	% TODO: ifndef, ifneq, nesting of includes & ifs inside reachable & unreachable clauses
+	
 	% All done
 	report_counts,
         (   failed_test(_,_)
