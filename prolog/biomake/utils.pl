@@ -263,7 +263,7 @@ safe_make_directory(Path) :-
 	!.
 
 safe_make_directory(Path) :-
-        catch(make_directory(Path),E,fail),
+        catch(make_directory(Path),_,fail),
         !.
 
 safe_make_directory(Path) :-
