@@ -2,7 +2,8 @@
 
 :- module(gnumake_parser,
           [
-              parse_gnu_makefile/4
+              parse_gnu_makefile/4,
+	      eval_gnu_makefile/4
 	  ]).
 
 :- use_module(library(pio)).
@@ -12,16 +13,22 @@
 
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M,OptsOut,OptsIn) :-
-	parse_gnu_makefile('',F,M,OptsOut,OptsIn).
+    parse_gnu_makefile('',F,M,OptsOut,OptsIn).
 
 parse_gnu_makefile(DirSlash,F,M,OptsOut,OptsIn) :-
-    debug(makefile,'reading: ~w~n',[F]),
+    debug(makefile,'reading: ~w',[F]),
     atom_string(MAKEFILE_LIST,"MAKEFILE_LIST"),
     Assignment = assignment(MAKEFILE_LIST,"+=",F),
     add_gnumake_clause(Assignment,OptsIn,OptsIn),
     format(string(Path),"~w~w",[DirSlash,F]),
     phrase_from_file(makefile_rules(Mf,OptsOut,OptsIn,1,Path),Path),
     M = [Assignment|Mf],
+    debug(makefile,"rules: ~w~noptions: ~w",[M,OptsOut]).
+
+eval_gnu_makefile(Text,M,OptsOut,OptsIn) :-
+    debug(makefile,'evaluating: ~w',[Text]),
+    string_codes(Text,Codes),
+    phrase(makefile_rules(M,OptsOut,OptsIn,1,"(eval)"),Codes),
     debug(makefile,"rules: ~w~noptions: ~w",[M,OptsOut]).
 
 % Grammar for reading GNU Makefile

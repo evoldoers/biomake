@@ -17,8 +17,10 @@
 	   report/3,
 	   report/4,
 	   
-           consult_makeprog/3,
            consult_gnu_makefile/3,
+           consult_makeprog/3,
+	   eval_string_as_makeprog_term/3,
+	   eval_atom_as_makeprog_term/3,
 
 	   add_spec_clause/3,
 	   add_spec_clause/4,
@@ -550,9 +552,20 @@ read_makeprog_stream(IO,OptsOut,OptsIn) :-
         read_term(IO,Term,[variable_names(VNs),
                            syntax_errors(error),
                            module(biomake)]),
-        debug(makeprog,'adding: ~w',[Term]),
+        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
         add_spec_clause(Term,VNs,Opts,OptsIn),
 	read_makeprog_stream(IO,OptsOut,Opts).
+
+eval_string_as_makeprog_term(String,OptsOut,OptsIn) :-
+        atom_string(Atom,String),
+        eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn).
+
+eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn) :-
+        read_term_from_atom(Atom,Term,[variable_names(VNs),
+				       syntax_errors(error),
+				       module(biomake)]),
+        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
+        add_spec_clause(Term,VNs,OptsOut,OptsIn).
 
 translate_gnu_makefile(M,P) :-
     debug(makeprog,"Writing translated makefile to ~w",[P]),
@@ -623,6 +636,7 @@ add_spec_clause( (Var ?= X), VNs, Opts, Opts) :-
 add_spec_clause( Ass, _VNs, Opts, Opts) :-
 	Ass =.. [Op,Var,X],
 	is_assignment_op(Op),
+	\+ var(Var),
         global_cmdline_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w ~w ~w since ~w was bound to ~w on the command-line",[Var,Op,X,Var,Oldval]).

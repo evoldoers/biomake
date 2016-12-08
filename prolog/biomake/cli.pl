@@ -34,7 +34,10 @@ main :-
 	get_cmd_args(TmpOpts,Opts),
  	add_assignments(Opts),
 	bind_special_variables(Opts),
-	consult_makefile(AllOpts,Opts),
+	eval_makefile_syntax_args(Opts2,Opts),
+	eval_makespec_syntax_args(Opts3,Opts2),
+	consult_makefile(Opts4,Opts3),
+	AllOpts = Opts4,
         forall(member(goal(G),AllOpts),
                G),
         forall(member(flush_queue(T),AllOpts),
@@ -67,6 +70,27 @@ nonbuild_task_specified(Opts) :- member(flush_queue(_),Opts).
 add_assignments(Opts) :-
         forall(member(assignment(Var,Val),Opts),
 	       add_cmdline_assignment((Var = Val))).
+
+eval_makefile_syntax_args(OptsOut,OptsIn) :-
+    bagof(Eval,member(eval_makefile_syntax(Eval),OptsIn),Evals),
+    !,
+    ensure_loaded(library(biomake/gnumake_parser)),
+    eval_makefile_syntax_args(Evals,OptsOut,OptsIn).
+eval_makefile_syntax_args(Opts,Opts).
+eval_makefile_syntax_args([Eval|Evals],OptsOut,OptsIn) :-
+    eval_gnu_makefile(Eval,_,Opts,OptsIn),
+    eval_makefile_syntax_args(Evals,OptsOut,Opts).
+eval_makefile_syntax_args([],Opts,Opts).
+
+eval_makespec_syntax_args(OptsOut,OptsIn) :-
+    bagof(Eval,member(eval_makespec_syntax(Eval),OptsIn),Evals),
+    !,
+    eval_makespec_syntax_args(Evals,OptsOut,OptsIn).
+eval_makespec_syntax_args(Opts,Opts).
+eval_makespec_syntax_args([Eval|Evals],OptsOut,OptsIn) :-
+    eval_atom_as_makeprog_term(Eval,Opts,OptsIn),
+    eval_makespec_syntax_args(Evals,OptsOut,Opts).
+eval_makespec_syntax_args([],Opts,Opts).
 
 consult_makefile(AllOpts,Opts) :-
 	DefaultMakeprogs = ['makespec.pro','Makespec.pro'],
@@ -164,6 +188,19 @@ show_help :-
         nl,
         halt_success.
 
+parse_arg(['-v'|L],L,null) :- show_version, !.
+arg_alias('-v','--version').
+arg_info('-v','','Show version').
+
+show_version :-
+        writeln('Biomake 1.0'),
+        writeln('Copyright (C) 2016 Evolutionary Software Foundation, Inc.'),
+        writeln('Authors: Chris Mungall, Ian Holmes.'),
+        writeln('This is free software; see the source for copying conditions.'),
+        writeln('There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A'),
+        writeln('PARTICULAR PURPOSE.'),
+        halt_success.
+
 simple_arg('-n',dry_run(true)).
 arg_alias('-n','--dry-run').
 arg_alias('-n','--recon').
@@ -185,6 +222,18 @@ arg_alias('-f','--file').
 arg_alias('-f','--makefile').
 recover_arg(['-f',Fabs],gnu_makefile(F)) :- absolute_file_name(F,Fabs).
 arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
+
+parse_arg(['-m',Text|L],L,eval_makefile_syntax(Text)).
+recover_arg(['-m',Text],eval_makefile_syntax(Text)).
+arg_alias('-m','--eval').
+arg_alias('-m','--makefile-syntax').
+arg_info('-m','STRING','Evaluate STRING as GNU Makefile syntax').
+
+parse_arg(['-P',Text|L],L,eval_makespec_syntax(Text)).
+recover_arg(['-P',Text],eval_makespec_syntax(Text)).
+arg_alias('-P','--eval-prolog').
+arg_alias('-P','--makespec-syntax').
+arg_info('-P','STRING','Evaluate STRING as Prolog Makespec syntax').
 
 parse_arg(['-I',D|L],L,include_dir(D)).
 arg_alias('-I','--include-dir').

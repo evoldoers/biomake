@@ -280,3 +280,9 @@ touch:
 
 multi_arg:
 	echo Updated multi_arg >$@
+
+NON_EVAL_VAR=expected
+cmdline_eval%:
+	echo Value of NON_EVAL_VAR is $(NON_EVAL_VAR) >$@
+	echo Value of CMDLINE_VAR is $(CMDLINE_VAR) >>$@
+	echo Value of EVAL_VAR is $(EVAL_VAR) >>$@
