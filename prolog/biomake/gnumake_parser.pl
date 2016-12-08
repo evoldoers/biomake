@@ -38,11 +38,11 @@ makefile_block([],Opts,Opts,_,_,1) --> blank_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> info_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> warning_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> error_line, !.
-makefile_block([option(Opt)],[Opt|Opts],Opts,_,_,Lines) --> makefile_special_target(Opt,Lines), !.
 makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(Rules,OptsOut,OptsIn,Line,File,Lines), !.
 makefile_block(Rules,OptsOut,OptsIn,_,_,1) --> include_line(Rules,OptsOut,OptsIn), !.
 makefile_block([Assignment],Opts,Opts,_,_,Lines) --> makefile_assignment(Assignment,Lines), !,
 	{add_gnumake_clause(Assignment,Opts,Opts)}.
+makefile_block([option(Opt)],[Opt|Opts],Opts,_,_,Lines) --> makefile_special_target(Opt,Lines), !.
 makefile_block([Rule],Opts,Opts,_,_,Lines) --> makefile_recipe(Rule,Lines), !,
 	{add_gnumake_clause(Rule,Opts,Opts)}.
 makefile_block(_,_,_,Line,File,_) -->
@@ -53,6 +53,13 @@ makefile_block(_,_,_,Line,File,_) -->
 	line_as_string(L), !,
 	{format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),
 	syntax_error(Err)}.
+
+ignore_makefile_block(Opts,Line,File,Lines) --> makefile_conditional(_,_,Opts,Line,File,Lines), !.
+ignore_makefile_block(Opts,_,_,1) --> include_line(_,Opts,Opts), !.
+ignore_makefile_block(_Opts,_,_,Lines) --> makefile_assignment(_,Lines), !.
+ignore_makefile_block(_Opts,_,_,Lines) --> makefile_special_target(_,Lines), !.
+ignore_makefile_block(_Opts,_,_,Lines) --> makefile_recipe(_,Lines), !.
+ignore_makefile_block(Opts,Line,File,Lines) --> makefile_block([],Opts,Opts,Line,File,Lines).
 
 error_line -->
     opt_space,
@@ -169,59 +176,75 @@ makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
     eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
 
 makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
-    opt_space, "ifdef", whitespace, xvar(Arg), opt_whitespace, "\n",
-    !, {Arg \= "" -> Status = true; Status = false},
+    opt_space, "ifdef", whitespace, xvar(Arg),
+    !, {Arg \= '' -> Status = true; Status = false},
     eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
 
 makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
-    opt_space, "ifndef", whitespace, xvar(Arg), opt_whitespace, "\n",
-    !, {Arg = "" -> Status = true; Status = false},
+    opt_space, "ifndef", whitespace, xvar(Arg),
+    !, {Arg = '' -> Status = true; Status = false},
     eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
 
 conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", xbracket(Arg2), ")".
 conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), ",", xquote(Arg2), "'".
 conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), ",", xdblquote(Arg2), "\"".
 
-eval_true_false_rules(true,TrueResult,TrueOptsOut,OptsIn,Line,File,Lines) -->
+eval_true_false_rules(true,TrueRules,TrueOptsOut,OptsIn,Line,File,Lines) -->
     { Lnext is Line + 1 },
-    true_false_rules(TrueResult,_FalseResult,TrueOptsOut,OptsIn,_FalseOptsOut,OptsIn,Lnext,File,Ltf),
+    show_true_false_rules(true,TrueRules,_FalseRules,TrueOptsOut,OptsIn,_FalseOptsOut,OptsIn,Lnext,File,Ltf),
     { Lines is Ltf + 1 }.
 
-eval_true_false_rules(false,FalseResult,FalseOptsOut,OptsIn,Line,File,Lines) -->
+eval_true_false_rules(false,FalseRules,FalseOptsOut,OptsIn,Line,File,Lines) -->
     { Lnext is Line + 1 },
-    true_false_rules(_TrueResult,FalseResult,_TrueOptsOut,OptsIn,FalseOptsOut,OptsIn,Lnext,File,Ltf),
+    show_true_false_rules(false,_TrueRules,FalseRules,_TrueOptsOut,OptsIn,FalseOptsOut,OptsIn,Lnext,File,Ltf),
     { Lines is Ltf + 1 }.
 
-true_false_rules([],[],TrueOptsIn,TrueOptsIn,FalseOptsIn,FalseOptsIn,_,_,1) -->
+show_true_false_rules(Status,TrueRules,FalseRules,TrueOptsOut,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+    true_false_rules(Status,TrueRules,FalseRules,TrueOptsOut,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines),
+    {debug(makefile,"Status=~w TrueRules=~w FalseRules=~w TrueOptsOut=~w FalseOptsOut=~w Lines=~w~n",[TrueRules,FalseRules,TrueOptsOut,FalseOptsOut,Lines])}.
+
+true_false_rules(_,[],[],TrueOptsIn,TrueOptsIn,FalseOptsIn,FalseOptsIn,_,_,1) -->
     opt_space, "endif", !, opt_whitespace, "\n".
 
-true_false_rules([],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+true_false_rules(Status,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
     opt_space, "else", !, opt_whitespace, "\n",
     { Lnext is Line + 1 },
-    false_rules(FalseRules,FalseOptsOut,FalseOptsIn,Lnext,File,FalseLines),
+    false_rules(Status,FalseRules,FalseOptsOut,FalseOptsIn,Lnext,File,FalseLines),
     { Lines is FalseLines + 1}.
 
-true_false_rules(TrueRules,FalseRules,TrueOptsOut,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+true_false_rules(true,TrueRules,[],TrueOptsOut,TrueOptsIn,FalseOptsIn,FalseOptsIn,Line,File,Lines) -->
     makefile_block(BlockRules,BlockOptsOut,TrueOptsIn,Line,File,BlockLines),
     !, { Lnext is Line + BlockLines, append(BlockRules,NextRules,TrueRules) },
-    true_false_rules(NextRules,FalseRules,TrueOptsOut,BlockOptsOut,FalseOptsOut,FalseOptsIn,Lnext,File,NextLines),
+    true_false_rules(true,NextRules,[],TrueOptsOut,BlockOptsOut,FalseOptsIn,FalseOptsIn,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
-true_false_rules(_,_,_,_,_,_,Line,File,_) -->
+true_false_rules(false,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+    ignore_makefile_block(TrueOptsIn,Line,File,BlockLines),
+    !, { Lnext is Line + BlockLines },
+    true_false_rules(false,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Lnext,File,NextLines),
+    { Lines is BlockLines + NextLines }.
+
+true_false_rules(_,_,_,_,_,_,_,Line,File,_) -->
     line_as_string(L), !,
     {format(string(Err),"GNU makefile parse error (expected else/endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
-false_rules([],OptsIn,OptsIn,_,_,1) -->
+false_rules(_,[],OptsIn,OptsIn,_,_,1) -->
     opt_space, "endif", !, opt_whitespace, "\n".
 
-false_rules(Rules,OptsOut,OptsIn,Line,File,Lines) -->
+false_rules(false,Rules,OptsOut,OptsIn,Line,File,Lines) -->
     makefile_block(BlockRules,BlockOptsOut,OptsIn,Line,File,BlockLines),
     !, { Lnext is Line + BlockLines, append(BlockRules,NextRules,Rules) },
-    false_rules(NextRules,OptsOut,BlockOptsOut,Lnext,File,NextLines),
+    false_rules(false,NextRules,OptsOut,BlockOptsOut,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
-false_rules(_,_,_,Line,File,_) -->
+false_rules(true,[],OptsIn,OptsIn,Line,File,Lines) -->
+    ignore_makefile_block(OptsIn,Line,File,BlockLines),
+    !, { Lnext is Line + BlockLines },
+    false_rules(true,[],OptsIn,OptsIn,Lnext,File,NextLines),
+    { Lines is BlockLines + NextLines }.
+
+false_rules(_,_,_,_,Line,File,_) -->
     line_as_string(L), !,
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
@@ -229,7 +252,7 @@ false_rules(_,_,_,Line,File,_) -->
 xbracket(Sx) --> {char_code('(',L),char_code(')',R)}, xdelim(Sx,L,R).
 xquote(Sx) --> {char_code('\'',Q)}, xdelim(Sx,Q,Q).
 xdblquote(Sx) --> {char_code('"',Q)}, xdelim(Sx,Q,Q).
-xvar(Sx) --> makefile_var_string_from_codes(S), {eval_var(S,Sx,v(null,null,null,[]))}.
+xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx,v(null,null,null,[]))}.
 xdelim(Sx,L,R) --> delim(S,L,R), !, {expand_vars(S,Sx,v(null,null,null,[]))}.
 delim(S,L,R) --> opt_whitespace, delim_outer(Sc,L,R), {string_codes(S,Sc)}.
 delim_outer(S,L,R) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R),

@@ -1,0 +1,18 @@
+
+ABC = blah
+
+ifdef ABC
+ifdef_true:
+	echo Correct >$@
+else
+ifdef_true:
+	echo Incorrect >$@
+endif
+
+ifdef XYZ
+ifdef_false:
+	echo Incorrect >$@
+else
+ifdef_false:
+	echo Correct >$@
+endif
