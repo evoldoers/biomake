@@ -172,18 +172,16 @@ shell_echo_wrap(Exec,Result) :-
 shell_comment(Comment,ShellComment) :-
 	format(string(ShellComment),"# ~w",[Comment]).
 
-% unfortunately, shell_eval does not seem to work within threads on OS X.
-% use a temporary file instead.
 shell_eval(Exec,CodeList) :-
 	shell_path(Sh),
 	working_directory(CWD,CWD),
-        process_create(Sh,['-c',Exec],[stdout(pipe(Stream)),
-					 stderr(null),
-					 cwd(CWD),
-					 process(Pid)]),
-        read_stream_to_codes(Stream,CodeList),
-	process_wait(Pid,_Status),
-        close(Stream).
+        setup_call_cleanup(process_create(Sh,['-c',Exec],[stdout(pipe(Stream)),
+							  stderr(null),
+							  cwd(CWD),
+							  process(Pid)]),
+			   (read_stream_to_codes(Stream,CodeList),
+			    process_wait(Pid,_Status)),
+			   close(Stream)).
 
 shell_eval_str(Exec,Result) :-
         shell_eval(Exec,Rnl),

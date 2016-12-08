@@ -180,6 +180,10 @@ init_counts :-
 	nb_setval(tests,0),
 	nb_setval(passed,0).
 
+announce(_) :-
+    only_test(_),
+    !.
+
 announce(X) :-
     string_chars(X,C),
     length(C,L),
@@ -220,8 +224,7 @@ report_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
          -> pass_test(Desc); fail_test(Desc)),
 	working_directory(_,CWD).
 
-report_test(_,_,_,_,_,Fmt,Vars) :-
-	skip_test(Fmt,Vars).
+report_test(_,_,_,_,_,_,_).
 
 start_test(Fmt,Vars,Desc) :-
 	inc(tests),
@@ -229,11 +232,6 @@ start_test(Fmt,Vars,Desc) :-
 	(only_test(N) -> N = T; true),
 	format(string(Desc),Fmt,Vars),
 	format("Starting test #~d: ~s~n",[T,Desc]).
-
-skip_test(Fmt,Vars) :-
-	nb_getval(tests,T),
-	format(string(Desc),Fmt,Vars),
-	format("Skipping test #~d: ~s~n",[T,Desc]).
 
 pass_test(Desc) :-
         nb_getval(tests,T),
@@ -383,8 +381,7 @@ report_failure_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
          -> fail_test(Desc); pass_test(Desc)),
 	working_directory(_,CWD).
 
-report_failure_test(_,_,_,_,_,Fmt,Vars) :-
-	skip_test(Fmt,Vars).
+report_failure_test(_,_,_,_,_,_,_).
 
 n_chars(N,_,[]) :- N =< 0, !.
 n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.

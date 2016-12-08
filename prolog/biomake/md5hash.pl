@@ -14,13 +14,12 @@
 % MD5 HASHES
 % ----------------------------------------
 
-md5_prog("md5sum","").  % Ubuntu
-md5_prog("md5","-q").  % MacOS, BSD
+md5_prog("md5sum",[]).  % Ubuntu
+md5_prog("md5",["-q"]).  % MacOS, BSD
 
-find_md5_prog(Exec) :-
+find_md5_prog(Path,Args) :-
 	md5_prog(Prog,Args),
 	find_on_path(Prog,Path),
-	atomic_list_concat([Path,Args]," ",Exec),
 	!.
 
 :- dynamic md5_hash/3.
@@ -79,20 +78,13 @@ compute_md5(T,Size,Hash) :-
     assert(md5_hash(T,Size,Hash)).
 
 % try the md5 executables findable with md5_prog
-% use a temporary file instead of a pipe, since process_create doesn't seem to play well with threads in OSX :-(
 try_md5_prog(Filename,Hash) :-
-    find_md5_prog(Md5Prog),
-    % the following is not infallible: if two targets with the same base name are built at the same time, we'll get a tempfile name clash
-    % TODO: come up with a better scheme here
-    file_base_name(Filename,Base),
-    format(string(TmpPrefix),"md5_~w",[Base]),
-    tmp_file(TmpPrefix,TmpFile),
-    absolute_file_name(Filename,Path),
-    format(string(Exec),"~w ~w >~w",[Md5Prog,Path,TmpFile]),
-    debug(md5,'computing hash: ~w',[Exec]),
-    shell(Exec),
-    phrase_from_file(first_n(32,HashCodes),TmpFile),
-    delete_file(TmpFile),
+    find_md5_prog(Md5Prog,Args),
+    append(Args,[Filename],Md5Args),
+    setup_call_cleanup(process_create(Md5Prog,Md5Args,[stdout(pipe(Stream))]),
+		       read_stream_to_codes(Stream,CodeList),
+		       close(Stream)),
+    phrase(first_n(32,HashCodes),CodeList),
     string_codes(HashStr,HashCodes),
     debug(md5,'output of ~w ~w: ~w',[Md5Prog,Filename,HashStr]),
     string_lower(HashStr,Hash).
