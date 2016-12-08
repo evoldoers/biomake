@@ -173,6 +173,7 @@ test :-
 	run_failure_test("another_nonexistent_target","stop_on_error1"),
 	run_failure_test("-k -S yet_another_nonexistent_target","stop_on_error2"),
 	run_test("ref","target",["echo Pre-update >touch"],"-B -t","touch"),
+	run_test("ref/md5.touch","target/md5.touch",["echo wrong >hello","echo wrong >world","echo wrong_wrong >hello_world"],"-t -H","hello_world"),
 	run_test("ref","target",["echo Pre-update >multi_arg"],"-Bk still_another_nonexistent_target","multi_arg"),
 	run_test("CMDLINE_VAR=average --eval EVAL_VAR=worthy","cmdline_eval1"),
 	run_test("CMDLINE_VAR=mediocre. --eval-prolog EVAL_VAR=deserving.","cmdline_eval2"),
