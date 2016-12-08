@@ -227,4 +227,3 @@ Ideas for future development:
 * semantic web enhancement (using NEPOMUK file ontology)
 * using other back ends and target sources (sqlite db, REST services)
 * cloud-based computing
-* running computes on clusters
