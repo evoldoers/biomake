@@ -77,6 +77,10 @@ compute_md5(T,Size,Hash) :-
     retract_md5_hash(T),
     assert(md5_hash(T,Size,Hash)).
 
+% clauses of try_md5_prog/2 are discontiguous, due to a couple of renamed versions that don't work,
+% but are kept in here because it'd be a better world if they did work, and maybe they will one day.
+:- discontiguous md5hash:try_md5_prog/2.
+
 % try the md5 executables findable with md5_prog, using a temporary file to stash the hash
 try_md5_prog(Filename,Hash) :-
     find_md5_prog(Md5Prog,Args),
