@@ -167,70 +167,64 @@ makefile_assignment(assignment(Var,Op,Val),1) -->
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifeq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
-    !, {Active -> (Arg1 = Arg2 -> Status = true; Status = false) ; Status = null},
-    eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
+    !, {test_equal(Active,Arg1,Arg2,Condition)},
+    begin_true_rules(Condition,Result,OptsOut,OptsIn,Line,File,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifneq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
-    !, {Active -> (Arg1 \= Arg2 -> Status = true; Status = false) ; Status = null},
-    eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
+    !, {test_inequal(Active,Arg1,Arg2,Condition)},
+    begin_true_rules(Condition,Result,OptsOut,OptsIn,Line,File,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifdef", whitespace, xvar(Arg),
-    !, {Active -> (Arg \= '' -> Status = true; Status = false) ; Status = null},
-    eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
+    !, {test_inequal(Active,Arg,'',Condition)},
+    begin_true_rules(Condition,Result,OptsOut,OptsIn,Line,File,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifndef", whitespace, xvar(Arg),
-    !, {Active -> (Arg = '' -> Status = true; Status = false) ; Status = null},
-    eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
+    !, {test_equal(Active,Arg,'',Condition)},
+    begin_true_rules(Condition,Result,OptsOut,OptsIn,Line,File,Lines).
+
+test_equal(false,_,_,null).
+test_equal(true,X,X,true) :- !.
+test_equal(true,_,_,false).
+
+test_inequal(false,_,_,null).
+test_inequal(true,X,X,false) :- !.
+test_inequal(true,_,_,true).
 
 conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", xbracket(Arg2), ")".
 conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), ",", xquote(Arg2), "'".
 conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), ",", xdblquote(Arg2), "\"".
 
-eval_true_false_rules(true,TrueRules,TrueOptsOut,OptsIn,Line,File,Lines) -->
+begin_true_rules(Condition,Rules,OptsOut,OptsIn,Line,File,Lines) -->
     { Lnext is Line + 1 },
-    show_true_false_rules(true,TrueRules,_FalseRules,TrueOptsOut,OptsIn,_FalseOptsOut,OptsIn,Lnext,File,Ltf),
+    true_rules(Condition,Rules,OptsOut,OptsIn,Lnext,File,Ltf),
     { Lines is Ltf + 1 }.
 
-eval_true_false_rules(false,FalseRules,FalseOptsOut,OptsIn,Line,File,Lines) -->
-    { Lnext is Line + 1 },
-    show_true_false_rules(false,_TrueRules,FalseRules,_TrueOptsOut,OptsIn,FalseOptsOut,OptsIn,Lnext,File,Ltf),
-    { Lines is Ltf + 1 }.
-
-eval_true_false_rules(null,[],OptsIn,OptsIn,Line,File,Lines) -->
-    { Lnext is Line + 1 },
-    show_true_false_rules(null,_TrueRules,_FalseRules,_TrueOptsOut,OptsIn,_FalseOptsOut,OptsIn,Lnext,File,Ltf),
-    { Lines is Ltf + 1 }.
-
-show_true_false_rules(Status,TrueRules,FalseRules,TrueOptsOut,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
-    true_false_rules(Status,TrueRules,FalseRules,TrueOptsOut,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines),
-    {debug(makefile,"Status=~w TrueRules=~w FalseRules=~w TrueOptsOut=~w FalseOptsOut=~w Lines=~w~n",[Status,TrueRules,FalseRules,TrueOptsOut,FalseOptsOut,Lines])}.
-
-true_false_rules(_,[],[],TrueOptsIn,TrueOptsIn,FalseOptsIn,FalseOptsIn,_,_,1) -->
+true_rules(_,[],OptsIn,OptsIn,_,_,1) -->
     opt_space, "endif", !, opt_whitespace, "\n".
 
-true_false_rules(Status,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
+true_rules(Condition,Rules,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "else", !, opt_whitespace, "\n",
     { Lnext is Line + 1 },
-    false_rules(Status,FalseRules,FalseOptsOut,FalseOptsIn,Lnext,File,FalseLines),
+    false_rules(Condition,Rules,OptsOut,OptsIn,Lnext,File,FalseLines),
     { Lines is FalseLines + 1}.
 
-true_false_rules(true,TrueRules,[],TrueOptsOut,TrueOptsIn,FalseOptsIn,FalseOptsIn,Line,File,Lines) -->
-    makefile_block(BlockRules,BlockOptsOut,TrueOptsIn,Line,File,BlockLines),
-    !, { Lnext is Line + BlockLines, append(BlockRules,NextRules,TrueRules) },
-    true_false_rules(true,NextRules,[],TrueOptsOut,BlockOptsOut,FalseOptsIn,FalseOptsIn,Lnext,File,NextLines),
+true_rules(true,Rules,OptsOut,OptsIn,Line,File,Lines) -->
+    makefile_block(BlockRules,BlockOptsOut,OptsIn,Line,File,BlockLines),
+    !, { Lnext is Line + BlockLines, append(BlockRules,NextRules,Rules) },
+    true_rules(true,NextRules,OptsOut,BlockOptsOut,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
-true_false_rules(Status,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Line,File,Lines) -->
-    { Status \= true },
-    ignore_makefile_block(TrueOptsIn,Line,File,BlockLines),
+true_rules(Condition,Rules,OptsOut,OptsIn,Line,File,Lines) -->
+    { Condition \= true },
+    ignore_makefile_block(OptsIn,Line,File,BlockLines),
     !, { Lnext is Line + BlockLines },
-    true_false_rules(Status,[],FalseRules,TrueOptsIn,TrueOptsIn,FalseOptsOut,FalseOptsIn,Lnext,File,NextLines),
+    true_rules(Condition,Rules,OptsOut,OptsIn,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
-true_false_rules(_,_,_,_,_,_,_,Line,File,_) -->
+true_rules(_,_,_,_,Line,File,_) -->
     line_as_string(L), !,
     {format(string(Err),"GNU makefile parse error (expected else/endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
@@ -244,11 +238,11 @@ false_rules(false,Rules,OptsOut,OptsIn,Line,File,Lines) -->
     false_rules(false,NextRules,OptsOut,BlockOptsOut,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
-false_rules(Status,[],OptsIn,OptsIn,Line,File,Lines) -->
-    { Status \= false },
+false_rules(Condition,[],OptsIn,OptsIn,Line,File,Lines) -->
+    { Condition \= false },
     ignore_makefile_block(OptsIn,Line,File,BlockLines),
     !, { Lnext is Line + BlockLines },
-    false_rules(true,[],OptsIn,OptsIn,Lnext,File,NextLines),
+    false_rules(Condition,[],OptsIn,OptsIn,Lnext,File,NextLines),
     { Lines is BlockLines + NextLines }.
 
 false_rules(_,_,_,_,Line,File,_) -->
@@ -264,10 +258,10 @@ xdelim(Sx,L,R) --> delim(S,L,R), !, {expand_vars(S,Sx,v(null,null,null,[]))}.
 delim(S,L,R) --> opt_whitespace, delim_outer(Sc,L,R), {string_codes(S,Sc)}.
 delim_outer(S,L,R) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R),
 	{ append([L|I],[R],LIR), append(LIR,Rest,S) }.
-delim_outer(S,L,R) --> {char_code(',',C)}, code_list(Start,[L,R,C]), !, delim_outer(Rest,L,R), {append(Start,Rest,S)}.
+delim_outer(S,L,R) --> {char_code(',',C)}, code_list([Start1|Start],[L,R,C]), !, delim_outer(Rest,L,R), {append([Start1|Start],Rest,S)}.
 delim_outer([],_,_) --> !.
 delim_inner(S,L,R) --> [L], !, delim_inner(I,L,R), [R], {append([L|I],[R],S)}.
-delim_inner(S,L,R) --> code_list(Start,[L,R]), !, delim_inner(Rest,L,R), {append(Start,Rest,S)}.
+delim_inner(S,L,R) --> code_list([Start1|Start],[L,R]), !, delim_inner(Rest,L,R), {append([Start1|Start],Rest,S)}.
 delim_inner([],_,_) --> !.
     
 

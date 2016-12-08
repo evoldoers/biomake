@@ -160,9 +160,11 @@ test :-
 	run_test("--file=Makefile.argval","arg_equals_val"),
 	run_test("-f Makefile.subdir.include -I subdir","include_dir"),
 
-	announce("CONDITIONAL MAKEFILES"),
+	announce("CONDITIONAL SYNTAX"),
 	run_test("-f Makefile.cond","ifdef_true"),
 	run_test("-f Makefile.cond","ifdef_false"),
+	run_test("-f Makefile.cond","ifeq_true"),
+	run_test("-f Makefile.cond","ifeq_false"),
 
 	% All done
 	report_counts,
