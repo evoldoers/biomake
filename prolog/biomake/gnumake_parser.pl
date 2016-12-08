@@ -159,9 +159,28 @@ makefile_assignment(assignment(Var,Op,Val),1) -->
     line_as_string(Val).
 
 makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
-    opt_space, "ifeq", whitespace, "(", xstr_arg(Arg1), ",", xstr_arg(Arg2), ")", opt_whitespace, "\n",
+    opt_space, "ifeq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
     !, {Arg1 = Arg2 -> Status = true; Status = false},
     eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
+
+makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
+    opt_space, "ifneq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
+    !, {Arg1 \= Arg2 -> Status = true; Status = false},
+    eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
+
+makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
+    opt_space, "ifdef", whitespace, xvar(Arg), opt_whitespace, "\n",
+    !, {Arg \= "" -> Status = true; Status = false},
+    eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
+
+makefile_conditional(Result,OptsOut,OptsIn,Line,File,Lines) -->
+    opt_space, "ifndef", whitespace, xvar(Arg), opt_whitespace, "\n",
+    !, {Arg = "" -> Status = true; Status = false},
+    eval_true_false_rules(Status,Result,OptsOut,OptsIn,Line,File,Lines).
+
+conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", xbracket(Arg2), ")".
+conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), ",", xquote(Arg2), "'".
+conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), ",", xdblquote(Arg2), "\"".
 
 eval_true_false_rules(true,TrueResult,TrueOptsOut,OptsIn,Line,File,Lines) -->
     { Lnext is Line + 1 },
@@ -207,16 +226,19 @@ false_rules(_,_,_,Line,File,_) -->
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
-
-% the following code is essentially duplicated from functions.pl, with codes instead of chars... ugh
-xstr_arg(Sx) --> str_arg(S), !, {expand_vars(S,Sx,v(null,null,null,[]))}.
-str_arg(S) --> opt_whitespace, str_arg_outer(S).
-str_arg_outer(S) --> ['('], !, str_arg_inner(Si), [')'], str_arg_outer(Rest), {concat_string_list(["(",Si,")",Rest],S)}.
-str_arg_outer(S) --> string_from_codes(Start,"(),"), !, str_arg_outer(Rest), {string_concat(Start,Rest,S)}.
-str_arg_outer("") --> !.
-str_arg_inner(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(",Si,")"],S)}.
-str_arg_inner(S) --> string_from_codes(Start,"()"), !, str_arg_inner(Rest), {string_concat(Start,Rest,S)}.
-str_arg_inner("") --> !.
+xbracket(Sx) --> {char_code('(',L),char_code(')',R)}, xdelim(Sx,L,R).
+xquote(Sx) --> {char_code('\'',Q)}, xdelim(Sx,Q,Q).
+xdblquote(Sx) --> {char_code('"',Q)}, xdelim(Sx,Q,Q).
+xvar(Sx) --> makefile_var_string_from_codes(S), {eval_var(S,Sx,v(null,null,null,[]))}.
+xdelim(Sx,L,R) --> delim(S,L,R), !, {expand_vars(S,Sx,v(null,null,null,[]))}.
+delim(S,L,R) --> opt_whitespace, delim_outer(Sc,L,R), {string_codes(S,Sc)}.
+delim_outer(S,L,R) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R),
+	{ append([L|I],[R],LIR), append(LIR,Rest,S) }.
+delim_outer(S,L,R) --> {char_code(',',C)}, code_list(Start,[L,R,C]), !, delim_outer(Rest,L,R), {append(Start,Rest,S)}.
+delim_outer([],_,_) --> !.
+delim_inner(S,L,R) --> [L], !, delim_inner(I,L,R), [R], {append([L|I],[R],S)}.
+delim_inner(S,L,R) --> code_list(Start,[L,R]), !, delim_inner(Rest,L,R), {append(Start,Rest,S)}.
+delim_inner([],_,_) --> !.
     
 
 makefile_special_target(queue(none),Lines) -->
