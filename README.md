@@ -62,8 +62,8 @@ Options
     Use a GNU Makefile as the build specification
 -m,--eval,--makefile-syntax STRING
     Evaluate STRING as GNU Makefile syntax
--P,--eval-prolog,--makespec-syntax STRING
-    Evaluate STRING as Prolog Makespec syntax
+-P,--eval-prolog,--makeprog-syntax STRING
+    Evaluate STRING as Prolog Makeprog syntax
 -I,--include-dir DIR
     Specify search directory for included Makefiles
 --target TARGET
@@ -119,7 +119,7 @@ Examples
 
 (this assumes some knowledge of GNU Make and [Makefiles](https://www.gnu.org/software/make/manual/html_node/index.html))
 
-biomake looks for a Prolog file called `Makespec.pro` in your
+biomake looks for a Prolog file called `Makespec.pro` (or `Makeprog`) in your
 current directory. If it's not there, it will try looking for a
 `Makefile` in GNU Make format. The following examples describe the
 Prolog syntax; GNU Make syntax is described elsewhere,
@@ -170,7 +170,7 @@ The output shows the tree structure of the dependencies:
     bar2baz x.bar > x.baz
     test.baz is up to date
 
-The syntax in the makespec above is designed to be similar to what is
+The syntax in the makeprog above is designed to be similar to what is
 already used in makefiles. You can bypass this and use Prolog
 variables. The following form is functionally equivalent:
 

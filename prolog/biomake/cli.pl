@@ -93,8 +93,8 @@ eval_makespec_syntax_args([Eval|Evals],OptsOut,OptsIn) :-
 eval_makespec_syntax_args([],Opts,Opts).
 
 consult_makefile(AllOpts,Opts) :-
-	DefaultMakeprogs = ['makespec.pro','Makespec.pro'],
-	DefaultGnuMakefiles = ['Makefile'],
+	DefaultMakeprogs = ['Makeprog','makeprog','Makespec.pro','makespec.pro'],
+	DefaultGnuMakefiles = ['Makefile','makefile'],
 	(member(makeprog(BF),Opts)
 	 -> consult_makeprog(BF,AllOpts,Opts);
 	 (member(gnu_makefile(F),Opts)
@@ -232,8 +232,8 @@ arg_info('-m','STRING','Evaluate STRING as GNU Makefile syntax').
 parse_arg(['-P',Text|L],L,eval_makespec_syntax(Text)).
 recover_arg(['-P',Text],eval_makespec_syntax(Text)).
 arg_alias('-P','--eval-prolog').
-arg_alias('-P','--makespec-syntax').
-arg_info('-P','STRING','Evaluate STRING as Prolog Makespec syntax').
+arg_alias('-P','--makeprog-syntax').
+arg_info('-P','STRING','Evaluate STRING as Prolog Makeprog syntax').
 
 parse_arg(['-I',D|L],L,include_dir(D)).
 arg_alias('-I','--include-dir').
