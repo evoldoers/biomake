@@ -135,7 +135,7 @@ Add the following rule to your `Makespec.pro`:
 
 Unlike makefiles, whitespace is irrelevant. However, you
 do need the quotes, and remember the closing ".",
-as this is prolog syntax.
+as this is Prolog syntax.
 
 If you prefer to stick with GNU Make syntax,
 the above `Makespec.pro` is equivalent to the following `Makefile`:
@@ -171,7 +171,7 @@ The output shows the tree structure of the dependencies:
     test.baz is up to date
 
 The syntax in the makespec above is designed to be similar to what is
-already used in makefiles. You can bypass this and use prolog
+already used in makefiles. You can bypass this and use Prolog
 variables. The following form is functionally equivalent:
 
     '$(Base).bar' <-- '$(Base).foo',
@@ -217,13 +217,20 @@ the inputs.  We can write a `Makespec.pro` with the following:
         'align $X.fa $Y.fa > $@'.
 
 (note that if we have multiple dependecies, these must be separated by
-commas and enclodes in square brackets - i.e. a prolog list]
+commas and enclodes in square brackets - i.e. a Prolog list)
 
 Now if we have files `x.fa` and `y.fa` we can type:
 
     biomake align-x-y.tbl
 
-We can include arbitrary prolog, including both database facts and
+We could achieve the same thing with the following GNU `Makefile`:
+
+    align-$X-$Y.tbl: $X.fa $Y.fa
+        align $X.fa $Y.fa > $@
+
+This is already an improvement over GNU Make, which only allows a single wildcard.
+However, the Prolog version allows us to do even fancier things with logic.
+Specifically, we can add arbitrary Prolog, including both database facts and
 rules. We can use these rules to control flow in a way that is more
 powerful than makefiles. Let's say we only want to run a certain
 program when the inputs match a certain table in our database:
@@ -240,10 +247,10 @@ Note that here the rule consists of 4 parts:
 
  * the target/output
  * dependencies
- * a prolog goal, enclosed in {}s, that is called to determine values
+ * a Prolog goal, enclosed in `{}`s, that is called to determine values
  * the command
 
-In this case, the prolog goal succeeds with 9 solutions, with 3
+In this case, the Prolog goal succeeds with 9 solutions, with 3
 different values for X and Y. If we type:
 
     biomake align-platypus-coelocanth.tbl
