@@ -101,7 +101,7 @@ Var=Val
 --flush,--qsub-flush <target or directory>
     Erase all jobs for given target/dir
 --debug MSG
-    [developers] debugging messages. MSG can be build, pattern, makefile, md5...
+    [developers] Debugging messages. MSG can be build, pattern, makefile, md5...
 --trace predicate
     [developers] Print debugging trace for given predicate
 --no-backtrace 
