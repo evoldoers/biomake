@@ -1,9 +1,10 @@
 % * -*- Mode: Prolog -*- */
 
 % Database of species
-sp(mouse).
-sp(human).
+mammal(mouse).
+mammal(human).
 sp(zebrafish).
+sp(X) :- mammal(X).
 
 % rule for generating a pair of (non-identical) species (asymetric)
 pair(X,Y) :- sp(X),sp(Y),X@<Y.

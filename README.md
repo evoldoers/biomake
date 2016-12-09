@@ -265,7 +265,7 @@ We can create a top-level target that generates all solutions:
     sp(human).
     sp(zebrafish).
 
-    % rule for generating a pair of (non-identical) species (asymetric)
+    % rule for generating a pair of (non-identical) species (asymmetric)
     pair(X,Y) :- sp(X),sp(Y),X@<Y.
 
     % top level target
