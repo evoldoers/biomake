@@ -23,7 +23,7 @@ find_md5_prog(Path,Args) :-
 	!.
 
 :- dynamic md5_hash/3.
-:- dynamic md5_valid/3.
+:- dynamic md5_valid/4.
 
 md5_valid(File,_,_,Opts) :- member(old_file(File),Opts), !.
 
