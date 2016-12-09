@@ -355,10 +355,10 @@ arg_info('--flush','<target or directory>','Erase all jobs for given target/dir'
 % ----------------------------------------
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
-arg_info('--debug','MSG','[developers] debugging messages. MSG can be build, pattern, makefile, md5...').
+arg_info('--debug','MSG','[developers] Debugging messages. MSG can be build, pattern, makefile, md5...').
 
 parse_arg(['--trace',Pred|L],L,null) :- trace(Pred), !.
-arg_info('--trace','predicate','Print debugging trace for given predicate').
+arg_info('--trace','predicate','[developers] Print debugging trace for given predicate').
 
 parse_arg(['--no-backtrace'|L],L,null) :- assert(no_backtrace), !.
-arg_info('--no-backtrace','','Do not print a backtrace on error').
+arg_info('--no-backtrace','','[developers] Do not print a backtrace on error').

@@ -103,9 +103,9 @@ Var=Val
 --debug MSG
     [developers] debugging messages. MSG can be build, pattern, makefile, md5...
 --trace predicate
-    Print debugging trace for given predicate
+    [developers] Print debugging trace for given predicate
 --no-backtrace 
-    Do not print a backtrace on error
+    [developers] Do not print a backtrace on error
 ```
 
 Examples
