@@ -1,8 +1,8 @@
 Biomake
 =======
 
-This is a [make](https://www.gnu.org/software/make/)-like utility for managing builds (or analysis workflows) between multiple
-dependent files. No knowledge of prolog is necessary; biomake can
+This is a [make](https://www.gnu.org/software/make/)-like utility for managing builds (or analysis workflows) involving multiple
+dependent files. Biomake is built in Prolog, but no knowledge of prolog is necessary to use it; the program can be
 run off a stripped-down GNU Makefile. However, if you're prepared to
 learn a little Prolog, you can do a lot more. And, really, logic
 programming is the way you _should_ be specifying dependencies and
