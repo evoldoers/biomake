@@ -2,7 +2,8 @@
 
 :- module(gnumake_parser,
           [
-              parse_gnu_makefile/4
+              parse_gnu_makefile/4,
+	      eval_gnu_makefile/4
 	  ]).
 
 :- use_module(library(pio)).
@@ -12,16 +13,22 @@
 
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M,OptsOut,OptsIn) :-
-	parse_gnu_makefile('',F,M,OptsOut,OptsIn).
+    parse_gnu_makefile('',F,M,OptsOut,OptsIn).
 
 parse_gnu_makefile(DirSlash,F,M,OptsOut,OptsIn) :-
-    debug(makefile,'reading: ~w~n',[F]),
+    debug(makefile,'reading: ~w',[F]),
     atom_string(MAKEFILE_LIST,"MAKEFILE_LIST"),
     Assignment = assignment(MAKEFILE_LIST,"+=",F),
     add_gnumake_clause(Assignment,OptsIn,OptsIn),
     format(string(Path),"~w~w",[DirSlash,F]),
     phrase_from_file(makefile_rules(Mf,OptsOut,OptsIn,1,Path),Path),
     M = [Assignment|Mf],
+    debug(makefile,"rules: ~w~noptions: ~w",[M,OptsOut]).
+
+eval_gnu_makefile(Text,M,OptsOut,OptsIn) :-
+    debug(makefile,'evaluating: ~w',[Text]),
+    string_codes(Text,Codes),
+    phrase(makefile_rules(M,OptsOut,OptsIn,1,"(eval)"),Codes),
     debug(makefile,"rules: ~w~noptions: ~w",[M,OptsOut]).
 
 % Grammar for reading GNU Makefile
@@ -39,7 +46,7 @@ makefile_block([],Opts,Opts,_,_,1) --> info_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> warning_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> error_line, !.
 makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(true,Rules,OptsOut,OptsIn,Line,File,Lines), !.
-makefile_block(Rules,OptsOut,OptsIn,_,_,1) --> include_line(true,Rules,OptsOut,OptsIn), !.
+makefile_block(Rules,OptsOut,OptsIn,_,File,1) --> include_line(true,File,Rules,OptsOut,OptsIn), !.
 makefile_block([Assignment],Opts,Opts,_,_,Lines) --> makefile_assignment(Assignment,Lines), !,
 	{add_gnumake_clause(Assignment,Opts,Opts)}.
 makefile_block([option(Opt)],[Opt|Opts],Opts,_,_,Lines) --> makefile_special_target(Opt,Lines), !.
@@ -55,7 +62,7 @@ makefile_block(_,_,_,Line,File,_) -->
 	syntax_error(Err)}.
 
 ignore_makefile_block(Opts,Line,File,Lines) --> makefile_conditional(false,_,_,Opts,Line,File,Lines), !.
-ignore_makefile_block(Opts,_,_,1) --> include_line(false,_,Opts,Opts), !.
+ignore_makefile_block(Opts,_,_,1) --> include_line(false,null,_,Opts,Opts), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_assignment(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_special_target(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_recipe(_,Lines), !.
@@ -97,41 +104,42 @@ info_line -->
     !,
     {format("~w~n",[W])}.
 
-include_line(Active,Rules,OptsOut,OptsIn) -->
+include_line(Active,CurrentFile,Rules,OptsOut,OptsIn) -->
     opt_space,
     "include",
     whitespace,
-    include_makefiles(Active,Rules,OptsOut,OptsIn).
+    include_makefiles(Active,CurrentFile,Rules,OptsOut,OptsIn).
 
-include_makefiles(Active,Rules,OptsOut,OptsIn) -->
+include_makefiles(Active,CurrentFile,Rules,OptsOut,OptsIn) -->
 	makefile_filename_string(F), opt_whitespace, "\n", !,
-	{Active -> include_gnu_makefile(F,Rules,OptsOut,OptsIn) ; true}.
-include_makefiles(Active,Rules,OptsOut,OptsIn) -->
+	{Active -> include_gnu_makefile(F,CurrentFile,Rules,OptsOut,OptsIn) ; true}.
+include_makefiles(Active,CurrentFile,Rules,OptsOut,OptsIn) -->
 	makefile_filename_string(F), whitespace, !,
-	{Active -> include_gnu_makefile(F,R,Opts,OptsIn) ; true},
-	include_makefiles(Next,OptsOut,Opts),
+	{Active -> include_gnu_makefile(F,CurrentFile,R,Opts,OptsIn) ; true},
+	include_makefiles(Next,CurrentFile,OptsOut,Opts),
 	{append(R,Next,Rules)}.
 
-include_gnu_makefile(F,R,Opts,OptsIn) :-
+include_gnu_makefile(F,CurrentFile,R,Opts,OptsIn) :-
 	(bagof(Dslash,
 	       (member(include_dir(D),OptsIn),
 	        format(atom(Dslash),"~w/",[D])),
 	       RevDirs)
 	 ; RevDirs = []),
 	reverse(RevDirs,Dirs),
-	search_include_dirs(F,['','./'|Dirs],R,Opts,OptsIn).
+	file_directory_name(CurrentFile,CurrentFileDir),
+	format(atom(CurrentFileDirSlash),"~w/",[CurrentFileDir]),
+	search_include_dirs(F,CurrentFile,['','./',CurrentFileDirSlash|Dirs],R,Opts,OptsIn).
 
-search_include_dirs(F,[],_,_,_) :-
-	format(string(Err),"Couldn't find included makefile ~w~n",[F]),
+search_include_dirs(F,CurrentFile,[],_,_,_) :-
+	format(string(Err),"Couldn't find makefile ~w included from ~w",[F,CurrentFile]),
 	throw(Err).
-search_include_dirs(F,[Dir|_],R,Opts,OptsIn) :-
+search_include_dirs(F,_,[Dir|_],R,Opts,OptsIn) :-
 	format(string(Path),"~w/~w",[Dir,F]),
 	exists_file(Path),
-	format("Found ~w~n",Path),
 	!,
 	parse_gnu_makefile(Dir,F,R,Opts,OptsIn).
-search_include_dirs(F,[_|Dirs],R,Opts,OptsIn) :-
-	search_include_dirs(F,Dirs,R,Opts,OptsIn).
+search_include_dirs(F,CurrentFile,[_|Dirs],R,Opts,OptsIn) :-
+	search_include_dirs(F,CurrentFile,Dirs,R,Opts,OptsIn).
 
 makefile_assignment(assignment(Var,Op,Val),Lines) -->
     opt_space,
@@ -193,9 +201,9 @@ test_inequal(false,_,_,null).
 test_inequal(true,X,X,false) :- !.
 test_inequal(true,_,_,true).
 
-conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", xbracket(Arg2), ")".
-conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), ",", xquote(Arg2), "'".
-conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), ",", xdblquote(Arg2), "\"".
+conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", opt_whitespace, xbracket(Arg2), ")".
+conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), "'", whitespace, "'", xquote(Arg2), "'".
+conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), "\"", whitespace, "\"", xdblquote(Arg2), "\"".
 
 begin_true_rules(Condition,Rules,OptsOut,OptsIn,Line,File,Lines) -->
     { Lnext is Line + 1 },
@@ -250,20 +258,21 @@ false_rules(_,_,_,_,Line,File,_) -->
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
-xbracket(Sx) --> {char_code('(',L),char_code(')',R)}, xdelim(Sx,L,R).
-xquote(Sx) --> {char_code('\'',Q)}, xdelim(Sx,Q,Q).
-xdblquote(Sx) --> {char_code('"',Q)}, xdelim(Sx,Q,Q).
-xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx,v(null,null,null,[]))}.
-xdelim(Sx,L,R) --> delim(S,L,R), !, {expand_vars(S,Sx,v(null,null,null,[]))}.
-delim(S,L,R) --> opt_whitespace, delim_outer(Sc,L,R), {string_codes(S,Sc)}.
-delim_outer(S,L,R) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R),
+xbracket(Sx) --> {char_code('(',L),char_code(')',R),char_code(',',C)}, xdelim(Sx,L,R,[C]).
+xdelim(Sx,L,R,X) --> delim(S,L,R,X), !, {expand_vars(S,Sx)}.
+delim(S,L,R,X) --> delim_outer(Sc,L,R,X), {string_codes(S,Sc)}.
+delim_outer(S,L,R,X) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R,X),
 	{ append([L|I],[R],LIR), append(LIR,Rest,S) }.
-delim_outer(S,L,R) --> {char_code(',',C)}, code_list([Start1|Start],[L,R,C]), !, delim_outer(Rest,L,R), {append([Start1|Start],Rest,S)}.
-delim_outer([],_,_) --> !.
+delim_outer(S,L,R,X) --> code_list([Start1|Start],[L,R|X]), !, delim_outer(Rest,L,R,X), {append([Start1|Start],Rest,S)}.
+delim_outer([],_,_,_) --> !.
 delim_inner(S,L,R) --> [L], !, delim_inner(I,L,R), [R], {append([L|I],[R],S)}.
 delim_inner(S,L,R) --> code_list([Start1|Start],[L,R]), !, delim_inner(Rest,L,R), {append([Start1|Start],Rest,S)}.
 delim_inner([],_,_) --> !.
-    
+
+xquote(Sx) --> code_list(C,['\'']), {string_codes(S,C), expand_vars(S,Sx)}.
+xdblquote(Sx) --> code_list(C,['"']), {string_codes(S,C), expand_vars(S,Sx)}.
+xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx)}.
+
 
 makefile_special_target(queue(none),Lines) -->
     makefile_recipe(rule([".NOTPARALLEL"],_,_),Lines).
@@ -283,7 +292,6 @@ makefile_recipe(rule(Head,Deps,[Efirst|Erest]),Lines) -->
     opt_makefile_targets(Deps),
     ";",
     line_as_string(Efirst),
-    "\n",
     !,
     makefile_execs(Erest,Lexecs),
     {Lines is 1 + Lexecs}.
@@ -300,6 +308,7 @@ makefile_target_string(S) --> string_from_codes(S,":; \t\n").
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".
+op_string("::=") --> ":=".
 op_string("?=") --> "?=".
 op_string("+=") --> "+=".
 op_string("!=") --> "!=".

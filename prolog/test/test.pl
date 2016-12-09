@@ -52,7 +52,10 @@ test :-
 	run_test("one_line_with_deps"),
 	run_test("-f Makefile.include","inc2.test"),
 	run_test("-f Makefile.include","makefile_list"),
+	run_test("-f Makefile.dir1","relative_include_path"),
 	run_test("forced_rebuild"),
+	run_test("ref","target",["touch old_dep","echo Pre-update >older_dep"],"","older_dep"),
+	run_test("ref","target",["echo Pre-update >newer_dep","sleep 1","touch new_dep"],"","newer_dep"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),
@@ -126,6 +129,7 @@ test :-
 	run_test("call"),
 	run_test("shell"),
 	run_test("foreach"),
+	run_test("value"),
 	run_test("bad_function_syntax"),
 
 	announce("MD5 CHECKSUMS"),
@@ -149,8 +153,11 @@ test :-
 	announce("QUEUES"),
 
 	% Queues are a bit under-served by tests at the moment...
+	% The first two tests just test that the Makefile is working and that commands can be run from a script.
 	run_test("-f Makefile.queue","i.am.the.garbage.flower"),
 	run_test("-f Makefile.queue --one-shell","love.will.tear.us.apart"),
+	% The remaining tests use the test queue (which just runs commands in a script)
+	% and the thread-pool queue, with and without MD5 hashes.
 	run_test("-f Makefile.queue -Q test","what.difference.does.it.make"),
 	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
 	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),
@@ -160,7 +167,17 @@ test :-
 
 	run_test("--file=Makefile.argval","arg_equals_val"),
 	run_test("-f Makefile.subdir.include -I subdir","include_dir"),
-	% could do with more here
+	run_test("ref","target",["touch what_if_dep","sleep 1","echo Pre-update >what_if"],"-W what_if_dep","what_if"),
+	run_test("ref","target",["echo Pre-update >old_file_target","sleep 1","touch old_file_target_dep"],"-o old_file_target","old_file_target"),
+	run_test("ref","target",["echo Pre-update >old_file_dep","sleep 1","touch old_file_dep_dep"],"-o old_file_dep_dep","old_file_dep"),
+	run_test("-k nonexistent_target","keep_going"),
+	run_failure_test("another_nonexistent_target","stop_on_error1"),
+	run_failure_test("-k -S yet_another_nonexistent_target","stop_on_error2"),
+	run_test("ref","target",["echo Pre-update >touch"],"-B -t","touch"),
+	run_test("ref/md5.touch","target/md5.touch",["echo wrong >hello","echo wrong >world","echo wrong_wrong >hello_world"],"-t -H","hello_world"),
+	run_test("ref","target",["echo Pre-update >multi_arg"],"-Bk still_another_nonexistent_target","multi_arg"),
+	run_test("CMDLINE_VAR=average --eval EVAL_VAR=worthy","cmdline_eval1"),
+	run_test("CMDLINE_VAR=mediocre. --eval-prolog EVAL_VAR=deserving.","cmdline_eval2"),
 	
 	announce("CONDITIONAL SYNTAX"),
 
@@ -168,7 +185,19 @@ test :-
 	run_test("-f Makefile.cond","ifdef_false"),
 	run_test("-f Makefile.cond","ifeq_true"),
 	run_test("-f Makefile.cond","ifeq_false"),
-	% TODO: ifndef, ifneq, nesting of includes & ifs inside reachable & unreachable clauses
+	run_test("-f Makefile.cond","ifndef_true"),
+	run_test("-f Makefile.cond","ifndef_false"),
+	run_test("-f Makefile.cond","ifneq_true"),
+	run_test("-f Makefile.cond","ifneq_false"),
+	run_test("-f Makefile.cond","ifeq_true_ifneq_false"),
+	run_test("-f Makefile.cond","ifeq_false_ifneq_true"),
+	run_test("-f Makefile.cond","nested_ifeq_ifneq"),
+	run_test("-f Makefile.cond","nested_ifeq_include"),
+	run_test("-f Makefile.cond","ifeq_space1"),
+	run_test("-f Makefile.cond","ifeq_space2"),
+	run_test("-f Makefile.cond","ifeq_space3"),
+	run_test("-f Makefile.cond","ifeq_quote"),
+	run_test("-f Makefile.cond","ifeq_dblquote"),
 	
 	% All done
 	report_counts,

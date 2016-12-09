@@ -1,5 +1,7 @@
 
 ABC = blah
+FOO = blah
+BAR = meh
 
 ifdef ABC
 ifdef_true:
@@ -17,8 +19,21 @@ ifdef_false:
 	echo 'Correct, XYZ is undefined' >$@
 endif
 
-FOO = blah
-BAR = meh
+ifndef ABC
+ifndef_true:
+	echo 'Incorrect, ABC is defined' >$@
+else
+ifndef_true:
+	echo 'Correct, ABC is defined' >$@
+endif
+
+ifndef XYZ
+ifndef_false:
+	echo 'Correct, XYZ is undefined' >$@
+else
+ifndef_false:
+	echo 'Incorrect, XYZ is undefined' >$@
+endif
 
 ifeq ($(FOO),$(ABC))
 ifeq_true:
@@ -36,3 +51,97 @@ ifeq_false:
 	echo 'Correct, FOO \= BAR' >$@
 endif
 
+ifneq ($(FOO),$(ABC))
+ifneq_true:
+	echo 'Incorrect, FOO = ABC' >$@
+else
+ifneq_true:
+	echo 'Correct, FOO = ABC' >$@
+endif
+
+ifneq ($(FOO),$(BAR))
+ifneq_false:
+	echo 'Correct, FOO \= BAR' >$@
+else
+ifneq_false:
+	echo 'Incorrect, FOO \= BAR' >$@
+endif
+
+ifeq ($(FOO),$(ABC))
+ifeq_true_ifneq_false:
+	echo 'Correct, FOO = ABC' >$@
+endif
+
+ifneq ($(FOO),$(ABC))
+ifeq_true_ifneq_false:
+	echo 'Incorrect, FOO = ABC' >$@
+endif
+
+ifeq ($(FOO),$(BAR))
+ifeq_false_ifneq_true:
+	echo 'Incorrect, FOO \= BAR' >$@
+endif
+
+ifneq ($(FOO),$(BAR))
+ifeq_false_ifneq_true:
+	echo 'Correct, FOO \= BAR' >$@
+endif
+
+TESTVAR1 = correct
+TESTVAR2 = incorrect
+TESTVAR3 = correct
+TESTVAR4 = correct
+ifeq ($(ABC),$(FOO))
+ifneq ($(BAR),meh)
+TESTVAR1 = incorrect
+else
+TESTVAR2 = correct
+endif
+else
+TESTVAR3 = incorrect
+ifeq ($(BAR),meh)
+TESTVAR4 = incorrect
+endif
+endif
+
+nested_ifeq_ifneq:
+	echo TESTVARs are $(TESTVAR1), $(TESTVAR2), $(TESTVAR3), $(TESTVAR4) >$@
+
+ifeq ($(ABC),$(FOO))
+include Makefile.cond.inc1
+else
+include Makefile.cond.inc2
+endif
+
+nested_ifeq_include:
+	echo $(GREETING) >$@
+
+ifeq ($(ABC), blah)
+ifeq_space1: ; echo correct >$@
+else
+ifeq_space1: ; echo incorrect >$@
+endif
+
+ifeq ($(ABC), blah )
+ifeq_space2: ; echo incorrect >$@
+else
+ifeq_space2: ; echo correct >$@
+endif
+
+ifeq ( $(ABC), blah)
+ifeq_space3: ; echo incorrect >$@
+else
+ifeq_space3: ; echo correct >$@
+endif
+
+ifeq '$(ABC)' 'blah'
+ifeq_quote: ; echo correct >$@
+else
+ifeq_quote: ; echo incorrect >$@
+endif
+
+ifeq "$(ABC)" "blah"
+ifeq_dblquote: ; echo correct >$@
+else
+ifeq_dblquote: ; echo incorrect >$@
+endif

@@ -5,6 +5,10 @@
            build_default/0,
            build_default/1,
 
+	   halt_success/0,
+	   halt_error/0,
+
+	   bind_special_variables/1,
 	   start_queue/1,
            build/1,
            build/2,
@@ -13,8 +17,10 @@
 	   report/3,
 	   report/4,
 	   
-           consult_makeprog/3,
            consult_gnu_makefile/3,
+           consult_makeprog/3,
+	   eval_string_as_makeprog_term/3,
+	   eval_atom_as_makeprog_term/3,
 
 	   add_spec_clause/3,
 	   add_spec_clause/4,
@@ -32,8 +38,10 @@
 	   run_execs_now/3,
 	   report_run_exec/3,
 	   update_hash/3,
-	   
+
 	   global_binding/2,
+	   bindvar/3,
+	   expand_vars/2,
 	   expand_vars/3
            ]).
 
@@ -88,7 +96,7 @@ build(T,SL,Opts) :-
 	reverse(SL,SLrev),
 	concat_string_list(SLrev,Chain," <-- "),
 	report("Cyclic dependency detected: ~w <-- ~w",[Chain,T],SL,Opts),
-        halt(1).
+        halt_error.
 
 build(T,SL,Opts) :-
         %show_global_bindings,
@@ -110,13 +118,10 @@ build(T,SL,Opts) :-
         report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
         \+ target_bindrule(T,_),
-        report('Don\'t know how to make ~w',[T],SL,Opts),
-        !,
-        fail.
+        handle_error('Don\'t know how to make ~w',[T],SL,Opts),
+	!.
 build(T,SL,Opts) :-
-        report('~w FAILED',[T],SL,Opts),
-        !,
-        fail.
+        handle_error('~w FAILED',[T],SL,Opts).
 
 % potentially split this into two steps:
 %  phase 1 iterates through targets and initiates any jobs
@@ -125,6 +130,14 @@ build_targets([],_,_).
 build_targets([T|TL],SL,Opts) :-
         build(T,SL,Opts),
         build_targets(TL,SL,Opts).
+
+% Special vars
+bind_special_variables(Opts) :-
+        member(biomake_prog(Prog),Opts),
+	add_spec_clause(('MAKE' = Prog),[],[]),
+	bagof(Arg,member(biomake_args(Arg),Opts),Args),
+	atomic_list_concat(Args," ",ArgStr),
+	add_spec_clause(('MAKEFLAGS' = ArgStr),[],[]).
 
 % Queue setup/wrapup
 start_queue(Opts) :-
@@ -139,6 +152,11 @@ finish_queue(Opts) :-
 	!,
 	release_queue(Q).
 finish_queue(_).
+
+
+% finish
+halt_success :- halt(0).
+halt_error :- halt(2).
 
 
 % ----------------------------------------
@@ -171,6 +189,17 @@ debug_report(Topic,Fmt,Args,SL) :-
 
 % The interactions between the various options are a little tricky...
 % Essentially (simplifying a little): MD5 overrides timestamps, except when queues are used.
+rebuild_required(T,DL,SL,Opts) :-
+	member(what_if(D),Opts),
+        member(D,DL),
+        !,
+        report('Target ~w has dependency ~w marked as modified from the command-line - building',[T,D],SL,Opts).
+rebuild_required(T,_,SL,Opts) :-
+        atom_string(T,Ts),
+        member(old_file(Ts),Opts),
+        !,
+        report('Target ~w marked as old from the command-line - will not rebuild',[T],SL,Opts),
+	fail.
 rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
@@ -178,6 +207,7 @@ rebuild_required(T,_,SL,Opts) :-
 rebuild_required(T,DL,SL,Opts) :-
         member(D,DL),
         \+ exists_target(D,Opts),
+	\+ member(old_file(D),Opts),
         !,
         report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
@@ -208,10 +238,12 @@ rebuild_required(T,_,SL,Opts) :-
 
 has_newer_dependency(T,DL,D,Opts) :-
         member(D,DL),
+	\+ member(old_file(D),Opts),
         has_newer_timestamp(D,T,Opts).
 
 has_rebuilt_dependency(T,DL,D,Opts) :-
         member(D,DL),
+	\+ member(old_file(D),Opts),
 	was_built_after(D,T,Opts).
 
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
@@ -285,6 +317,15 @@ run_execs_and_update(Rule,SL,Opts) :-
     flag_as_rebuilt(T).
 
 dispatch_run_execs(Rule,SL,Opts) :-
+        member(touch_only(true),Opts),
+	!,
+        rule_target(Rule,T,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	format(string(Cmd),"touch ~w",[T]),
+	shell(Cmd),
+	(member(silent(true),Opts) -> true; report('~w',[Cmd],SL,Opts)),
+	update_hash(T,DL,Opts).
+dispatch_run_execs(Rule,SL,Opts) :-
 	member(queue(Q),Opts),
 	!,
 	rule_target(Rule,T,Opts),
@@ -327,32 +368,42 @@ run_execs([E|Es],SL,Opts) :-
         run_exec(E,SL,Opts),
         run_execs(Es,SL,Opts).
 
-run_exec(Exec,SL,_Opts) :-
+run_exec(Exec,SL,Opts) :-
 	string_chars(Exec,['@'|SilentChars]),
 	!,
 	string_chars(Silent,SilentChars),
-	silent_run_exec(Silent,SL).
+	silent_run_exec(Silent,SL,Opts).
 run_exec(Exec,SL,Opts) :-
 	member(silent(true),Opts),
-	silent_run_exec(Exec,SL).
+	silent_run_exec(Exec,SL,Opts).
 run_exec(Exec,SL,Opts) :-
 	report_run_exec(Exec,SL,Opts).
 
 report_run_exec(Exec,SL,Opts) :-
         report('~w',[Exec],SL,Opts),
-	silent_run_exec(Exec,SL).
+	silent_run_exec(Exec,SL,Opts).
 
-silent_run_exec(Exec,SL) :-
+silent_run_exec(Exec,SL,Opts) :-
         get_time(T1),
         shell(Exec,Err),
         get_time(T2),
         DT is T2-T1,
         debug_report(build,'  Return: ~w Time: ~w',[Err,DT],SL),
-        Err=0,
+	handle_exec_error(Exec,Err,SL,Opts),
         !.
 
-silent_run_exec(Exec,_Opts) :-
-        throw(error(run(Exec))).
+handle_exec_error(_,0,_,_) :- !.
+handle_exec_error(Exec,Err,SL,Opts) :-
+        handle_error('Error ~w executing ~w',[Err,Exec],SL,Opts).
+
+handle_error(Fmt,Args,SL,Opts) :-
+        report(Fmt,Args,SL),
+        member(keep_going_on_error(true),Opts),
+        \+ member(stop_on_error(true),Opts),
+        !.
+handle_error(_,_,_,_) :-
+        halt_error.
+
 
 % run_execs_if_required tests the always_make and md5 options before running a recipe.
 % When biomake is run without queues, these tests happen in rebuild_required,
@@ -503,9 +554,20 @@ read_makeprog_stream(IO,OptsOut,OptsIn) :-
         read_term(IO,Term,[variable_names(VNs),
                            syntax_errors(error),
                            module(biomake)]),
-        debug(makeprog,'adding: ~w',[Term]),
+        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
         add_spec_clause(Term,VNs,Opts,OptsIn),
 	read_makeprog_stream(IO,OptsOut,Opts).
+
+eval_string_as_makeprog_term(String,OptsOut,OptsIn) :-
+        atom_string(Atom,String),
+        eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn).
+
+eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn) :-
+        read_term_from_atom(Atom,Term,[variable_names(VNs),
+				       syntax_errors(error),
+				       module(biomake)]),
+        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
+        add_spec_clause(Term,VNs,OptsOut,OptsIn).
 
 translate_gnu_makefile(M,P) :-
     debug(makeprog,"Writing translated makefile to ~w",[P]),
@@ -540,7 +602,7 @@ write_clause(_,assignment(Var,_,_)) :-
     atom_codes(Var,[V|_]),
     V @>= 97, V @=< 122,   % a through z
     format("Prolog will not recognize `~w' as a variable, as it does not begin with an upper-case letter.~nStubbornly refusing to translate unless you fix this outrageous affront!~n",[Var]),
-    halt(1).
+    halt_error.
 
 write_clause(IO,assignment(Var,Op,Val)) :-
     format(IO,"~w ~w ~q.~n",[Var,Op,Val]).
@@ -576,6 +638,7 @@ add_spec_clause( (Var ?= X), VNs, Opts, Opts) :-
 add_spec_clause( Ass, _VNs, Opts, Opts) :-
 	Ass =.. [Op,Var,X],
 	is_assignment_op(Op),
+	\+ var(Var),
         global_cmdline_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w ~w ~w since ~w was bound to ~w on the command-line",[Var,Op,X,Var,Oldval]).
@@ -695,7 +758,7 @@ mkrule_default(T,D,E,true,VNs) :- with(mkrule(T,D,E),VNs).
 mkrule_default(T,D,E,G,VNs) :- with(mkrule(T,D,E,G),VNs).
 
 expand_vars(X,Y) :-
-	expand_vars(X,Y,v("","","",[])).
+	expand_vars(X,Y,v(null,null,null,[])).
 
 expand_vars(X,Y,V) :-
 	normalize_pattern(X,Yt,V),
@@ -769,26 +832,30 @@ varlabel('@') --> ['@'],!.
 varlabel('^') --> ['^'],!.
 varlabel('+') --> ['^'],!.  % $+ is not quite the same as $^, but we fudge it
 varlabel('?') --> ['^'],!.  % $? is not quite the same as $^, but we fudge it
-varlabel('<') --> ['(','<',')'],!.
-varlabel('*') --> ['(','*',')'],!.
-varlabel('@') --> ['(','@',')'],!.
-varlabel('^') --> ['(','^',')'],!.
-varlabel('^') --> ['(','+',')'],!.
-varlabel('^') --> ['(','?',')'],!.
-varlabel('*F') --> ['(','*','F',')'],!.
-varlabel('*D') --> ['(','*','D',')'],!.
-varlabel('@F') --> ['(','@','F',')'],!.
-varlabel('@D') --> ['(','@','D',')'],!.
-varlabel('<F') --> ['(','<','F',')'],!.
-varlabel('<D') --> ['(','<','D',')'],!.
-varlabel('^F') --> ['(','^','F',')'],!.
-varlabel('^D') --> ['(','^','D',')'],!.
-varlabel('^F') --> ['(','+','F',')'],!.
-varlabel('^D') --> ['(','+','D',')'],!.
-varlabel('^F') --> ['(','?','F',')'],!.
-varlabel('^D') --> ['(','?','D',')'],!.
+varlabel('<') --> bracketed(['<']),!.
+varlabel('*') --> bracketed(['*']),!.
+varlabel('@') --> bracketed(['@']),!.
+varlabel('^') --> bracketed(['^']),!.
+varlabel('^') --> bracketed(['+']),!.
+varlabel('^') --> bracketed(['?']),!.
+varlabel('*F') --> bracketed(['*','F']),!.
+varlabel('*D') --> bracketed(['*','D']),!.
+varlabel('@F') --> bracketed(['@','F']),!.
+varlabel('@D') --> bracketed(['@','D']),!.
+varlabel('<F') --> bracketed(['<','F']),!.
+varlabel('<D') --> bracketed(['<','D']),!.
+varlabel('^F') --> bracketed(['^','F']),!.
+varlabel('^D') --> bracketed(['^','D']),!.
+varlabel('^F') --> bracketed(['+','F']),!.
+varlabel('^D') --> bracketed(['+','D']),!.
+varlabel('^F') --> bracketed(['?','F']),!.
+varlabel('^D') --> bracketed(['?','D']),!.
 varlabel(A) --> makefile_var_char(C), {atom_chars(A,[C])}.
 varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
+varlabel(A) --> ['{'],makefile_var_atom_from_chars(A),['}'].
+
+bracketed(L) --> ['('],L,[')'].
+bracketed(L) --> ['{'],L,['}'].
 
 bindvar(VL,v(S,T,D,BL),X) :- bindauto(VL,v(S,T,D,BL),X), !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.

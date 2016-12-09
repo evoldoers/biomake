@@ -23,7 +23,9 @@ find_md5_prog(Path,Args) :-
 	!.
 
 :- dynamic md5_hash/3.
-:- dynamic md5_valid/3.
+:- dynamic md5_valid/4.
+
+md5_valid(File,_,_,Opts) :- member(old_file(File),Opts), !.
 
 md5_hash_up_to_date(T,DL,Opts) :-
     atom(T),
@@ -31,11 +33,11 @@ md5_hash_up_to_date(T,DL,Opts) :-
     atom_chars(T,Tc),
     string_chars(Tstr,Tc),
     md5_hash_up_to_date(Tstr,DL,Opts).
-md5_hash_up_to_date(T,DL,_Opts) :-
+md5_hash_up_to_date(T,DL,Opts) :-
     !,
     debug(md5,"Checking MD5 hash validity for ~w <-- ~w",[T,DL]),
     md5_check(T,S,H),
-    md5_valid(T,S,H).
+    md5_valid(T,S,H,Opts).
 
 % read_md5_file attempts to find the MD5 hash of a target and (if known) the conditions under which this target is still valid.
 % It does this by first trying to read the file .biomake/md5/{targetName}, then trying to lookup the hash in its database,
@@ -84,10 +86,10 @@ compute_md5(T,Size,Hash) :-
 % try the md5 executables findable with md5_prog, using a temporary file to stash the hash
 try_md5_prog(Filename,Hash) :-
     find_md5_prog(Md5Prog,Args),
-    append(Args,[Filename],Md5Args),
+    absolute_file_name(Filename,Path),
+    append(Args,[Path],Md5Args),
     atomic_list_concat(Md5Args," ",Md5ArgStr),
     biomake_private_filename_dir_exists(Filename,"tmp",TmpFile),
-    absolute_file_name(Filename,Path),
     format(string(Exec),"~w ~w >~w",[Md5Prog,Md5ArgStr,TmpFile]),
     debug(md5,'computing hash: ~w',[Exec]),
     shell(Exec),
@@ -148,7 +150,7 @@ make_md5_hash_term(T,S,H,Str) :-
     format(string(Str),"md5_hash(\"~w\",~d,\"~w\")",[T,S,H]).
 
 make_md5_valid_term(T,S,H,Str) :-
-    format(string(Str),"md5_valid(\"~w\",~d,\"~w\")",[T,S,H]).
+    format(string(Str),"md5_valid(\"~w\",~d,\"~w\",_)",[T,S,H]).
 
 make_md5_check_term(T,S,H,Str) :-
     format(string(Str),"md5_check(\"~w\",~d,\"~w\")",[T,S,H]).

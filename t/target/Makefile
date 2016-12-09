@@ -19,6 +19,12 @@ first_dep: a.echo b.echo c.echo
 all_deps: a.echo b.echo c.echo
 	echo $^ >$@
 
+newer_dep: new_dep
+	echo Updated newer_dep >$@
+
+older_dep: old_dep
+	echo Updated older_dep >$@
+
 FOO = .foo
 
 %.bar: %$(FOO)
@@ -38,6 +44,10 @@ ABC = abc
 
 vars%:
 	echo ABC=$(ABC) DEF=$(DEF) XYZ=$(XYZ) >$@
+
+VALUE = $(ABC) xyz
+value:
+	echo '$(value VALUE)' >$@
 
 hyphenated-var = This variable is hyphenated
 hyphenated_var:
@@ -250,3 +260,33 @@ and1:
 
 and2:
 	echo $(and abc,,ghi) >$@
+
+what_if: what_if_dep
+	echo Updated what_if >$@
+
+old_file_target: old_file_target_dep
+	echo Updated old_file_target >$@
+
+old_file_dep: old_file_dep_dep
+	echo Updated old_file_dep >$@
+
+keep_going:
+	echo Bravely, in the face of all odds >$@
+
+stop_on_error1:
+	echo Should not get here >$@
+
+stop_on_error2:
+	echo Should not get here either >$@
+
+touch:
+	echo Updated touch >$@
+
+multi_arg:
+	echo Updated multi_arg >$@
+
+NON_EVAL_VAR=expected
+cmdline_eval%:
+	echo Value of NON_EVAL_VAR is $(NON_EVAL_VAR) >$@
+	echo Value of CMDLINE_VAR is $(CMDLINE_VAR) >>$@
+	echo Value of EVAL_VAR is $(EVAL_VAR) >>$@
