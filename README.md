@@ -7,10 +7,10 @@ It supports most of the functionality of GNU Make, along with neat extensions li
 cluster-based job processing, multiple wildcards per target, MD5 checksums instead of timestamps,
 and declarative logic programming in Prolog.
 
-Yes, you heard right: [Prolog](https://en.wikipedia.org/wiki/Prolog).
-Biomake is built in Prolog, but no knowledge of the dark logical arts is necessary to use it; the software can be
-run directly off a GNU Makefile. However, if you're prepared to
-learn a little Prolog, you can do a lot more. And, really, logic
+Indeed: [Prolog](https://en.wikipedia.org/wiki/Prolog).
+No knowledge of the dark logical arts is necessary to use Biomake; the software can be
+run directly off a GNU Makefile. However, if you know (or are prepared to
+learn) a little Prolog, you can do a lot more. And, really, logic
 programming is the way you _should_ be specifying workflow dependencies and
 build chains; so what are you waiting for?
 
