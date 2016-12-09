@@ -244,7 +244,8 @@ parse_arg(['--target',T|L],L,toplevel(T)).
 arg_info('--target','TARGET','Force biomake to recognize a target even if it looks like an option').
 
 parse_arg(['-T',F|L],L,translate_gnu_makefile(F)).
-parse_arg(['--translate',F|L],L,translate_gnu_makefile(F)).
+arg_alias('-T','--translate').
+arg_alias('-T','--save-prolog').
 arg_info('-T','FILE','Translate GNU Makefile to Prolog Makeprog syntax').
 
 parse_arg(['-W',F|L],L,what_if(Fs)) :- atom_string(F,Fs).

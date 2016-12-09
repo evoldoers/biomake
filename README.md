@@ -68,7 +68,7 @@ Options
     Specify search directory for included Makefiles
 --target TARGET
     Force biomake to recognize a target even if it looks like an option
--T FILE
+-T,--translate,--save-prolog FILE
     Translate GNU Makefile to Prolog Makeprog syntax
 -W,--what-if,--new-file,--assume-new TARGET
     Pretend that TARGET has been modified
@@ -284,6 +284,12 @@ Now if we type:
 
 And all non-identical pairs are compared (in one direction only - the
 assumption is that the `align` program is symmetric).
+
+Translation to Prolog
+---------------------
+
+You can parse a GNU Makefile and save the corresponding Prolog version using the `-T` option
+(long-form `--translate`).
 
 Make-like features
 ------------------
