@@ -832,26 +832,30 @@ varlabel('@') --> ['@'],!.
 varlabel('^') --> ['^'],!.
 varlabel('+') --> ['^'],!.  % $+ is not quite the same as $^, but we fudge it
 varlabel('?') --> ['^'],!.  % $? is not quite the same as $^, but we fudge it
-varlabel('<') --> ['(','<',')'],!.
-varlabel('*') --> ['(','*',')'],!.
-varlabel('@') --> ['(','@',')'],!.
-varlabel('^') --> ['(','^',')'],!.
-varlabel('^') --> ['(','+',')'],!.
-varlabel('^') --> ['(','?',')'],!.
-varlabel('*F') --> ['(','*','F',')'],!.
-varlabel('*D') --> ['(','*','D',')'],!.
-varlabel('@F') --> ['(','@','F',')'],!.
-varlabel('@D') --> ['(','@','D',')'],!.
-varlabel('<F') --> ['(','<','F',')'],!.
-varlabel('<D') --> ['(','<','D',')'],!.
-varlabel('^F') --> ['(','^','F',')'],!.
-varlabel('^D') --> ['(','^','D',')'],!.
-varlabel('^F') --> ['(','+','F',')'],!.
-varlabel('^D') --> ['(','+','D',')'],!.
-varlabel('^F') --> ['(','?','F',')'],!.
-varlabel('^D') --> ['(','?','D',')'],!.
+varlabel('<') --> bracketed(['<']),!.
+varlabel('*') --> bracketed(['*']),!.
+varlabel('@') --> bracketed(['@']),!.
+varlabel('^') --> bracketed(['^']),!.
+varlabel('^') --> bracketed(['+']),!.
+varlabel('^') --> bracketed(['?']),!.
+varlabel('*F') --> bracketed(['*','F']),!.
+varlabel('*D') --> bracketed(['*','D']),!.
+varlabel('@F') --> bracketed(['@','F']),!.
+varlabel('@D') --> bracketed(['@','D']),!.
+varlabel('<F') --> bracketed(['<','F']),!.
+varlabel('<D') --> bracketed(['<','D']),!.
+varlabel('^F') --> bracketed(['^','F']),!.
+varlabel('^D') --> bracketed(['^','D']),!.
+varlabel('^F') --> bracketed(['+','F']),!.
+varlabel('^D') --> bracketed(['+','D']),!.
+varlabel('^F') --> bracketed(['?','F']),!.
+varlabel('^D') --> bracketed(['?','D']),!.
 varlabel(A) --> makefile_var_char(C), {atom_chars(A,[C])}.
 varlabel(A) --> ['('],makefile_var_atom_from_chars(A),[')'].
+varlabel(A) --> ['{'],makefile_var_atom_from_chars(A),['}'].
+
+bracketed(L) --> ['('],L,[')'].
+bracketed(L) --> ['{'],L,['}'].
 
 bindvar(VL,v(S,T,D,BL),X) :- bindauto(VL,v(S,T,D,BL),X), !.
 bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
