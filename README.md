@@ -87,7 +87,7 @@ Var=Val
 -s,--quiet,--silent 
     Silent operation; do not print recipes as they are executed
 --one-shell 
-    Run recipes in single shell (equivalent to GNU make's .ONESHELL)
+    Run recipes in single shell (equivalent to GNU Make's .ONESHELL)
 -H,--md5-hash 
     Use MD5 hashes instead of timestamps
 -Q,--queue-engine ENGINE
@@ -297,7 +297,10 @@ Biomake supports most of the functionality of GNU Make, including
 - many of the same [command-line options](https://www.gnu.org/software/make/manual/html_node/Options-Summary.html)
 - [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html) and [conditional functions](https://www.gnu.org/software/make/manual/html_node/Conditional-Functions.html)
 - the [include](https://www.gnu.org/software/make/manual/html_node/Include.html) directive
-- various other quirks of GNU make syntax e.g. single-line recipes, forced rebuilds
+- various other quirks of GNU Make syntax e.g. single-line recipes, forced rebuilds
+
+Differences from GNU Make
+-------------------------
 
 There are slight differences in the way variables are expanded, which arise from the fact that Biomake
 treats variable expansion as a post-processing step (part of the language) rather than a pre-processing step (which is how GNU Make does it).
@@ -315,6 +318,9 @@ target: dep1 dep2 dep3
 That is, the expansion of the `RULE` variable spans both the target list and the start of the dependency list.
 To emulate this behavior faithfully, Biomake would have to do the variable expansion in a separate preprocessing pass - which would mean we couldn't translate variables directly into Prolog.
 We think it's worth sacrificing this edge case in order to maintain the semantic parallel between Makefile variables and Prolog variables, which allows for some powerful constructs.
+
+Unlike GNU Make, Biomake does not offer domain-specific language extensions in [Scheme](https://www.gnu.org/software/guile/)
+(even though this is one of the cooler aspects of GNU Make), but you can program it in Prolog instead - it's quite hackable.
 
 MD5 hashes
 ----------

@@ -303,7 +303,7 @@ arg_alias('-s','--silent').
 arg_info('-s','','Silent operation; do not print recipes as they are executed').
 
 simple_arg('--one-shell',oneshell(true)).
-arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'s .ONESHELL)').
+arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU Make\'s .ONESHELL)').
 
 % ----------------------------------------
 % MD5 CHECKSUMS
