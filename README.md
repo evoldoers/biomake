@@ -289,7 +289,7 @@ Biomake supports most of the functionality of GNU Make, including
 - [user-defined functions](https://www.gnu.org/software/make/manual/html_node/Call-Function.html)
 - [errors and warnings](https://www.gnu.org/software/make/manual/html_node/Make-Control-Functions.html)
 - many of the same [command-line options](https://www.gnu.org/software/make/manual/html_node/Options-Summary.html)
-- [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html) and [https://www.gnu.org/software/make/manual/html_node/Conditional-Functions.html](conditional functions)
+- [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html) and [conditional functions](https://www.gnu.org/software/make/manual/html_node/Conditional-Functions.html)
 - the [include](https://www.gnu.org/software/make/manual/html_node/Include.html) directive
 - various other quirks of GNU make syntax e.g. single-line recipes, forced rebuilds
 
