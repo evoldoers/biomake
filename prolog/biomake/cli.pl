@@ -311,6 +311,7 @@ arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU make\'
 
 parse_arg(['-H'|L],L,md5(true)) :- ensure_loaded(library(biomake/md5hash)), !.
 arg_alias('-H','--md5-hash').
+arg_alias('-H','--md5-checksum').
 recover_arg(['-H'],md5(true)).
 arg_info('-H','','Use MD5 hashes instead of timestamps').
 
@@ -332,18 +333,22 @@ arg_alias('-j','--jobs').
 arg_info('-j','JOBS','Number of job threads (poolq engine)').
 
 parse_arg(['--qsub-exec',X|L],L,qsub_exec(X)).
+arg_alias('--qsub-exec','--sbatch-exec').
 arg_info('--qsub-exec','PATH','Path to qsub (sge,pbs) or sbatch (slurm)').
 
 parse_arg(['--qdel-exec',X|L],L,qsub_exec(X)).
+arg_alias('--qdel-exec','--scancel-exec').
 arg_info('--qdel-exec','PATH','Path to qdel (sge,pbs) or scancel (slurm)').
 
 parse_arg(['--queue-args',X|L],L,queue_args(X)).
 arg_info('--queue-args','"ARGS"','Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)').
 
 parse_arg(['--qsub-args',X|L],L,qsub_args(X)).
+arg_alias('--qsub-args','--sbatch-args').
 arg_info('--qsub-args','"ARGS"','Additional arguments for qsub (sge,pbs) or sbatch (slurm)').
 
 parse_arg(['--qdel-args',X|L],L,qdel_args(X)).
+arg_alias('--qdel-args','--scancel-args').
 arg_info('--qdel-args','"ARGS"','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
 
 parse_arg(['--flush',X|L],L,flush_queue(X)).

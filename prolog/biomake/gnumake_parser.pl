@@ -308,6 +308,7 @@ makefile_target_string(S) --> string_from_codes(S,":; \t\n").
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".
+op_string("::=") --> ":=".
 op_string("?=") --> "?=".
 op_string("+=") --> "+=".
 op_string("!=") --> "!=".

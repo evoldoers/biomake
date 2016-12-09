@@ -2,8 +2,8 @@ Biomake
 =======
 
 This is a [make](https://www.gnu.org/software/make/)-like utility for managing builds (or analysis workflows) involving multiple
-dependent files. Biomake is built in Prolog, but no knowledge of prolog is necessary to use it; the program can be
-run off a stripped-down GNU Makefile. However, if you're prepared to
+dependent files. Biomake is built in Prolog, but no knowledge of Prolog is necessary to use it; the program can be
+run off a GNU Makefile. However, if you're prepared to
 learn a little Prolog, you can do a lot more. And, really, logic
 programming is the way you _should_ be specifying dependencies and
 build chains; so what are you waiting for?
@@ -271,6 +271,71 @@ Now if we type:
 
 And all non-identical pairs are compared (in one direction only - the
 assumption is that the `align` program is symmetric).
+
+Make-like features
+------------------
+
+Biomake supports most of the functionality of GNU Make, including
+- different [flavors of variable](https://www.gnu.org/software/make/manual/make.html#Flavors) (recursive, expanded, etc.)
+- various ways of [setting variables](https://www.gnu.org/software/make/manual/html_node/Setting.html)
+- [appending to variables](https://www.gnu.org/software/make/manual/html_node/Appending.html)
+- [multi-line variables](https://www.gnu.org/software/make/manual/html_node/Multi_002dLine.html)
+- [automatic variables](https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html) such as `$<`, `$@`, `$^`, `$(@F)`, etc.
+- [substitution references](https://www.gnu.org/software/make/manual/html_node/Substitution-Refs.html)
+- [computed variable names](https://www.gnu.org/software/make/manual/html_node/Computed-Names.html)
+- [all the text functions](https://www.gnu.org/software/make/manual/html_node/Text-Functions.html)
+- [all the filename functions](https://www.gnu.org/software/make/manual/html_node/File-Name-Functions.html)
+- [the shell function](https://www.gnu.org/software/make/manual/html_node/Shell-Function.html)
+- [user-defined functions](https://www.gnu.org/software/make/manual/html_node/Call-Function.html)
+- [errors and warnings](https://www.gnu.org/software/make/manual/html_node/Make-Control-Functions.html)
+- many of the same [command-line options](https://www.gnu.org/software/make/manual/html_node/Options-Summary.html)
+- [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html) and [https://www.gnu.org/software/make/manual/html_node/Conditional-Functions.html](conditional functions)
+- the [include](https://www.gnu.org/software/make/manual/html_node/Include.html) directive
+- various other quirks of GNU make syntax e.g. single-line recipes, forced rebuilds
+
+There are slight differences in the way variables are expanded, which arise from the fact that Biomake
+treats variable expansion as a post-processing step (part of the language) rather than a pre-processing step (which is how GNU Make does it).
+In Biomake, variable expansions must be aligned with the overall syntactic structure; they cannot span multiple syntactic elements.
+
+As a concrete example, GNU Make allows this sort of thing:
+~~~~
+RULE = target: dep1 dep2
+$(RULE) dep3
+~~~~
+which (in GNU Make, but not biomake) expands to
+~~~~
+target: dep1 dep2 dep3
+~~~~
+That is, the expansion of the `RULE` variable spans both the target list and the start of the dependency list.
+To emulate this behavior faithfully, Biomake would have to do the variable expansion in a separate preprocessing pass - which would mean we couldn't translate variables directly into Prolog.
+We think it's worth sacrificing this edge case in order to maintain the semantic parallel between Makefile variables and Prolog variables, which allows for some powerful constructs.
+
+MD5 hashes
+----------
+
+Instead of using file timestamps, which are fragile (especially on networked filesystems),
+Biomake can optionally use MD5 checksums to decide when to rebuild files.
+Turn on this behavior with the `-H` options (long form `--md5-hash`).
+
+Biomake uses the external program `md5` to do checksums (available on OS X), or `md5sum` (available on Linux).
+If neither of these are found, Biomake falls back to using the SWI-Prolog md5 implementation;
+this does however require loading the entire file into memory (which may be prohibitive for large files).
+
+Queues
+------
+
+To run jobs in parallel, locally or on a cluster, you need to specify a queueing engine
+using the `-Q` option (long form `--queue-engine`). Note that, unlike with GNU Make, it is not sufficient
+just to specify the number of threads with `-j`.
+
+There are several queueing engines currently supported:
+- `-Q poolq` uses an internal thread pool for running jobs in parallel on the same machine that `biomake` is running on
+- `-Q sge` uses [Sun Grid Engine](https://en.wikipedia.org/wiki/Oracle_Grid_Engine)
+- `-Q pbs` uses [PBS](https://en.wikipedia.org/wiki/Portable_Batch_System)
+- `-Q slurm` uses [SLURM](https://slurm.schedmd.com/)
+
+For Sun Grid Engine, PBS and SLURM, the paths to the relevant job control executables, and any arguments to those executables
+(such as the name of the queue that jobs should be run on), can be controlled using various command-line arguments.
 
 More
 ----
