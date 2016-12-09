@@ -319,6 +319,11 @@ That is, the expansion of the `RULE` variable spans both the target list and the
 To emulate this behavior faithfully, Biomake would have to do the variable expansion in a separate preprocessing pass - which would mean we couldn't translate variables directly into Prolog.
 We think it's worth sacrificing this edge case in order to maintain the semantic parallel between Makefile variables and Prolog variables, which allows for some powerful constructs.
 
+The implementation of [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html)
+(`ifeq`, `ifdef` and the like) must also be aligned with the syntax: you can only place a conditional
+at a point where a variable assignment, recipe, or `include` directive could go
+(i.e. at the top level of the `Makefile` grammar).
+
 Unlike GNU Make, Biomake does not offer domain-specific language extensions in [Scheme](https://www.gnu.org/software/guile/)
 (even though this is one of the cooler aspects of GNU Make), but you can program it in Prolog instead - it's quite hackable.
 
