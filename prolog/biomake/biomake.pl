@@ -38,8 +38,10 @@
 	   run_execs_now/3,
 	   report_run_exec/3,
 	   update_hash/3,
-	   
+
 	   global_binding/2,
+	   bindvar/3,
+	   expand_vars/2,
 	   expand_vars/3
            ]).
 
@@ -756,7 +758,7 @@ mkrule_default(T,D,E,true,VNs) :- with(mkrule(T,D,E),VNs).
 mkrule_default(T,D,E,G,VNs) :- with(mkrule(T,D,E,G),VNs).
 
 expand_vars(X,Y) :-
-	expand_vars(X,Y,v("","","",[])).
+	expand_vars(X,Y,v(null,null,null,[])).
 
 expand_vars(X,Y,V) :-
 	normalize_pattern(X,Yt,V),

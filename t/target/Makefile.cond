@@ -115,3 +115,33 @@ endif
 
 nested_ifeq_include:
 	echo $(GREETING) >$@
+
+ifeq ($(ABC), blah)
+ifeq_space1: ; echo correct >$@
+else
+ifeq_space1: ; echo incorrect >$@
+endif
+
+ifeq ($(ABC), blah )
+ifeq_space2: ; echo incorrect >$@
+else
+ifeq_space2: ; echo correct >$@
+endif
+
+ifeq ( $(ABC), blah)
+ifeq_space3: ; echo incorrect >$@
+else
+ifeq_space3: ; echo correct >$@
+endif
+
+ifeq '$(ABC)' 'blah'
+ifeq_quote: ; echo correct >$@
+else
+ifeq_quote: ; echo incorrect >$@
+endif
+
+ifeq "$(ABC)" "blah"
+ifeq_dblquote: ; echo correct >$@
+else
+ifeq_dblquote: ; echo incorrect >$@
+endif

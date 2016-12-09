@@ -201,9 +201,9 @@ test_inequal(false,_,_,null).
 test_inequal(true,X,X,false) :- !.
 test_inequal(true,_,_,true).
 
-conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", xbracket(Arg2), ")".
-conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), ",", xquote(Arg2), "'".
-conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), ",", xdblquote(Arg2), "\"".
+conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", opt_whitespace, xbracket(Arg2), ")".
+conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), "'", whitespace, "'", xquote(Arg2), "'".
+conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), "\"", whitespace, "\"", xdblquote(Arg2), "\"".
 
 begin_true_rules(Condition,Rules,OptsOut,OptsIn,Line,File,Lines) -->
     { Lnext is Line + 1 },
@@ -258,20 +258,21 @@ false_rules(_,_,_,_,Line,File,_) -->
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
-xbracket(Sx) --> {char_code('(',L),char_code(')',R)}, xdelim(Sx,L,R).
-xquote(Sx) --> {char_code('\'',Q)}, xdelim(Sx,Q,Q).
-xdblquote(Sx) --> {char_code('"',Q)}, xdelim(Sx,Q,Q).
-xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx,v(null,null,null,[]))}.
-xdelim(Sx,L,R) --> delim(S,L,R), !, {expand_vars(S,Sx,v(null,null,null,[]))}.
-delim(S,L,R) --> opt_whitespace, delim_outer(Sc,L,R), {string_codes(S,Sc)}.
-delim_outer(S,L,R) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R),
+xbracket(Sx) --> {char_code('(',L),char_code(')',R),char_code(',',C)}, xdelim(Sx,L,R,[C]).
+xdelim(Sx,L,R,X) --> delim(S,L,R,X), !, {expand_vars(S,Sx)}.
+delim(S,L,R,X) --> delim_outer(Sc,L,R,X), {string_codes(S,Sc)}.
+delim_outer(S,L,R,X) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R,X),
 	{ append([L|I],[R],LIR), append(LIR,Rest,S) }.
-delim_outer(S,L,R) --> {char_code(',',C)}, code_list([Start1|Start],[L,R,C]), !, delim_outer(Rest,L,R), {append([Start1|Start],Rest,S)}.
-delim_outer([],_,_) --> !.
+delim_outer(S,L,R,X) --> code_list([Start1|Start],[L,R|X]), !, delim_outer(Rest,L,R,X), {append([Start1|Start],Rest,S)}.
+delim_outer([],_,_,_) --> !.
 delim_inner(S,L,R) --> [L], !, delim_inner(I,L,R), [R], {append([L|I],[R],S)}.
 delim_inner(S,L,R) --> code_list([Start1|Start],[L,R]), !, delim_inner(Rest,L,R), {append([Start1|Start],Rest,S)}.
 delim_inner([],_,_) --> !.
-    
+
+xquote(Sx) --> code_list(C,['\'']), {string_codes(S,C), expand_vars(S,Sx)}.
+xdblquote(Sx) --> code_list(C,['"']), {string_codes(S,C), expand_vars(S,Sx)}.
+xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx)}.
+
 
 makefile_special_target(queue(none),Lines) -->
     makefile_recipe(rule([".NOTPARALLEL"],_,_),Lines).
@@ -291,7 +292,6 @@ makefile_recipe(rule(Head,Deps,[Efirst|Erest]),Lines) -->
     opt_makefile_targets(Deps),
     ";",
     line_as_string(Efirst),
-    "\n",
     !,
     makefile_execs(Erest,Lexecs),
     {Lines is 1 + Lexecs}.

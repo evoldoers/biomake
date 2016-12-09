@@ -45,6 +45,10 @@ ABC = abc
 vars%:
 	echo ABC=$(ABC) DEF=$(DEF) XYZ=$(XYZ) >$@
 
+VALUE = $(ABC) xyz
+value:
+	echo '$(value VALUE)' >$@
+
 hyphenated-var = This variable is hyphenated
 hyphenated_var:
 	echo $(hyphenated-var) >$@

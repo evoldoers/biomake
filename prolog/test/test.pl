@@ -129,6 +129,7 @@ test :-
 	run_test("call"),
 	run_test("shell"),
 	run_test("foreach"),
+	run_test("value"),
 	run_test("bad_function_syntax"),
 
 	announce("MD5 CHECKSUMS"),
@@ -192,6 +193,11 @@ test :-
 	run_test("-f Makefile.cond","ifeq_false_ifneq_true"),
 	run_test("-f Makefile.cond","nested_ifeq_ifneq"),
 	run_test("-f Makefile.cond","nested_ifeq_include"),
+	run_test("-f Makefile.cond","ifeq_space1"),
+	run_test("-f Makefile.cond","ifeq_space2"),
+	run_test("-f Makefile.cond","ifeq_space3"),
+	run_test("-f Makefile.cond","ifeq_quote"),
+	run_test("-f Makefile.cond","ifeq_dblquote"),
 	
 	% All done
 	report_counts,

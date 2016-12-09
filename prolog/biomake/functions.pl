@@ -8,6 +8,7 @@
            makefile_subst_ref/4,
 	   makefile_computed_var/3,
 	   makefile_computed_var/4,
+	   eval_var/2,
 	   eval_var/3
            ]).
 
@@ -126,6 +127,12 @@ makefile_function(Result,V) --> lb("or"), opt_whitespace, cond_param_list(L), rb
 makefile_function(Result,V) --> lb("and"), opt_whitespace, cond_param_list(L), rb, !,
         { makefile_and(L,Result,V) }.
 
+makefile_function(Result,_V) --> lb("value"), opt_whitespace, var_arg(Var), rb,
+        { atom_string(VarAtom,Var), global_binding(VarAtom,Result) }, !.
+
+makefile_function(Result,V) --> lb("value"), opt_whitespace, var_arg(Var), rb, !,
+        { bindvar(Var,V,Result) }.
+
 makefile_function("",_V) --> ['('], str_arg(S), [')'], !, {format("Warning: unknown function $(~w)~n",[S])}.
 
 makefile_subst_ref(Result) --> makefile_subst_ref(Result,v(null,null,null,[])).
@@ -166,8 +173,15 @@ var_arg(S) --> opt_whitespace, makefile_var_string_from_chars(S).
 
 suffix_arg(C) --> char_list(C,['=',')',' ']).
 
+var_expr(VarName,Expr) :-
+	concat_string_list(["$(",VarName,")"],Expr).
+
+eval_var(VarName,Val) :-
+	var_expr(VarName,Expr),
+	expand_vars(Expr,Val).
+
 eval_var(VarName,Val,V) :-
-	concat_string_list(["$(",VarName,")"],Expr),
+	var_expr(VarName,Expr),
 	expand_vars(Expr,Val,V).
 
 call_param_list([],_V) --> [].
