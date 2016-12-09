@@ -1,7 +1,7 @@
 Biomake
 =======
 
-This is a Makefile-like system for managing builds between multiple
+This is a [make](https://www.gnu.org/software/make/)-like utility for managing builds (or bioinformatics analysis workflows) between multiple
 dependent files. No knowledge of prolog is necessary; biomake can
 run off a stripped-down GNU Makefile. However, if you're prepared to
 learn a little Prolog, you can do a lot more. And, really, logic
@@ -111,7 +111,7 @@ Var=Val
 Examples
 --------
 
-(this assumes some knowledge of [make](https://www.gnu.org/software/make/) and makefiles)
+(this assumes some knowledge of GNU Make and [makefiles](https://www.gnu.org/software/make/manual/html_node/index.html))
 
 biomake looks for a Prolog file called `Makespec.pro` in your
 current directory. If it's not there, it will try looking for a
