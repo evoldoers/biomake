@@ -342,8 +342,8 @@ Queues
 ------
 
 To run jobs in parallel, locally or on a cluster, you need to specify a queueing engine
-using the `-Q` option (long form `--queue-engine`). Note that, unlike with GNU Make, it is not sufficient
-just to specify the number of threads with `-j`.
+using the `-Q` option (long form `--queue-engine`). Note that, unlike with GNU Make, multi-threading is not triggered
+simply by specifying the number of threads with `-j`; you need `-Q` as well.
 
 There are several queueing engines currently supported:
 - `-Q poolq` uses an internal thread pool for running jobs in parallel on the same machine that `biomake` is running on
