@@ -14,7 +14,7 @@ all <-- Deps,
 {findall( t([X,-,Y,'.pair']),
           pair(X,Y),
           Deps),
-format("Deps=~w~n",[Deps])}.
+ format("Deps=~w~n",[Deps])}.
 
 % biomake rules
 '$X.single' <-- [],

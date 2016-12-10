@@ -272,7 +272,7 @@ We can create a top-level target that generates all solutions:
     all <-- Deps, 
       {findall( t(['align-',X,-,Y,'.tbl']),
                 pair(X,Y),
-                Deps)}.
+                Deps )}.
 
     % biomake rule
     'align-$X-$Y.tbl' <-- ['$X.obo', '$Y.obo'],
