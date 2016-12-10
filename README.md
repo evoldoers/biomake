@@ -24,21 +24,21 @@ required. Just add it to your path (changing the directory if necessary):
 
     `export PATH=$PATH:$HOME/biomake/bin`
 
-3. Alternatively, if you want to install it in `/usr/local/bin`, type `make install`.
-(This just creates a symlink, so don't remove the `biomake` directory after installation.)
-You can also try `make test` to run the test suite.
-
-4. Get (minimal) help from the command line:
+3. Get (minimal) help from the command line:
 
     `biomake -h`
 
-5. Create a 'Makespec.pro' or a 'Makefile' (see below)
+4. Create a 'Makespec.pro' or a 'Makefile' (see below)
 
 Alternate installation instructions
 -----------------------------------
 
-This can also be installed via the SWI-Prolog pack system
+If you want to install biomake in `/usr/local/bin` instead of adding it to your path, type `make install` in the top level directory of the repository.
+(This just creates a symlink, so don't remove the `biomake` directory after installation.)
 
+You can also try `make test` to run the test suite.
+
+The program can also be installed via the SWI-Prolog pack system.
 Just start SWI and type:
 
     ?- pack_install('biomake').
