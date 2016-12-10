@@ -34,7 +34,7 @@ Alternate installation instructions
 -----------------------------------
 
 If you want to install biomake in `/usr/local/bin` instead of adding it to your path, type `make install` in the top level directory of the repository.
-(This just creates a symlink, so don't remove the `biomake` directory after installation.)
+(This just creates a symlink, so be sure to put the repository somewhere safe, and don't remove it after installation.)
 
 You can also try `make test` to run the test suite.
 
