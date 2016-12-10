@@ -24,6 +24,7 @@ required. Just add it to your path (changing the directory if necessary):
 
     `export PATH=$PATH:$HOME/biomake/bin`
 Alternatively, if you want to install it in `/usr/local/bin`, type `make install`.
+(This just creates a symlink, so don't remove the `biomake` directory after installation.)
 You can also try `make test` to run the test suite.
 
 3. Get (minimal) help from the command line:
