@@ -364,7 +364,7 @@ MD5 hashes
 
 Instead of using file timestamps, which are fragile (especially on networked filesystems),
 Biomake can optionally use MD5 checksums to decide when to rebuild files.
-Turn on this behavior with the `-H` options (long form `--md5-hash`).
+Turn on this behavior with the `-H` option (long form `--md5-hash`).
 
 Biomake uses the external program `md5` to do checksums (available on OS X), or `md5sum` (available on Linux).
 If neither of these are found, Biomake falls back to using the SWI-Prolog md5 implementation;
