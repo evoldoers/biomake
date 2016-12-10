@@ -20,9 +20,11 @@ Getting Started
 1. Install SWI-Prolog from http://www.swi-prolog.org
 
 2. Get the latest biomake source from github. No installation steps are
-required. Add it to your path (changing the directory if necessary):
+required. Just add it to your path (changing the directory if necessary):
 
     `export PATH=$PATH:$HOME/biomake/bin`
+Alternatively, if you want to install it in `/usr/local/bin`, type `make install`.
+You can also try `make test` to run the test suite.
 
 3. Get (minimal) help from the command line:
 
@@ -320,14 +322,18 @@ treats variable expansion as a post-processing step (part of the language) rathe
 In Biomake, variable expansions must be aligned with the overall syntactic structure; they cannot span multiple syntactic elements.
 
 As a concrete example, GNU Make allows this sort of thing:
+
 ~~~~
 RULE = target: dep1 dep2
 $(RULE) dep3
 ~~~~
+
 which (in GNU Make, but not biomake) expands to
+
 ~~~~
 target: dep1 dep2 dep3
 ~~~~
+
 That is, the expansion of the `RULE` variable spans both the target list and the start of the dependency list.
 To emulate this behavior faithfully, Biomake would have to do the variable expansion in a separate preprocessing pass - which would mean we couldn't translate variables directly into Prolog.
 We think it's worth sacrificing this edge case in order to maintain the semantic parallel between Makefile variables and Prolog variables, which allows for some powerful constructs.
@@ -359,6 +365,7 @@ using the `-Q` option (long form `--queue-engine`). Note that, unlike with GNU M
 simply by specifying the number of threads with `-j`; you need `-Q` as well.
 
 There are several queueing engines currently supported:
+
 - `-Q poolq` uses an internal thread pool for running jobs in parallel on the same machine that `biomake` is running on
 - `-Q sge` uses [Sun Grid Engine](https://en.wikipedia.org/wiki/Oracle_Grid_Engine)
 - `-Q pbs` uses [PBS](https://en.wikipedia.org/wiki/Portable_Batch_System)
