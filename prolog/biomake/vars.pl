@@ -2,17 +2,18 @@
 
 :- module(vars,
           [
-	   read_makeprog_stream/4,
-
-	   eval_string_as_makeprog_term/3,
-	   eval_atom_as_makeprog_term/3,
-
 	   eval_bagof/3
            ]).
 
+/** 
+
+  A minimally-cluttered namespace for user variable bindings in Makeprogs & Makefiles.
+
+  */
+
 :- use_module(library(biomake/biomake)).
 
-% we have to duplicate these op declarations, ugh
+% We have to redefine these operators, ugh
 :- user:op(1100,xfy,<--).
 :- user:op(1101,xfy,?=).
 :- user:op(1102,xfy,:=).
@@ -29,27 +30,3 @@ eval_bagof(TemplateStr,GoalStr,Result) :-
     atomic_list_concat(List," ",Result),
     !.
 eval_bagof(_,_,"").
-
-read_makeprog_stream(IO,Opts,Opts,[]) :-
-        at_end_of_stream(IO),
-	!,
-	close(IO).
-
-read_makeprog_stream(IO,OptsOut,OptsIn,[Term|Terms]) :-
-        read_term(IO,Term,[variable_names(VNs),
-                           syntax_errors(error),
-                           module(vars)]),
-        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
-        add_spec_clause(Term,VNs,Opts,OptsIn),
-	read_makeprog_stream(IO,OptsOut,Opts,Terms).
-
-eval_string_as_makeprog_term(String,OptsOut,OptsIn) :-
-        atom_string(Atom,String),
-        eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn).
-
-eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn) :-
-        read_term_from_atom(Atom,Term,[variable_names(VNs),
-				       syntax_errors(error),
-				       module(vars)]),
-        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
-        add_spec_clause(Term,VNs,OptsOut,OptsIn).

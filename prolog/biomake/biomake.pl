@@ -22,6 +22,11 @@
 
 	   consult_gnu_makefile/3,
            consult_makeprog/3,
+	   read_makeprog_stream/4,
+	   
+	   read_string_as_makeprog_term/3,
+	   read_atom_as_makeprog_term/3,
+	   eval_atom_as_makeprog_term/3,
 
 	   add_spec_clause/3,
 	   add_spec_clause/4,
@@ -60,15 +65,20 @@
 :- user:op(1103,xfy,+=).
 :- user:op(1104,xfy,=*).
 
+/** <module> Prolog implementation of Makefile-inspired build system
+
+  See the README
+
+  */
+
 % ----------------------------------------
 % EXCEPTIONS
 % ----------------------------------------
 
-% use no_backtrace to permanently disable backtrace on exception,
-% and suppress_backtrace to temporarily disable it.
+% use disable_backtrace to permanently disable backtrace on exception,
+% and call_without_backtrace to temporarily disable it.
 :- dynamic no_backtrace/0.
 :- dynamic suppress_backtrace/0.
-:- multifile no_backtrace/0.
 
 % Intercept a couple of exceptions that are thrown by the threadpool library
 % This is kind of yucky, but only seems to affect our exception-handling code
@@ -90,13 +100,6 @@ call_without_backtrace(Term) :-
 	retract(suppress_backtrace).
 
 disable_backtrace :- assert(no_backtrace).
-
-/** <module> Prolog implementation of Makefile-inspired build system
-
-  See the README
-
-  */
-
 
 
 % ----------------------------------------
@@ -502,6 +505,33 @@ consult_gnu_makefile(F,AllOpts,Opts) :-
 	(member(translate_gnu_makefile(P),AllOpts)
 	 -> translate_gnu_makefile(M,P); true).
 
+read_makeprog_stream(IO,Opts,Opts,[]) :-
+        at_end_of_stream(IO),
+	!,
+	close(IO).
+
+read_makeprog_stream(IO,OptsOut,OptsIn,[Term|Terms]) :-
+        read_term(IO,Term,[variable_names(VNs),
+                           syntax_errors(error),
+                           module(vars)]),
+        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
+        add_spec_clause(Term,VNs,Opts,OptsIn),
+	read_makeprog_stream(IO,OptsOut,Opts,Terms).
+
+eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn) :-
+        read_atom_as_makeprog_term(Atom,Term,VNs),
+        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
+        add_spec_clause(Term,VNs,OptsOut,OptsIn).
+
+read_atom_as_makeprog_term(Atom,Term,VNs) :-
+        read_term_from_atom(Atom,Term,[variable_names(VNs),
+				       syntax_errors(error),
+				       module(vars)]).
+
+read_string_as_makeprog_term(String,Term,VNs) :-
+        atom_string(Atom,String),
+        read_atom_as_makeprog_term(Atom,Term,VNs).
+
 translate_gnu_makefile(M,P) :-
     debug(makeprog,"Writing translated makefile to ~w",[P]),
     open(P,write,IO,[]),
@@ -509,9 +539,15 @@ translate_gnu_makefile(M,P) :-
     close(IO).
 
 add_gnumake_clause(G,OptsOut,OptsIn) :-
+    translate_gnumake_clause(G,P,VNs),
+    !,
+    add_spec_clause(P,VNs,OptsOut,OptsIn).
+
+add_gnumake_clause(G,OptsOut,OptsIn) :-
     translate_gnumake_clause(G,P),
     add_spec_clause(P,OptsOut,OptsIn).
-    
+
+translate_gnumake_clause(rule(Ts,Ds,Es,{Goal},VNs), (Ts <-- Ds,{Goal},Es), VNs).
 translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)).
 translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)).
 translate_gnumake_clause(assignment(Var,"?=",Val), (Var ?= Val)).
@@ -692,7 +728,7 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         % only one of the specified targets has to match
         member(TP,TPs),
         uniq_pattern_match(TP,T),
-        Goal,
+        call_without_backtrace(Goal),
 
 	% Two-pass expansion of dependency list.
 	% This is ultra-hacky but allows for variable-expanded dependency lists that contain % wildcards
@@ -747,13 +783,19 @@ expand_deps(Deps,Result,V) :-
     normalize_patterns(Deps,NormDeps,V),
     maplist(unwrap_t,NormDeps,ExpandedDeps),
     maplist(split_spaces,ExpandedDeps,DepLists),
-    flatten(DepLists,Result).
+    flatten_trim(DepLists,Result).
 
 expand_execs(Execs,Result,V) :-
     normalize_patterns(Execs,NormExecs,V),
     maplist(unwrap_t,NormExecs,ExpandedExecs),
     maplist(split_newlines,ExpandedExecs,ExecLists),
-    flatten(ExecLists,Result).
+    flatten_trim(ExecLists,Result).
+
+flatten_trim(Lumpy,Trimmed) :-
+    flatten(Lumpy,Untrimmed),
+    include(not_empty,Untrimmed,Trimmed).
+
+not_empty(X) :- X \= "", X \= ''.
 
 % ----------------------------------------
 % PATTERN SYNTAX AND API
@@ -791,11 +833,10 @@ normalize_patterns(P,Ns,V) :-
 
 % this is a bit hacky - parsing is too eager to add t(...) wrapper (original comment by cmungall)
 % Comment by ihh: not entirely sure what all this wrapping evaluated patterns in t(...) is about.
-% Mostly it is a royal pain in the butt, but it seems to be some kind of a marker for pattern evaluation.
+% It seems to be some kind of a marker for pattern evaluation.
 % Anyway...
 % wrap_t is a construct from cmungall's original code, abstracted into a separate term by me (ihh).
-%  Beyond the definition here, I really don't know the original intent here.
-% unwrap_t flattens a list into a string, removing any t(...) wrappers in the process,
+% unwrap_t flattens a list into an atom, removing any t(...) wrappers in the process,
 % and evaluating any postponed functions wrapped with a call(...) compound clause.
 wrap_t(t([L]),L) :- member(t(_),L), !.
 wrap_t(X,[X]).
@@ -807,8 +848,7 @@ unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
 unwrap_t([],"") :- !.
 unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), atom_concat(F,Fs,Flat), !.
 unwrap_t(N,A) :- number(A), atom_number(A,N), !.
-unwrap_t(A,F) :- atom(A), atom_string(A,F), !.
-unwrap_t(S,S) :- string(S), !.
+unwrap_t(S,A) :- string(S), atom_string(A,S), !.
 unwrap_t(S,S) :- ground(S), !.
 unwrap_t(X,_) :- type_of(X,T), format("Can't unwrap ~w ~w~n",[T,X]), fail.
 

@@ -217,7 +217,7 @@ files producing some output (e.g. biological sequence alignment, or
 ontology alignment). Assume our file convention is to suffix ".fa" on
 the inputs.  We can write a `Makespec.pro` with the following:
 
-    'align-$X-$Y.tbl' <-- ['$X.fa', '$Y.fa'],
+    'align-$X-$Y' <-- ['$X.fa', '$Y.fa'],
         'align $X.fa $Y.fa > $@'.
 
 (note that if we have multiple dependecies, these must be separated by
@@ -225,11 +225,11 @@ commas and enclodes in square brackets - i.e. a Prolog list)
 
 Now if we have files `x.fa` and `y.fa` we can type:
 
-    biomake align-x-y.tbl
+    biomake align-x-y
 
 We could achieve the same thing with the following GNU `Makefile`:
 
-    align-$X-$Y.tbl: $X.fa $Y.fa
+    align-$X-$Y: $X.fa $Y.fa
         align $X.fa $Y.fa > $@
 
 This is already an improvement over GNU Make, which only allows a single wildcard.
@@ -243,7 +243,7 @@ program when the inputs match a certain table in our database:
     sp(human).
     sp(zebrafish).
 
-    'align-$X-$Y.tbl' <-- ['$X.fa', '$Y.fa'],
+    'align-$X-$Y' <-- ['$X.fa', '$Y.fa'],
         {sp(X),sp(Y)},
         'align $X.fa $Y.fa > $@'.
 
@@ -257,7 +257,7 @@ Note that here the rule consists of 4 parts:
 In this case, the Prolog goal succeeds with 9 solutions, with 3
 different values for X and Y. If we type:
 
-    biomake align-platypus-coelocanth.tbl
+    biomake align-platypus-coelocanth
 
 It will not succeed, even if the .fa files are on the filesystem. This
 is because the goal cannot be satisfied for these two values.
@@ -274,13 +274,15 @@ We can create a top-level target that generates all solutions:
 
     % top level target
     all <-- Deps, 
-      {findall( t(['align-',X,-,Y,'.tbl']),
+      {findall( t(['align-',X,-,Y]),
                 pair(X,Y),
                 Deps )}.
 
     % biomake rule
-    'align-$X-$Y.tbl' <-- ['$X.obo', '$Y.obo'],
+    'align-$X-$Y' <-- ['$X.obo', '$Y.obo'],
         'align $X.obo $Y.obo > $@'.
+
+(The `t(...)` wrapper around `['align-',X,-,Y]` is used to concatenate a list of tokens.)
 
 Now if we type:
 
@@ -358,6 +360,39 @@ Biomake provides a few extra functions for arithmetic on lists:
 - `$(add X,L)` adds `X` to every element of the space-separated list `L`
 - `$(multiply Y,L)` multiplies every element of the space-separated list `L` by `Y`
 - `$(divide Z,L)` divides every element of the space-separated list `L` by `Z`
+
+Embedding Prolog in Makefiles
+-----------------------------
+
+- Prolog can be embedded within `prolog` and `endprolog` directives
+- `$(bagof Template,Goal)` expands to the space-separated `List` from the Prolog `bagof(Template,Goal,List)`
+- Following the dependent list with `{Goal}` causes the rule to match only if `Goal` is satisfied
+
+e.g.
+
+~~~~
+prolog
+mammal(mouse).
+mammal(human).
+sp(zebrafish).
+sp(X) :- mammal(X).
+
+pair(X,Y) :- sp(X),sp(Y),X@<Y.
+
+make_pair(A) :-
+  pair(X,Y),
+  format(atom(A),"~w-~w.pair",[X,Y]).
+endprolog
+
+all: $(bagof A,make_pair(A))
+
+$X.single:
+	echo Single: $X > $@
+
+$X-$Y.pair: $X.single $Y.single { pair(X,Y) }
+	cat $X.single $Y.single > $@
+	echo Files: $X.single $Y.single >> $@
+~~~~
 
 MD5 hashes
 ----------

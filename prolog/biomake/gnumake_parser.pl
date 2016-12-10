@@ -304,7 +304,8 @@ false_rules(_,_,_,_,Line,File,_) -->
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
-xbracket(Sx) --> {char_code('(',L),char_code(')',R),char_code(',',C)}, xdelim(Sx,L,R,[C]).
+xbracket(Sx) --> xdelim(Sx,0'(,0'),[0',]).
+xbrace(Sx) --> xdelim(Sx,0'{,0'},[]).
 xdelim(Sx,L,R,X) --> delim(S,L,R,X), !, {expand_vars(S,Sx)}.
 delim(S,L,R,X) --> delim_outer(Sc,L,R,X), {string_codes(S,Sc)}.
 delim_outer(S,L,R,X) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R,X),
@@ -319,9 +320,21 @@ xquote(Sx) --> code_list(C,['\'']), {string_codes(S,C), expand_vars(S,Sx)}.
 xdblquote(Sx) --> code_list(C,['"']), {string_codes(S,C), expand_vars(S,Sx)}.
 xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx)}.
 
-
 makefile_special_target(queue(none),Lines) -->
     makefile_recipe(rule([".NOTPARALLEL"],_,_),Lines).
+
+makefile_recipe(rule(Head,Deps,Exec,{Goal},VNs),Lines) -->
+    makefile_targets(Head),
+    ":",
+    opt_makefile_targets(Deps),
+    "{",
+    xbrace(GoalAtom),
+    "}",
+    "\n",
+    !,
+    makefile_execs(Exec,Lexecs),
+    { Lines is 1 + Lexecs,
+      read_atom_as_makeprog_term(GoalAtom,Goal,VNs) }.
 
 makefile_recipe(rule(Head,Deps,Exec),Lines) -->
     makefile_targets(Head),
@@ -350,7 +363,7 @@ makefile_targets([T]) --> opt_space, makefile_target_string(T), opt_whitespace.
 
 makefile_warning_text(S) --> string_from_codes(S,")").
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
-makefile_target_string(S) --> string_from_codes(S,":; \t\n").
+makefile_target_string(S) --> delim(S,0'(,0'),[0':,0';,0'\s,0'\t,0'\n]), {S \= ""}, !.
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".

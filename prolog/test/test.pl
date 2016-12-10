@@ -210,6 +210,9 @@ test :-
 	announce("EMBEDDED PROLOG SYNTAX"),
 	run_test("-f Makefile.bagof","bagof1"),
 	run_test("-f Makefile.bagof","bagof2"),
+	run_test("-f Makefile.goal","goal_a"),
+	run_test("-f Makefile.goal","goal_x"),
+	run_test("ref/embedded","target/embedded",["rm [hmz]*"],"",""),
 
 	% All done
 	report_counts,
