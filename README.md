@@ -346,6 +346,17 @@ at a point where a variable assignment, recipe, or `include` directive could go
 Unlike GNU Make, Biomake does not offer domain-specific language extensions in [Scheme](https://www.gnu.org/software/guile/)
 (even though this is one of the cooler aspects of GNU Make), but you can program it in Prolog instead - it's quite hackable.
 
+Arithmetic functions
+--------------------
+
+Biomake provides a few extra functions for arithmetic on lists:
+
+- `$(iota N)` returns a space-separated list of numbers from `1` to `N`
+- `$(iota S,E)` returns a space-separated list of numbers from `S` to `E`
+- `$(add X,L)` adds `X` to every element of the space-separated list `L`
+- `$(multiply Y,L)` multiplies every element of the space-separated list `L` by `Y`
+- `$(divide Z,L)` divides every element of the space-separated list `L` by `Z`
+
 MD5 hashes
 ----------
 

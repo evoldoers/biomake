@@ -51,10 +51,10 @@ makefile_function(Result,V) --> lb("sort"), xlst_arg(L,V), rb, !,
 	  remove_dups(S,R),
 	  concat_string_list_spaced(R,Result) }.
 
-makefile_function(Result,V) --> lb("word"), num_arg(N), comma, xlst_arg(L,V), rb, !,
+makefile_function(Result,V) --> lb("word"), int_arg(N), comma, xlst_arg(L,V), rb, !,
 	{ nth_element(N,L,Result) }.
 
-makefile_function(Result,V) --> lb("wordlist"), num_arg(S), comma, num_arg(E), comma, xlst_arg(L,V), rb, !,
+makefile_function(Result,V) --> lb("wordlist"), int_arg(S), comma, int_arg(E), comma, xlst_arg(L,V), rb, !,
 	{ slice(S,E,L,Sliced),
 	  concat_string_list(Sliced,Result," ") }.
 
@@ -132,6 +132,29 @@ makefile_function(Result,_V) --> lb("value"), opt_whitespace, var_arg(Var), rb,
 
 makefile_function(Result,V) --> lb("value"), opt_whitespace, var_arg(Var), rb, !,
         { bindvar(Var,V,Result) }.
+
+makefile_function(Result,V) --> lb("iota"), opt_whitespace, xstr_arg(Na,V), rb, !,
+	{ atom_number(Na,N),
+	  iota(N,L),
+ 	  concat_string_list_spaced(L,Result) }.
+
+makefile_function(Result,V) --> lb("iota"), opt_whitespace, xstr_arg(Sa,V), comma, opt_whitespace, xstr_arg(Ea,V), rb, !,
+	{ atom_number(Sa,S),
+	  atom_number(Ea,E),
+	  iota(S,E,L),
+	  concat_string_list_spaced(L,Result) }.
+
+makefile_function(Result,V) --> lb("add"), opt_whitespace, xstr_arg(Na,V), comma, opt_whitespace, xlst_arg(List,V), rb, !,
+        { maplist(add(Na),List,ResultList),
+	  concat_string_list_spaced(ResultList,Result) }.
+
+makefile_function(Result,V) --> lb("multiply"), opt_whitespace, xstr_arg(Na,V), comma, opt_whitespace, xlst_arg(List,V), rb, !,
+        { maplist(multiply(Na),List,ResultList),
+	  concat_string_list_spaced(ResultList,Result) }.
+
+makefile_function(Result,V) --> lb("divide"), opt_whitespace, xstr_arg(Na,V), comma, opt_whitespace, xlst_arg(List,V), rb, !,
+        { maplist(divide(Na),List,ResultList),
+	  concat_string_list_spaced(ResultList,Result) }.
 
 makefile_function("",_V) --> ['('], str_arg(S), [')'], !, {format("Warning: unknown function $(~w)~n",[S])}.
 
@@ -212,10 +235,10 @@ makefile_and([C],Result,V) :- expand_vars(C,Result,V), !.
 makefile_and([C|Cs],Result,V) :- expand_vars(C,X,V), X \= "", !, makefile_and(Cs,Result,V).
 makefile_and(_,"",_).
 
-num_arg(N) --> opt_whitespace, num_chars(C), {C\=[],number_chars(N,C)}.
-num_chars([]) --> [].
-num_chars([C|Cs]) --> num_char(C), num_chars(Cs).
-num_char(X) --> [X],{X@>='0',X@=<'9'},!.    % foo('0') %
+int_arg(N) --> opt_whitespace, int_chars(C), {C\=[],number_chars(N,C)}.
+int_chars([]) --> [].
+int_chars([C|Cs]) --> int_char(C), int_chars(Cs).
+int_char(X) --> [X],{X@>='0',X@=<'9'},!.    % foo('0') %
 
 subst(Cs,Ds,Result) --> Cs, !, subst(Cs,Ds,Rest), {append(Ds,Rest,Result)}.
 subst(Cs,Ds,[C|Rest]) --> [C], !, subst(Cs,Ds,Rest).
@@ -282,3 +305,12 @@ addsuffix(S,[N|Ns],[R|Rs]) :- string_concat(N,S,R), addsuffix(S,Ns,Rs).
 
 addprefix(_,[],[]).
 addprefix(P,[N|Ns],[R|Rs]) :- string_concat(P,N,R), addprefix(P,Ns,Rs).
+
+iota(N,L) :- iota(1,N,L).
+iota(S,E,[]) :- S > E, !.
+iota(S,E,[S|L]) :- Snext is S + 1, iota(Snext,E,L).
+
+% these arithmetic functions are highly idiosyncratic to this module - do not re-use!
+multiply(Aa,Bs,C) :- atom_string(Aa,As), number_string(A,As), number_string(B,Bs), C is A * B.
+divide(Aa,Bs,C) :- atom_string(Aa,As), number_string(A,As), number_string(B,Bs), C is B / A.
+add(Aa,Bs,C) :- atom_string(Aa,As), number_string(A,As), number_string(B,Bs), C is A + B.
