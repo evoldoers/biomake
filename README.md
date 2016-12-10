@@ -46,7 +46,7 @@ Just start SWI and type:
 Command-line
 ------------
 
-    biomake [-h] [-p MAKEPROG] [-f GNUMAKEFILE] [-l DIR] [-n|--dry-run] [-B|--always-make] [TARGETS...]
+    biomake [OPTIONS] [TARGETS]
 
 Options
 -------
