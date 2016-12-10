@@ -207,6 +207,10 @@ test :-
 	run_test("CMDLINE_VAR=average --eval EVAL_VAR=worthy","cmdline_eval1"),
 	run_test("CMDLINE_VAR=mediocre. --eval-prolog EVAL_VAR=deserving.","cmdline_eval2"),
 	
+	announce("EMBEDDED PROLOG SYNTAX"),
+	run_test("-f Makefile.bagof","bagof1"),
+	run_test("-f Makefile.bagof","bagof2"),
+
 	% All done
 	report_counts,
         (   failed_test(_,_)

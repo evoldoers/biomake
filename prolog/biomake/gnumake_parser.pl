@@ -45,6 +45,7 @@ makefile_block([],Opts,Opts,_,_,1) --> blank_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> info_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> warning_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> error_line, !.
+makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> prolog_block(true,Rules,OptsOut,OptsIn,Line,File,Lines).
 makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(true,Rules,OptsOut,OptsIn,Line,File,Lines), !.
 makefile_block(Rules,OptsOut,OptsIn,_,File,1) --> include_line(true,File,Rules,OptsOut,OptsIn), !.
 makefile_block([Assignment],Opts,Opts,_,_,Lines) --> makefile_assignment(Assignment,Lines), !,
@@ -61,12 +62,57 @@ makefile_block(_,_,_,Line,File,_) -->
 	{format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),
 	syntax_error(Err)}.
 
+ignore_makefile_block(Opts,Opts,Line,File,Lines) --> prolog_block(false,_,_,Opts,Line,File,Lines).
 ignore_makefile_block(Opts,Line,File,Lines) --> makefile_conditional(false,_,_,Opts,Line,File,Lines), !.
 ignore_makefile_block(Opts,_,_,1) --> include_line(false,null,_,Opts,Opts), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_assignment(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_special_target(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_recipe(_,Lines), !.
 ignore_makefile_block(Opts,Line,File,Lines) --> makefile_block([],Opts,Opts,Line,File,Lines).
+
+prolog_block(Active,Rules,OptsOut,OptsIn,Line,File,Lines) -->
+    opt_space,
+    "prolog",
+    opt_period,
+    opt_whitespace,
+    "\n",
+    { Lnext is Line + 1 },
+    prolog_block_body(RawLines,Lnext,File,Lbody),
+    { Lines is Lbody + 1,
+      read_prolog_from_string(Active,Rules,OptsOut,OptsIn,RawLines) },
+    !.
+
+prolog_block_body(_,_,File,_) -->
+    call(eos),
+    { format(string(Err),"GNU makefile parse error (expected endprolog) at end of file ~w",[File]),
+      syntax_error(Err) }.
+
+prolog_block_body([],_,_,1) -->
+    opt_space,
+    "endprolog",
+    opt_period,
+    opt_whitespace,
+    "\n",
+    !.
+
+prolog_block_body([RawLine|RawLines],Line,File,Lines) -->
+    line_as_string(RawLine),
+    { Lnext is Line + 1 },
+    prolog_block_body(RawLines,Lnext,File,Lbody),
+    { Lines is Lbody + 1 },
+    !.
+
+opt_period --> ".".
+opt_period --> [].
+
+read_prolog_from_string(false,[],Opts,Opts,_).
+read_prolog_from_string(true,Rules,OptsOut,OptsIn,RawLines) :-
+    concat_string_list(RawLines,Raw,"\n"),
+    open_string(Raw,IOS),
+    read_makeprog_stream(IOS,OptsOut,OptsIn,Terms),
+    maplist(wrap_prolog,Terms,Rules).
+
+wrap_prolog(Term,prolog(Term)).
 
 error_line -->
     opt_space,

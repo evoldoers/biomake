@@ -90,10 +90,10 @@ alphanum_char(X) --> [X],{X@>='a',X@=<'z'},!.
 alphanum_char(X) --> parse_num_char(X),!.
 parse_num_char(X) --> [X],{X@>='0',X@=<'9'}.
 
-alphanum_code(X) --> [X],{X@>=65,X@=<90},!.  % A through Z
-alphanum_code(X) --> [X],{X@>=97,X@=<122},!.  % a through z
+alphanum_code(X) --> [X],{X@>=0'A,X@=<0'Z},!.  % A through Z
+alphanum_code(X) --> [X],{X@>=0'a,X@=<0'z},!.  % a through z
 alphanum_code(X) --> parse_num_code(X),!.
-parse_num_code(X) --> [X],{X@>=48,X@=<57}.  % 0 through 9
+parse_num_code(X) --> [X],{X@>=0'0,X@=<0'9}.  % 0 through 9
 
 n_chars(N,_,[]) :- N =< 0, !.
 n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.

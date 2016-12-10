@@ -15,6 +15,7 @@
 :- use_module(library(readutil)).
 
 :- use_module(library(biomake/utils)).
+:- use_module(library(biomake/vars)).
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/gnumake_parser)).
 
@@ -133,15 +134,12 @@ makefile_function(Result,_V) --> lb("value"), opt_whitespace, var_arg(Var), rb,
 makefile_function(Result,V) --> lb("value"), opt_whitespace, var_arg(Var), rb, !,
         { bindvar(Var,V,Result) }.
 
-makefile_function(Result,V) --> lb("iota"), opt_whitespace, xstr_arg(Na,V), rb, !,
-	{ atom_number(Na,N),
-	  iota(N,L),
+makefile_function(Result,V) --> lb("iota"), opt_whitespace, xnum_arg(N,V), rb, !,
+	{ iota(N,L),
  	  concat_string_list_spaced(L,Result) }.
 
-makefile_function(Result,V) --> lb("iota"), opt_whitespace, xstr_arg(Sa,V), comma, opt_whitespace, xstr_arg(Ea,V), rb, !,
-	{ atom_number(Sa,S),
-	  atom_number(Ea,E),
-	  iota(S,E,L),
+makefile_function(Result,V) --> lb("iota"), opt_whitespace, xnum_arg(S,V), comma, opt_whitespace, xnum_arg(E,V), rb, !,
+	{ iota(S,E,L),
 	  concat_string_list_spaced(L,Result) }.
 
 makefile_function(Result,V) --> lb("add"), opt_whitespace, xstr_arg(Na,V), comma, opt_whitespace, xlst_arg(List,V), rb, !,
@@ -156,6 +154,9 @@ makefile_function(Result,V) --> lb("divide"), opt_whitespace, xstr_arg(Na,V), co
         { maplist(divide(Na),List,ResultList),
 	  concat_string_list_spaced(ResultList,Result) }.
 
+makefile_function(Result,_V) --> lb("bagof"), str_arg(Template), comma, str_arg(Goal), rb, !,
+				 { eval_bagof(Template,Goal,Result) }.
+	  
 makefile_function("",_V) --> ['('], str_arg(S), [')'], !, {format("Warning: unknown function $(~w)~n",[S])}.
 
 makefile_subst_ref(Result) --> makefile_subst_ref(Result,v(null,null,null,[])).
@@ -179,6 +180,7 @@ rb --> opt_whitespace, [')'].
 comma --> opt_whitespace, [','].
 xlst_arg(L,V) --> xstr_arg(S,V), !, {split_spaces(S,L)}.
 xchr_arg(C,V) --> xstr_arg(S,V), !, {string_chars(S,C)}.
+xnum_arg(N,V) --> xstr_arg(S,V), !, {atom_number(S,N)}.
 xstr_arg(Sx,V) --> str_arg(S), !, {expand_vars(S,Sx,V)}.
 chr_arg(C) --> str_arg(S), !, {string_chars(S,C)}.
 str_arg(S) --> opt_whitespace, str_arg_outer(S).
