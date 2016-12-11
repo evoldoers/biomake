@@ -437,7 +437,7 @@ Queues
 ------
 
 To run jobs in parallel, locally or on a cluster, you need to specify a queueing engine
-using the `-Q` option (long form `--queue-engine`). Note that, unlike with GNU Make, multi-threading is not triggered
+using the `-Q` option (long form `--queue-engine`). Note that, unlike with GNU Make, multi-threading is not activated
 simply by specifying the number of threads with `-j`; you need `-Q` as well.
 
 There are several queueing engines currently supported:
