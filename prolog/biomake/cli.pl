@@ -193,17 +193,17 @@ simple_arg('-B',always_make(true)).
 arg_alias('-B','--always-make').
 arg_info('-B','','Always build fresh target even if dependency is up to date').
 
-parse_arg(['-p',F|L],L,makeprog(F)).
-arg_alias('-p','--prog').
-arg_alias('-p','--makeprog').
-recover_arg(['-p',Fabs],makeprog(F)) :- absolute_file_name(F,Fabs).
-arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]').
-
 parse_arg(['-f',F|L],L,gnu_makefile(F)).
 arg_alias('-f','--file').
 arg_alias('-f','--makefile').
 recover_arg(['-f',Fabs],gnu_makefile(F)) :- absolute_file_name(F,Fabs).
-arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification').
+arg_info('-f','GNUMAKEFILE','Use a GNU Makefile as the build specification [default: Makefile]').
+
+parse_arg(['-p',F|L],L,makeprog(F)).
+arg_alias('-p','--prog').
+arg_alias('-p','--makeprog').
+recover_arg(['-p',Fabs],makeprog(F)) :- absolute_file_name(F,Fabs).
+arg_info('-p','MAKEPROG','Use MAKEPROG as the (Prolog) build specification [default: Makeprog]').
 
 parse_arg(['-m',Text|L],L,eval_makefile_syntax(Text)).
 recover_arg(['-m',Text],eval_makefile_syntax(Text)).

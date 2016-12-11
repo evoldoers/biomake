@@ -28,7 +28,7 @@ required. Just add it to your path (changing the directory if necessary):
 
     `biomake -h`
 
-4. Create a 'Makespec.pro' or a 'Makefile' (see below)
+4. Create a 'Makefile' or a 'Makeprog' (see below)
 
 Alternate installation instructions
 -----------------------------------
@@ -60,10 +60,10 @@ Options
     Print the commands that would be executed, but do not execute them
 -B,--always-make 
     Always build fresh target even if dependency is up to date
--p,--prog,--makeprog MAKEPROG
-    Use MAKEPROG as the (Prolog) build specification [default: Makespec.pro]
 -f,--file,--makefile GNUMAKEFILE
-    Use a GNU Makefile as the build specification
+    Use a GNU Makefile as the build specification [default: Makefile]
+-p,--prog,--makeprog MAKEPROG
+    Use MAKEPROG as the (Prolog) build specification [default: Makeprog]
 -m,--eval,--makefile-syntax STRING
     Evaluate STRING as GNU Makefile syntax
 -P,--eval-prolog,--makeprog-syntax STRING
@@ -127,7 +127,7 @@ Brief overview:
 
 - Prolog can be embedded within `prolog` and `endprolog` directives
 - `$(bagof Template,Goal)` expands to the space-separated `List` from the Prolog `bagof(Template,Goal,List)`
-- Following the dependent list with `{Goal}` causes the rule to match only if `Goal` is satisfied. The special variables `TARGET` and `DEPS`, if used, will be bound to the target and dependency-list (i.e. `$@` and `$^`, loosely speaking, except the latter is a list)
+- Following the dependent list with `{Goal}` causes the rule to match only if `Goal` is satisfied. The special variables `TARGET` and `DEPS`, if used, will be bound to the target and dependency-list (i.e. `$@` and `$^`, loosely speaking; except the latter is a true Prolog list, not encoded as a string with whitespace separators as in GNU Make)
 
 Examples
 --------
@@ -223,7 +223,7 @@ Programming directly in Prolog
 ------------------------------
 
 If you are a Prolog wizard who finds embedding Prolog in Makefiles too cumbersome, you can use a native Prolog-like syntax.
-Biomake looks for a Prolog file called `Makespec.pro` (or `Makeprog`) in your
+Biomake looks for a Prolog file called `Makeprog` (or `Makespec.pro`) in your
 current directory. (If it's not there, it will try looking for a
 `Makefile` in GNU Make format. The following examples describe the
 Prolog syntax.)
@@ -231,7 +231,7 @@ Prolog syntax.)
 Assume you have two file formats, ".foo" and ".bar", and a `foo2bar`
 converter.
 
-Add the following rule to your `Makespec.pro`:
+Add the following rule to your `Makeprog`:
 
     '%.bar' <-- '%.foo',
         'foo2bar $< > $@'.
@@ -241,7 +241,7 @@ do need the quotes, and remember the closing ".",
 as this is Prolog syntax.
 
 If you prefer to stick with GNU Make syntax,
-the above `Makespec.pro` is equivalent to the following `Makefile`:
+the above `Makeprog` is equivalent to the following `Makefile`:
 
     %.bar: %.foo
     	   foo2bar $< > $@
