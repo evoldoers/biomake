@@ -759,6 +759,7 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
 	(member(('TARGET' = T), Bindings) ; true),  % make $@ available to the Goal as variable TARGET
 
 	% Do a dummy expansion of the dependency list so that Goal has something to chew on
+	% We do not however want to do the real expansion yet - because Goal might affect that
 	expand_deps(DP1,DPtmp,V),
 	(member(('DEPS' = DPtmp), Bindings) ; true),  % make $^ available to the Goal as variable DEPS
 
