@@ -327,6 +327,7 @@ makefile_recipe(rule(Head,Deps,Exec,{Goal},VNs),Lines) -->
     makefile_targets(Head),
     ":",
     opt_makefile_targets(Deps),
+    opt_linebreak,
     "{",
     xbrace(GoalAtom),
     "}",
@@ -360,6 +361,9 @@ opt_makefile_targets([]) --> opt_space.
 
 makefile_targets([T|Ts]) --> opt_space, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
 makefile_targets([T]) --> opt_space, makefile_target_string(T), opt_whitespace.
+
+opt_linebreak --> [].
+opt_linebreak --> "\n", opt_whitespace.
 
 makefile_warning_text(S) --> string_from_codes(S,")").
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
