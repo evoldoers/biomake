@@ -342,7 +342,7 @@ The same syntax applies to rules which have lists of multiple targets, or multip
 
 The rule for target `all` in this translation involves a call to the Biomake function `$(bagof ...)`,
 but (as noted) this function is just a wrapper for the Prolog `bagof/3` predicate.
-The automatic translation is not smart enough to remove this double layer of wrapping,
+The automatic translation is not smart enough to remove this layer of wrapping,
 but we can do so manually, yielding a clearer program:
 
 ~~~
