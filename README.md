@@ -280,9 +280,6 @@ variables. The following form is functionally equivalent:
 
 The equivalent `Makefile` would be this...
 
-    $(Base).foo:
-    	echo $(Base) >$@
-
     $(Base).bar: $(Base).foo
     	foo2bar $(Base).foo > $(Base).bar
 
@@ -292,15 +289,6 @@ don't work the same way in GNU Make as they do in Biomake
 (Biomake will try to use them as wildcards for pattern-matching,
 whereas GNU Make will just replace them with the empty string - which is also the default behavior
 for Biomake if they occur outside of a pattern-matching context).
-
-If you want variables to work as Prolog variables as well
-as GNU Make variables, then they must conform to Prolog syntax:
-they must have a leading uppercase, and only alphanumeric characters plus underscore.
-
-You can also use GNU Makefile constructs, like automatic variables (`$<`, `$@`, `$*`, etc.), if you like:
-
-    '$(Base).bar' <-- '$(Base).foo',
-        'foo2bar $< > $@'.
 
 Following the GNU Make convention, variable names must be enclosed in
 parentheses unless they are single letters.
