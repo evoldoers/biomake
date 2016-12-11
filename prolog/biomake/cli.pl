@@ -254,14 +254,17 @@ arg_info('-S','','Stop after error').
 
 simple_arg('-t',touch_only(true)).
 arg_alias('-t','--touch').
-arg_info('-t','','Touch files (and update MD5 hashes, if appropriate) instead of running recipes').
+arg_info('-t','','Touch files (& update MD5 hashes, if appropriate) instead of running recipes').
 
+parse_arg(['-D',Var,Val|L],L,assignment(Var,Val)).
+arg_alias('-D','--define').
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
 recover_arg(VarEqualsVal,assignment(Var,Val)) :-
-    format(string(VarEqualsVal),"~w=~q",[Var,Val]).
-arg_info('Var=Val','','Assign Makefile variables from command line').
+    format(string(VarEqualsVal),"--define ~w ~q",[Var,Val]).
+arg_info('-D','Var Val','Assign Makefile variables from command line').
+arg_info('Var=Val','','Alternative syntax for \'-D Var Val\'').
 
 makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
 makefile_var(A) --> atom_from_codes(A,":= \t\n").
