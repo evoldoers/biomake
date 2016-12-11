@@ -311,7 +311,8 @@ You can parse a GNU Makefile (including Biomake-specific extensions, if any)
 and save the corresponding Prolog syntax using the `-T` option
 (long-form `--translate`).
 
-Here is the translation of the Makefile from the previous section:
+Here is the translation of the Makefile from the previous section (lightly formatted for clarity):
+
 ~~~
 sp(mouse).
 sp(human).
@@ -326,12 +327,44 @@ make_filename(F):-
  ordered_pair(X,Y),
  format(atom(F),"align-~w-~w",[X,Y]).
 
-["all"] <-- ["$(bagof F,make_filename(F))"], [].
+"all" <-- "$(bagof F,make_filename(F))".
 
-["align-$X-$Y"] <-- ["$X.fa","$Y.fa"],
+"align-$X-$Y" <--
+ ["$X.fa","$Y.fa"],
  {ordered_pair(X,Y),
   format("Matched ~w~n",[TARGET])},
- ["align $X.fa $Y.fa > $@"].
+ "align $X.fa $Y.fa > $@".
+~~~
+
+Note how the list of dependencies in the second rule, which contains more than one dependency (`$X.fa` and `$Y.fa`), is enclosed in square brackets, i.e. a Prolog list (`["$X.fa","$Y.fa"]`).
+The same syntax applies to rules which have lists of multiple targets, or multiple executables.
+
+The rule for target `all` in this translation involves a call to the Biomake function `$(bagof ...)`,
+but (as noted) this function is just a wrapper for the Prolog `bagof/3` predicate.
+The automatic translation is not smart enough to remove this double layer of wrapping,
+but we can do so manually, yielding a clearer program:
+
+~~~
+sp(mouse).
+sp(human).
+sp(zebrafish).
+
+ordered_pair(X,Y):-
+ sp(X),
+ sp(Y),
+ X@<Y.
+
+make_filename(F):-
+ ordered_pair(X,Y),
+ format(atom(F),"align-~w-~w",[X,Y]).
+
+"all" <-- Deps, {bagof(F,make_filename(F),Deps)}.
+
+"align-$X-$Y" <--
+ ["$X.fa","$Y.fa"],
+ {ordered_pair(X,Y),
+  format("Matched ~w~n",[TARGET])},
+ "align $X.fa $Y.fa > $@".
 ~~~
 
 Make-like features

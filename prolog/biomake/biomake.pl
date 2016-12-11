@@ -569,13 +569,26 @@ write_clause(IO,option(Opt)) :-
 
 write_clause(IO,rule(Ts,Ds,Es)) :-
     !,
-    format(IO,"~q <-- ~q, ~q.~n",[Ts,Ds,Es]).
+    write_list(IO,Ts),
+    write(IO,' <-- '),
+    write_list(IO,Ds),
+    (Es = []
+     ; (write(IO,', '),
+	write_list(IO,Es))),
+    write(IO,'.\n').
 
 write_clause(IO,rule(Ts,Ds,Es,{Goal},VNs)) :-
     !,
-    format(IO,"~q <-- ~q, {",[Ts,Ds]),
+    write_list(IO,Ts),
+    write(IO,' <-- '),
+    write_list(IO,Ds),
+    write(IO,', {'),
     write_term(IO,Goal,[variable_names(VNs),quoted(true)]),
-    format(IO,"}, ~q.~n",[Es]).
+    write(IO,'}'),
+    (Es = []
+     ; (write(IO,', '),
+	write_list(IO,Es))),
+    write(IO,'.\n').
 
 write_clause(_,assignment(Var,_,_)) :-
     atom_codes(Var,[V|_]),
@@ -592,6 +605,9 @@ write_clause(IO,prolog( (Term,VNs) )) :-
     write(IO,'.\n').
 
 write_clause(_,X) :- format("Don't know how to write ~w~n",[X]).
+
+write_list(IO,[X]) :- format(IO,"~q",[X]), !.
+write_list(IO,L) :- format(IO,"~q",[L]).
 
 add_cmdline_assignment((Var = X)) :-
         global_unbind(Var),
