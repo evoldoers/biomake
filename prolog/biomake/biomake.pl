@@ -757,9 +757,15 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         member(TP,TPs),
         uniq_pattern_match(TP,T),
 	(member(('TARGET' = T), Bindings) ; true),  % make $@ available to the Goal as variable TARGET
-        call_without_backtrace(Goal),
 
-	% Two-pass expansion of dependency list.
+	% Do a dummy expansion of the dependency list so that Goal has something to chew on
+	expand_deps(DP1,DPtmp,V),
+	(member(('DEPS' = DPtmp), Bindings) ; true),  % make $^ available to the Goal as variable DEPS
+
+	% Check the Goal
+	call_without_backtrace(Goal),
+
+	% Do a two-pass expansion of dependency list.
 	% This is ultra-hacky but allows for variable-expanded dependency lists that contain % wildcards
 	% (the variables are expanded on the first pass, and the %'s on the second pass).
 	% A more rigorous solution would be a two-pass expansion of the entire GNU Makefile,

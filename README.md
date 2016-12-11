@@ -125,7 +125,7 @@ Brief overview:
 
 - Prolog can be embedded within `prolog` and `endprolog` directives
 - `$(bagof Template,Goal)` expands to the space-separated `List` from the Prolog `bagof(Template,Goal,List)`
-- Following the dependent list with `{Goal}` causes the rule to match only if `Goal` is satisfied. The special variable `TARGET`, if used, will be bound to `$@`
+- Following the dependent list with `{Goal}` causes the rule to match only if `Goal` is satisfied. The special variables `TARGET` and `DEPS`, if used, will be bound to the target and dependency-list (i.e. `$@` and `$^`, loosely speaking, except the latter is a list)
 
 Examples
 --------
@@ -333,7 +333,7 @@ make_filename(F):-
 "align-$X-$Y" <--
  ["$X.fa","$Y.fa"],
  {ordered_pair(X,Y),
-  format("Matched ~w~n",[TARGET])},
+  format("Matched ~w <-- ~n",[TARGET,DEPS])},
  "align $X.fa $Y.fa > $@".
 ~~~
 
@@ -359,12 +359,12 @@ make_filename(F):-
  ordered_pair(X,Y),
  format(atom(F),"align-~w-~w",[X,Y]).
 
-"all" <-- Deps, {bagof(F,make_filename(F),Deps)}.
+"all" <-- DepList, {bagof(F,make_filename(F),DepList)}.
 
 "align-$X-$Y" <--
  ["$X.fa","$Y.fa"],
  {ordered_pair(X,Y),
-  format("Matched ~w~n",[TARGET])},
+  format("Matched ~w <-- ~n",[TARGET,DEPS])},
  "align $X.fa $Y.fa > $@".
 ~~~
 
