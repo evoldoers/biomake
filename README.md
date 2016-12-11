@@ -205,7 +205,7 @@ endprolog
 all: $(bagof F,make_filename(F))
 
 align-$X-$Y: $X.fa $Y.fa { ordered_pair(X,Y),
-                           format("Matched ~w~n",[TARGET]) }
+                           format("Matched ~w <-- ~n",[TARGET,DEPS]) },
     align $X.fa $Y.fa > $@
 ~~~~
 
