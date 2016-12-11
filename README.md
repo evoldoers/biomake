@@ -84,8 +84,10 @@ Options
     Stop after error
 -t,--touch 
     Touch files (and update MD5 hashes, if appropriate) instead of running recipes
-Var=Val 
+-D,--define Var Val
     Assign Makefile variables from command line
+Var=Val 
+    Alternative syntax for '-D Var Val'
 -l DIRECTORY
     Iterates through directory writing metadata on each file found
 -s,--quiet,--silent 
