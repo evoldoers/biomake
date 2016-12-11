@@ -1,13 +1,13 @@
 % * -*- Mode: Prolog -*- */
 
-:- module(vars,
+:- module(embed,
           [
 	   eval_bagof/3
            ]).
 
 /** 
 
-  A minimally-cluttered namespace for user variable bindings in Makeprogs & Makefiles.
+  A minimally-cluttered namespace for embedded Prolog in Makefiles.
 
   */
 

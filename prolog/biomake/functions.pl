@@ -15,7 +15,7 @@
 :- use_module(library(readutil)).
 
 :- use_module(library(biomake/utils)).
-:- use_module(library(biomake/vars)).
+:- use_module(library(biomake/embed)).
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/gnumake_parser)).
 
@@ -155,8 +155,8 @@ makefile_function(Result,V) --> lb("divide"), opt_whitespace, xstr_arg(Na,V), co
 	  concat_string_list_spaced(ResultList,Result) }.
 
 makefile_function(Result,_V) --> lb("bagof"), str_arg(Template), comma, str_arg(Goal), rb, !,
-				 { eval_bagof(Template,Goal,Result) }.
-	  
+	{ eval_bagof(Template,Goal,Result) }.
+
 makefile_function("",_V) --> ['('], str_arg(S), [')'], !, {format("Warning: unknown function $(~w)~n",[S])}.
 
 makefile_subst_ref(Result) --> makefile_subst_ref(Result,v(null,null,null,[])).

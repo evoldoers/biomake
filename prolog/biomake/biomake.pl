@@ -57,7 +57,7 @@
 
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
-:- use_module(library(biomake/vars)).
+:- use_module(library(biomake/embed)).
 
 :- user:op(1100,xfy,<--).
 :- user:op(1101,xfy,?=).
@@ -510,13 +510,16 @@ read_makeprog_stream(IO,Opts,Opts,[]) :-
 	!,
 	close(IO).
 
-read_makeprog_stream(IO,OptsOut,OptsIn,[Term|Terms]) :-
+read_makeprog_stream(IO,OptsOut,OptsIn,Terms) :-
         read_term(IO,Term,[variable_names(VNs),
                            syntax_errors(error),
-                           module(vars)]),
-        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
-        add_spec_clause(Term,VNs,Opts,OptsIn),
-	read_makeprog_stream(IO,OptsOut,Opts,Terms).
+                           module(embed)]),
+	(Term = 'end_of_file'
+	 -> (Terms = [], OptsOut = OptsIn)
+	 ; (Terms = [(Term,VNs)|Rest],
+	    debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
+            add_spec_clause(Term,VNs,Opts,OptsIn),
+	    read_makeprog_stream(IO,OptsOut,Opts,Rest))).
 
 eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn) :-
         read_atom_as_makeprog_term(Atom,Term,VNs),
@@ -526,7 +529,7 @@ eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn) :-
 read_atom_as_makeprog_term(Atom,Term,VNs) :-
         read_term_from_atom(Atom,Term,[variable_names(VNs),
 				       syntax_errors(error),
-				       module(vars)]).
+				       module(embed)]).
 
 read_string_as_makeprog_term(String,Term,VNs) :-
         atom_string(Atom,String),
@@ -547,14 +550,14 @@ add_gnumake_clause(G,OptsOut,OptsIn) :-
     translate_gnumake_clause(G,P),
     add_spec_clause(P,OptsOut,OptsIn).
 
-translate_gnumake_clause(rule(Ts,Ds,Es,{Goal},VNs), (Ts <-- Ds,{Goal},Es), VNs).
-translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)).
-translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)).
-translate_gnumake_clause(assignment(Var,"?=",Val), (Var ?= Val)).
-translate_gnumake_clause(assignment(Var,":=",Val), (Var := Val)).
-translate_gnumake_clause(assignment(Var,"+=",Val), (Var += Val)).
-translate_gnumake_clause(assignment(Var,"!=",Val), (Var =* Val)).
-translate_gnumake_clause(prolog(Term), Term).
+translate_gnumake_clause(rule(Ts,Ds,Es,{Goal},VNs), (Ts <-- Ds,{Goal},Es), VNs):- !.
+translate_gnumake_clause(prolog(Term,VNs), Term, VNs):- !.
+translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)):- !.
+translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)):- !.
+translate_gnumake_clause(assignment(Var,"?=",Val), (Var ?= Val)):- !.
+translate_gnumake_clause(assignment(Var,":=",Val), (Var := Val)):- !.
+translate_gnumake_clause(assignment(Var,"+=",Val), (Var += Val)):- !.
+translate_gnumake_clause(assignment(Var,"!=",Val), (Var =* Val)):- !.
 translate_gnumake_clause(C,_) :-
     format("Error translating ~w~n",[C]),
 	backtrace(20),
@@ -568,6 +571,12 @@ write_clause(IO,rule(Ts,Ds,Es)) :-
     !,
     format(IO,"~q <-- ~q, ~q.~n",[Ts,Ds,Es]).
 
+write_clause(IO,rule(Ts,Ds,Es,{Goal},VNs)) :-
+    !,
+    format(IO,"~q <-- ~q, {",[Ts,Ds]),
+    write_term(IO,Goal,[variable_names(VNs),quoted(true)]),
+    format(IO,"}, ~q.~n",[Es]).
+
 write_clause(_,assignment(Var,_,_)) :-
     atom_codes(Var,[V|_]),
     V @>= 0'a, V @=< 0'z,   % a through z
@@ -577,9 +586,12 @@ write_clause(_,assignment(Var,_,_)) :-
 write_clause(IO,assignment(Var,Op,Val)) :-
     format(IO,"~w ~w ~q.~n",[Var,Op,Val]).
 
-write_clause(IO,prolog(Term)) :-
+write_clause(IO,prolog( (Term,VNs) )) :-
     !,
-    write_term(IO,Term,[]).
+    write_term(IO,Term,[variable_names(VNs),quoted(true)]),
+    write(IO,'.\n').
+
+write_clause(_,X) :- format("Don't know how to write ~w~n",[X]).
 
 add_cmdline_assignment((Var = X)) :-
         global_unbind(Var),
@@ -728,6 +740,7 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         % only one of the specified targets has to match
         member(TP,TPs),
         uniq_pattern_match(TP,T),
+	(member(('TARGET' = T), Bindings) ; true),  % make $@ available to the Goal as variable TARGET
         call_without_backtrace(Goal),
 
 	% Two-pass expansion of dependency list.

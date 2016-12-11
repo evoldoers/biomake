@@ -118,16 +118,113 @@ Var=Val
     [developers] Do not print a backtrace on error
 ```
 
+Embedding Prolog in Makefiles
+-----------------------------
+
+Brief overview:
+
+- Prolog can be embedded within `prolog` and `endprolog` directives
+- `$(bagof Template,Goal)` expands to the space-separated `List` from the Prolog `bagof(Template,Goal,List)`
+- Following the dependent list with `{Goal}` causes the rule to match only if `Goal` is satisfied. The special variable `TARGET`, if used, will be bound to `$@`
+
 Examples
 --------
 
-(this assumes some knowledge of GNU Make and [Makefiles](https://www.gnu.org/software/make/manual/html_node/index.html))
+This assumes some knowledge of GNU Make and [Makefiles](https://www.gnu.org/software/make/manual/html_node/index.html).
 
-biomake looks for a Prolog file called `Makespec.pro` (or `Makeprog`) in your
-current directory. If it's not there, it will try looking for a
+Unlike makefiles, biomake allows multiple variables in pattern
+matching. Let's say we have a program called `align` that compares two
+files producing some output (e.g. biological sequence alignment, or
+ontology alignment). Assume our file convention is to suffix ".fa" on
+the inputs.  We can write a `Makefile` with the following:
+
+    align-$X-$Y: $X.fa $Y.fa
+        align $X.fa $Y.fa > $@
+
+Now if we have files `x.fa` and `y.fa` we can type:
+
+    biomake align-x-y
+
+Prolog extensions allow us to do even fancier things with logic.
+Specifically, we can embed arbitrary Prolog, including both database facts and
+rules. We can use these rules to control flow in a way that is more
+powerful than makefiles.
+
+Let's say we only want to run a certain program when the inputs match a certain table in our database.
+We can embed Prolog in our Makefile as follows:
+
+    prolog
+    sp(mouse).
+    sp(human).
+    sp(zebrafish).
+    endprolog
+
+    align-$X-$Y: $X.fa $Y.fa {sp(X),sp(Y)}
+        align $X.fa $Y.fa > $@
+
+The lines beginning `sp` between `prolog` and `endprolog` define the set of species that we want the rule to apply to.
+The rule itself consists of 4 parts:
+
+ * the target (`align-$X-$Y`)
+ * the dependencies (`$X.fa` and `$Y.fa`)
+ * a Prolog goal, enclosed in braces (`{sp(X),sp(Y)}`), that is used as an additional logic test of whether the rule can be applied
+ * the command (`align ...`)
+
+In this case, the Prolog goal succeeds with 9 solutions, with 3
+different values for `X` and `Y`. If we type...
+
+    biomake align-platypus-coelacanth
+
+...it will not succeed, even if the .fa files are on the filesystem. This
+is because the goal `{sp(X),sp(Y)}` cannot be satisfied for these two values of `X` and `Y`.
+
+To get a list of all matching targets,
+we can use the special BioMake function `$(bagof...)`
+which wraps the Prolog predicate [bagof/3](http://www.swi-prolog.org/pldoc/man?predicate=bagof/3).
+The following example also uses the Prolog predicates
+[format/2](http://www.swi-prolog.org/pldoc/man?predicate=format/2)
+and
+[format/3](http://www.swi-prolog.org/pldoc/man?predicate=format/3),
+for formatted output:
+
+~~~~
+prolog
+
+sp(mouse).
+sp(human).
+sp(zebrafish).
+
+ordered_pair(X,Y) :- sp(X),sp(Y),X@<Y.
+
+make_filename(F) :-
+  ordered_pair(X,Y),
+  format(atom(F),"align-~w-~w",[X,Y]).
+
+endprolog
+
+all: $(bagof F,make_filename(F))
+
+align-$X-$Y: $X.fa $Y.fa { ordered_pair(X,Y),
+                           format("Matched ~w~n",[TARGET]) }
+    align $X.fa $Y.fa > $@
+~~~~
+
+Now if we type...
+
+    biomake all
+
+...then all non-identical ordered pairs will be compared
+(since we have required them to be _ordered_ pairs, we get e.g. "mouse-zebrafish" but not "zebrafish-mouse";
+the motivation here is that the `align` program is symmetric, and so only needs to be run once per pair).
+
+Programming directly in Prolog
+------------------------------
+
+If you are a Prolog wizard who finds embedding Prolog in Makefiles too cumbersome, you can use a native Prolog-like syntax.
+Biomake looks for a Prolog file called `Makespec.pro` (or `Makeprog`) in your
+current directory. (If it's not there, it will try looking for a
 `Makefile` in GNU Make format. The following examples describe the
-Prolog syntax; GNU Make syntax is described elsewhere,
-e.g. [here](https://www.gnu.org/software/make/manual/html_node/index.html).
+Prolog syntax.)
 
 Assume you have two file formats, ".foo" and ".bar", and a `foo2bar`
 converter.
@@ -157,12 +254,12 @@ converter. We can add an additional rule:
     '%.baz' <-- '%.bar',
         'bar2baz $< > $@'.
 
-Now if we type:
+Now if we type...
 
     touch x.foo
     biomake x.baz
 
-The output shows the tree structure of the dependencies:
+...we get the following output, showing the tree structure of the dependencies:
 
     Checking dependencies: test.baz <-- [test.bar]
         Checking dependencies: test.bar <-- [test.foo]
@@ -191,7 +288,7 @@ The equivalent `Makefile` would be this...
 
 ...although this isn't _strictly_ equivalent, since unbound variables
 don't work the same way in GNU Make as they do in Biomake
-(Biomake will try to use them as wildcards for [pattern-matching](#PatternMatching),
+(Biomake will try to use them as wildcards for pattern-matching,
 whereas GNU Make will just replace them with the empty string - which is also the default behavior
 for Biomake if they occur outside of a pattern-matching context).
 
@@ -207,95 +304,35 @@ You can also use GNU Makefile constructs, like automatic variables (`$<`, `$@`, 
 Following the GNU Make convention, variable names must be enclosed in
 parentheses unless they are single letters.
 
-<a name="PatternMatching"></a>
-Pattern-matching
-----------------
+Automatic translation to Prolog
+-------------------------------
 
-Unlike makefiles, biomake allows multiple variables in pattern
-matching. Let's say we have a program called `align` that compares two
-files producing some output (e.g. biological sequence alignment, or
-ontology alignment). Assume our file convention is to suffix ".fa" on
-the inputs.  We can write a `Makespec.pro` with the following:
-
-    'align-$X-$Y' <-- ['$X.fa', '$Y.fa'],
-        'align $X.fa $Y.fa > $@'.
-
-(note that if we have multiple dependecies, these must be separated by
-commas and enclodes in square brackets - i.e. a Prolog list)
-
-Now if we have files `x.fa` and `y.fa` we can type:
-
-    biomake align-x-y
-
-We could achieve the same thing with the following GNU `Makefile`:
-
-    align-$X-$Y: $X.fa $Y.fa
-        align $X.fa $Y.fa > $@
-
-This is already an improvement over GNU Make, which only allows a single wildcard.
-However, the Prolog version allows us to do even fancier things with logic.
-Specifically, we can add arbitrary Prolog, including both database facts and
-rules. We can use these rules to control flow in a way that is more
-powerful than makefiles. Let's say we only want to run a certain
-program when the inputs match a certain table in our database:
-
-    sp(mouse).
-    sp(human).
-    sp(zebrafish).
-
-    'align-$X-$Y' <-- ['$X.fa', '$Y.fa'],
-        {sp(X),sp(Y)},
-        'align $X.fa $Y.fa > $@'.
-
-Note that here the rule consists of 4 parts:
-
- * the target/output
- * dependencies
- * a Prolog goal, enclosed in `{}`s, that is called to determine values
- * the command
-
-In this case, the Prolog goal succeeds with 9 solutions, with 3
-different values for X and Y. If we type:
-
-    biomake align-platypus-coelocanth
-
-It will not succeed, even if the .fa files are on the filesystem. This
-is because the goal cannot be satisfied for these two values.
-
-We can create a top-level target that generates all solutions:
-
-    % Database of species
-    sp(mouse).
-    sp(human).
-    sp(zebrafish).
-
-    % rule for generating a pair of (non-identical) species (asymmetric)
-    pair(X,Y) :- sp(X),sp(Y),X@<Y.
-
-    % top level target
-    all <-- Deps, 
-      {findall( t(['align-',X,-,Y]),
-                pair(X,Y),
-                Deps )}.
-
-    % biomake rule
-    'align-$X-$Y' <-- ['$X.obo', '$Y.obo'],
-        'align $X.obo $Y.obo > $@'.
-
-(The `t(...)` wrapper around `['align-',X,-,Y]` is used to concatenate a list of tokens.)
-
-Now if we type:
-
-    biomake all
-
-And all non-identical pairs are compared (in one direction only - the
-assumption is that the `align` program is symmetric).
-
-Translation to Prolog
----------------------
-
-You can parse a GNU Makefile and save the corresponding Prolog version using the `-T` option
+You can parse a GNU Makefile (including Biomake-specific extensions, if any)
+and save the corresponding Prolog syntax using the `-T` option
 (long-form `--translate`).
+
+Here is the translation of the Makefile from the previous section:
+~~~
+sp(mouse).
+sp(human).
+sp(zebrafish).
+
+ordered_pair(X,Y):-
+ sp(X),
+ sp(Y),
+ X@<Y.
+
+make_filename(F):-
+ ordered_pair(X,Y),
+ format(atom(F),"align-~w-~w",[X,Y]).
+
+["all"] <-- ["$(bagof F,make_filename(F))"], [].
+
+["align-$X-$Y"] <-- ["$X.fa","$Y.fa"],
+ {ordered_pair(X,Y),
+  format("Matched ~w~n",[TARGET])},
+ ["align $X.fa $Y.fa > $@"].
+~~~
 
 Make-like features
 ------------------
@@ -361,39 +398,6 @@ Biomake provides a few extra functions for arithmetic on lists:
 - `$(multiply Y,L)` multiplies every element of the space-separated list `L` by `Y`
 - `$(divide Z,L)` divides every element of the space-separated list `L` by `Z`
 
-Embedding Prolog in Makefiles
------------------------------
-
-- Prolog can be embedded within `prolog` and `endprolog` directives
-- `$(bagof Template,Goal)` expands to the space-separated `List` from the Prolog `bagof(Template,Goal,List)`
-- Following the dependent list with `{Goal}` causes the rule to match only if `Goal` is satisfied
-
-e.g.
-
-~~~~
-prolog
-mammal(mouse).
-mammal(human).
-sp(zebrafish).
-sp(X) :- mammal(X).
-
-pair(X,Y) :- sp(X),sp(Y),X@<Y.
-
-make_pair(A) :-
-  pair(X,Y),
-  format(atom(A),"~w-~w.pair",[X,Y]).
-endprolog
-
-all: $(bagof A,make_pair(A))
-
-$X.single:
-	echo Single: $X > $@
-
-$X-$Y.pair: $X.single $Y.single { pair(X,Y) }
-	cat $X.single $Y.single > $@
-	echo Files: $X.single $Y.single >> $@
-~~~~
-
 MD5 hashes
 ----------
 
@@ -431,3 +435,4 @@ Ideas for future development:
 * semantic web enhancement (using NEPOMUK file ontology)
 * using other back ends and target sources (sqlite db, REST services)
 * cloud-based computing
+* metadata

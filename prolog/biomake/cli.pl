@@ -2,7 +2,7 @@
 
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/utils)).
-:- use_module(library(biomake/vars)).
+:- use_module(library(biomake/embed)).
 
 % ----------------------------------------
 % MAIN PROGRAM
