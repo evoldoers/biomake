@@ -286,7 +286,8 @@ The equivalent `Makefile` would be this...
     $(Base).bar: $(Base).foo
     	foo2bar $(Base).foo > $(Base).bar
 
-...although this isn't _strictly_ equivalent, since unbound variables
+...although strictly speaking, this is only equivalent if you are using Biomake;
+GNU Make's treatment of this Makefile isn't quite equivalent, since unbound variables
 don't work the same way in GNU Make as they do in Biomake
 (Biomake will try to use them as wildcards for pattern-matching,
 whereas GNU Make will just replace them with the empty string - which is also the default behavior
