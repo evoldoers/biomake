@@ -1,0 +1,12 @@
+
+prolog
+valid(a).
+valid(b).
+valid(c).
+endprolog
+
+goal_$X: { valid(X) }
+	echo $X is valid. >$@
+
+goal_$X: { \+ valid(X) }
+	echo $X is invalid. >$@

@@ -2,7 +2,10 @@
 
 :- module(biomake,
           [
-           build_default/0,
+	   disable_backtrace/0,
+	   call_without_backtrace/1,
+	      
+	   build_default/0,
            build_default/1,
 
 	   halt_success/0,
@@ -16,10 +19,13 @@
 
 	   report/3,
 	   report/4,
-	   
-           consult_gnu_makefile/3,
+
+	   consult_gnu_makefile/3,
            consult_makeprog/3,
-	   eval_string_as_makeprog_term/3,
+	   read_makeprog_stream/4,
+	   
+	   read_string_as_makeprog_term/3,
+	   read_atom_as_makeprog_term/3,
 	   eval_atom_as_makeprog_term/3,
 
 	   add_spec_clause/3,
@@ -27,8 +33,13 @@
 	   add_cmdline_assignment/1,
 	   add_gnumake_clause/3,
 	   
+	   global_binding/2,
+	   
            target_bindrule/2,
            rebuild_required/4,
+
+	   normalize_pattern/3,
+	   unwrap_t/2,
 
            rule_target/3,
            rule_dependencies/3,
@@ -39,7 +50,6 @@
 	   report_run_exec/3,
 	   update_hash/3,
 
-	   global_binding/2,
 	   bindvar/3,
 	   expand_vars/2,
 	   expand_vars/3
@@ -47,6 +57,13 @@
 
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
+:- use_module(library(biomake/embed)).
+
+:- user:op(1100,xfy,<--).
+:- user:op(1101,xfy,?=).
+:- user:op(1102,xfy,:=).
+:- user:op(1103,xfy,+=).
+:- user:op(1104,xfy,=*).
 
 /** <module> Prolog implementation of Makefile-inspired build system
 
@@ -54,6 +71,35 @@
 
   */
 
+% ----------------------------------------
+% EXCEPTIONS
+% ----------------------------------------
+
+% use disable_backtrace to permanently disable backtrace on exception,
+% and call_without_backtrace to temporarily disable it.
+:- dynamic no_backtrace/0.
+:- dynamic suppress_backtrace/0.
+
+% Intercept a couple of exceptions that are thrown by the threadpool library
+% This is kind of yucky, but only seems to affect our exception-handling code
+:- dynamic prolog_exception_hook/4.
+
+user:prolog_exception_hook(error(existence_error(thread,_),context(system:thread_property/2,_)),_,_,_) :- !, fail.
+user:prolog_exception_hook('$aborted',_,_,_) :- !, fail.
+
+% Default exception handler: show backtrace
+user:prolog_exception_hook(E,_,_,_) :-
+	format("Exception: ~w~n",[E]),
+        (no_backtrace; (suppress_backtrace; backtrace(99))),
+        !,
+        fail.
+
+call_without_backtrace(Term) :-
+        assert(suppress_backtrace),
+	catch(call(Term),_,fail),
+	retract(suppress_backtrace).
+
+disable_backtrace :- assert(no_backtrace).
 
 
 % ----------------------------------------
@@ -99,8 +145,6 @@ build(T,SL,Opts) :-
         halt_error.
 
 build(T,SL,Opts) :-
-        %show_global_bindings,
-        %report('Target: ~w',[T]),
         debug_report(build,'  Target: ~w',[T],SL),
         target_bindrule(T,Rule),
         debug_report(build,'  Bindrule: ~w',[Rule],SL),
@@ -279,6 +323,7 @@ rule_execs(rb(_,_,X),_,_Opts) :- throw(error(no_exec(X))).
 
 
 % internal tracking of build order
+% a bit hacky to use global assertions/retractions for this
 :- dynamic build_count/2.
 :- dynamic build_counter/1.
 
@@ -431,87 +476,9 @@ report_build(Rule,SL,Opts) :-
 	rule_target(Rule,T,Opts),
         report('Building target ~w',[T],SL,Opts).
 
-% ----------------------------------------
-% RULES AND PATTERN MATCHING
-% ----------------------------------------
-
-
-
-target_bindrule(T,rb(T,Ds,Execs)) :-
-        mkrule_default(TP1,DP1,Exec1,Goal,Bindings),
-        append(Bindings,_,Bindings_Open),
-        V=v(_Base,T,Ds,Bindings_Open),
-        normalize_patterns(TP1,TPs,V),
-
-        % we allow multiple heads;
-        % only one of the specified targets has to match
-        member(TP,TPs),
-        uniq_pattern_match(TP,T),
-        Goal,
-
-	% Two-pass expansion of dependency list.
-	% This is ultra-hacky but allows for variable-expanded dependency lists that contain % wildcards
-	% (the variables are expanded on the first pass, and the %'s on the second pass).
-	% A more rigorous solution would be a two-pass expansion of the entire GNU Makefile,
-	% which would allow currently impossible things like variable-expanded rules, e.g.
-	%   RULE = target: dep1 dep2
-	%   $(RULE) dep3
-	% which (in GNU make, but not here) expands to
-	%   target: dep1 dep2 dep3
-	% However, this would fragment the current homology between the Prolog syntax and GNU Make syntax,
-	% making it harder to translate GNU Makefiles into Prolog.
-	% Consequently, we currently sacrifice perfect GNU make compatibility for a simpler translation.
-	expand_deps(DP1,DP2,V),
-	expand_deps(DP2,Ds,V),
-
-	% expansion of executables
-	expand_execs(Exec1,Execs,V).
-
-% semidet
-uniq_pattern_match(TL,A) :-
-        debug(bindrule,'Matching: ~w to ~w',[TL,A]),
-        pattern_match(TL,A),
-        debug(bindrule,' Matched: ~w to ~w',[TL,A]),
-        !.
-uniq_pattern_match(TL,A) :-
-        debug(bindrule,' NO_MATCH: ~w to ~w',[TL,A]),
-        fail.
-
-pattern_match(A,B) :- var(A),!,B=A.
-pattern_match(t(TL),A) :- !, pattern_match(TL,A).
-pattern_match([],'').
-pattern_match([Tok|PatternToks],Atom) :-
-    nonvar(Tok),
-    !,
-    atom_concat(Tok,Rest,Atom),
-    pattern_match(PatternToks,Rest).
-pattern_match([Tok|PatternToks],Atom) :-
-    var(Tok),
-    !,
-    atom_concat(Tok,Rest,Atom),
-    Tok\='',
-    pattern_match(PatternToks,Rest).
-    
-
-pattern_match_list([],[]).
-pattern_match_list([P|Ps],[M|Ms]) :-
-        pattern_match(P,M),
-        pattern_match_list(Ps,Ms).
-
-expand_deps(Deps,Result,V) :-
-    normalize_patterns(Deps,NormDeps,V),
-    maplist(unwrap_t,NormDeps,ExpandedDeps),
-    maplist(split_spaces,ExpandedDeps,DepLists),
-    flatten(DepLists,Result).
-
-expand_execs(Execs,Result,V) :-
-    normalize_patterns(Execs,NormExecs,V),
-    maplist(unwrap_t,NormExecs,ExpandedExecs),
-    maplist(split_newlines,ExpandedExecs,ExecLists),
-    flatten(ExecLists,Result).
 
 % ----------------------------------------
-% READING
+% READING AND WRITING MAKEPROGS
 % ----------------------------------------
 
 :- dynamic global_cmdline_binding/2.
@@ -520,18 +487,17 @@ expand_execs(Execs,Result,V) :-
 
 :- dynamic default_target/1.
 
-:- user:op(1100,xfy,<--).
-
-:- user:op(1101,xfy,?=).
-:- user:op(1102,xfy,:=).
-:- user:op(1103,xfy,+=).
-:- user:op(1104,xfy,=*).
-
 is_assignment_op(=).
 is_assignment_op(?=).
 is_assignment_op(:=).
 is_assignment_op(+=).
 is_assignment_op(=*).
+
+consult_makeprog(F,AllOpts,Opts) :-
+        debug(makeprog,'reading: ~w',[F]),
+        open(F,read,IO,[]),
+	read_makeprog_stream(IO,AllOpts,Opts,_),
+        debug(makeprog,'read: ~w',[F]).
 
 consult_gnu_makefile(F,AllOpts,Opts) :-
         ensure_loaded(library(biomake/gnumake_parser)),
@@ -539,35 +505,35 @@ consult_gnu_makefile(F,AllOpts,Opts) :-
 	(member(translate_gnu_makefile(P),AllOpts)
 	 -> translate_gnu_makefile(M,P); true).
 
-consult_makeprog(F,AllOpts,Opts) :-
-        debug(makeprog,'reading: ~w',[F]),
-        open(F,read,IO,[]),
-	read_makeprog_stream(IO,AllOpts,Opts),
-        debug(makeprog,'read: ~w',[F]).
-
-read_makeprog_stream(IO,Opts,Opts) :-
+read_makeprog_stream(IO,Opts,Opts,[]) :-
         at_end_of_stream(IO),
 	!,
 	close(IO).
 
-read_makeprog_stream(IO,OptsOut,OptsIn) :-
+read_makeprog_stream(IO,OptsOut,OptsIn,Terms) :-
         read_term(IO,Term,[variable_names(VNs),
                            syntax_errors(error),
-                           module(biomake)]),
-        debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
-        add_spec_clause(Term,VNs,Opts,OptsIn),
-	read_makeprog_stream(IO,OptsOut,Opts).
-
-eval_string_as_makeprog_term(String,OptsOut,OptsIn) :-
-        atom_string(Atom,String),
-        eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn).
+                           module(embed)]),
+	(Term = 'end_of_file'
+	 -> (Terms = [], OptsOut = OptsIn)
+	 ; (Terms = [(Term,VNs)|Rest],
+	    debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
+            add_spec_clause(Term,VNs,Opts,OptsIn),
+	    read_makeprog_stream(IO,OptsOut,Opts,Rest))).
 
 eval_atom_as_makeprog_term(Atom,OptsOut,OptsIn) :-
-        read_term_from_atom(Atom,Term,[variable_names(VNs),
-				       syntax_errors(error),
-				       module(biomake)]),
+        read_atom_as_makeprog_term(Atom,Term,VNs),
         debug(makeprog,'adding: ~w (variables: ~w)',[Term,VNs]),
         add_spec_clause(Term,VNs,OptsOut,OptsIn).
+
+read_atom_as_makeprog_term(Atom,Term,VNs) :-
+        read_term_from_atom(Atom,Term,[variable_names(VNs),
+				       syntax_errors(error),
+				       module(embed)]).
+
+read_string_as_makeprog_term(String,Term,VNs) :-
+        atom_string(Atom,String),
+        read_atom_as_makeprog_term(Atom,Term,VNs).
 
 translate_gnu_makefile(M,P) :-
     debug(makeprog,"Writing translated makefile to ~w",[P]),
@@ -576,15 +542,22 @@ translate_gnu_makefile(M,P) :-
     close(IO).
 
 add_gnumake_clause(G,OptsOut,OptsIn) :-
+    translate_gnumake_clause(G,P,VNs),
+    !,
+    add_spec_clause(P,VNs,OptsOut,OptsIn).
+
+add_gnumake_clause(G,OptsOut,OptsIn) :-
     translate_gnumake_clause(G,P),
     add_spec_clause(P,OptsOut,OptsIn).
-    
-translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)).
-translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)).
-translate_gnumake_clause(assignment(Var,"?=",Val), (Var ?= Val)).
-translate_gnumake_clause(assignment(Var,":=",Val), (Var := Val)).
-translate_gnumake_clause(assignment(Var,"+=",Val), (Var += Val)).
-translate_gnumake_clause(assignment(Var,"!=",Val), (Var =* Val)).
+
+translate_gnumake_clause(rule(Ts,Ds,Es,{Goal},VNs), (Ts <-- Ds,{Goal},Es), VNs):- !.
+translate_gnumake_clause(prolog(Term,VNs), Term, VNs):- !.
+translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)):- !.
+translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)):- !.
+translate_gnumake_clause(assignment(Var,"?=",Val), (Var ?= Val)):- !.
+translate_gnumake_clause(assignment(Var,":=",Val), (Var := Val)):- !.
+translate_gnumake_clause(assignment(Var,"+=",Val), (Var += Val)):- !.
+translate_gnumake_clause(assignment(Var,"!=",Val), (Var =* Val)):- !.
 translate_gnumake_clause(C,_) :-
     format("Error translating ~w~n",[C]),
 	backtrace(20),
@@ -596,16 +569,45 @@ write_clause(IO,option(Opt)) :-
 
 write_clause(IO,rule(Ts,Ds,Es)) :-
     !,
-    format(IO,"~q <-- ~q, ~q.~n",[Ts,Ds,Es]).
+    write_list(IO,Ts),
+    write(IO,' <-- '),
+    write_list(IO,Ds),
+    (Es = []
+     ; (write(IO,', '),
+	write_list(IO,Es))),
+    write(IO,'.\n').
+
+write_clause(IO,rule(Ts,Ds,Es,{Goal},VNs)) :-
+    !,
+    write_list(IO,Ts),
+    write(IO,' <-- '),
+    write_list(IO,Ds),
+    write(IO,', {'),
+    write_term(IO,Goal,[variable_names(VNs),quoted(true)]),
+    write(IO,'}'),
+    (Es = []
+     ; (write(IO,', '),
+	write_list(IO,Es))),
+    write(IO,'.\n').
 
 write_clause(_,assignment(Var,_,_)) :-
     atom_codes(Var,[V|_]),
-    V @>= 97, V @=< 122,   % a through z
+    V @>= 0'a, V @=< 0'z,   % a through z
     format("Prolog will not recognize `~w' as a variable, as it does not begin with an upper-case letter.~nStubbornly refusing to translate unless you fix this outrageous affront!~n",[Var]),
     halt_error.
 
 write_clause(IO,assignment(Var,Op,Val)) :-
     format(IO,"~w ~w ~q.~n",[Var,Op,Val]).
+
+write_clause(IO,prolog( (Term,VNs) )) :-
+    !,
+    write_term(IO,Term,[variable_names(VNs),quoted(true)]),
+    write(IO,'.\n').
+
+write_clause(_,X) :- format("Don't know how to write ~w~n",[X]).
+
+write_list(IO,[X]) :- format(IO,"~q",[X]), !.
+write_list(IO,L) :- format(IO,"~q",[L]).
 
 add_cmdline_assignment((Var = X)) :-
         global_unbind(Var),
@@ -618,11 +620,10 @@ add_spec_clause(Ass,Opts,Opts) :-
 	!,
 	add_spec_clause(Ass, [Var=Var], Opts, Opts).
 
-add_spec_clause( (Head <-- Deps, Exec), Opts, Opts ) :-
-        !,
-        add_spec_clause( (Head <-- Deps, Exec), [], Opts, Opts ).
+add_spec_clause( Term, Opts, Opts ) :-
+        add_spec_clause( Term, [], Opts, Opts ).
 
-add_spec_clause( option(Opts), OptsOut, OptsIn ) :-
+add_spec_clause( option(Opts), _VNs, OptsOut, OptsIn ) :-
 	!,
 	append(Opts,OptsIn,OptsOut).
 
@@ -647,7 +648,7 @@ add_spec_clause( Ass, [], Opts, Opts) :-
 	Ass =.. [Op,Var,_],
 	is_assignment_op(Op),
 	atom_codes(Var,[V|_]),
-	V @>= 97, V @=< 122,   % a through z
+	V @>= 0'a, V @=< 0'z,   % a through z
         debug(makeprog,"Warning: Prolog will not recognize ~w as a variable as it does not begin with an upper-case letter. Use at your own peril!~n",[Var]),
 	fail.
 
@@ -742,6 +743,97 @@ global_binding(Var,Val) :- global_simple_binding(Var,Val).
 global_binding(Var,Val) :- global_lazy_binding(Var,Val).
 
 % ----------------------------------------
+% RULES AND PATTERN MATCHING
+% ----------------------------------------
+
+target_bindrule(T,rb(T,Ds,Execs)) :-
+        mkrule_default(TP1,DP1,Exec1,Goal,Bindings),
+        append(Bindings,_,Bindings_Open),
+        V=v(_Base,T,Ds,Bindings_Open),
+        normalize_patterns(TP1,TPs,V),
+
+        % we allow multiple heads;
+        % only one of the specified targets has to match
+        member(TP,TPs),
+        uniq_pattern_match(TP,T),
+	(member(('TARGET' = T), Bindings) ; true),  % make $@ available to the Goal as variable TARGET
+
+	% Do a dummy expansion of the dependency list so that Goal has something to chew on
+	% We do not however want to do the real expansion yet - because Goal might affect that
+	expand_deps(DP1,DPtmp,V),
+	(member(('DEPS' = DPtmp), Bindings) ; true),  % make $^ available to the Goal as variable DEPS
+
+	% Check the Goal
+	call_without_backtrace(Goal),
+
+	% Do a two-pass expansion of dependency list.
+	% This is ultra-hacky but allows for variable-expanded dependency lists that contain % wildcards
+	% (the variables are expanded on the first pass, and the %'s on the second pass).
+	% A more rigorous solution would be a two-pass expansion of the entire GNU Makefile,
+	% which would allow currently impossible things like variable-expanded rules, e.g.
+	%   RULE = target: dep1 dep2
+	%   $(RULE) dep3
+	% which (in GNU make, but not here) expands to
+	%   target: dep1 dep2 dep3
+	% However, this would fragment the current homology between the Prolog syntax and GNU Make syntax,
+	% making it harder to translate GNU Makefiles into Prolog.
+	% Consequently, we currently sacrifice perfect GNU make compatibility for a simpler translation.
+	expand_deps(DP1,DP2,V),
+	expand_deps(DP2,Ds,V),
+
+	% expansion of executables
+	expand_execs(Exec1,Execs,V).
+
+% semidet
+uniq_pattern_match(TL,A) :-
+        debug(bindrule,'Matching: ~w to ~w',[TL,A]),
+        pattern_match(TL,A),
+        debug(bindrule,' Matched: ~w to ~w',[TL,A]),
+        !.
+uniq_pattern_match(TL,A) :-
+        debug(bindrule,' NO_MATCH: ~w to ~w',[TL,A]),
+        fail.
+
+pattern_match(A,B) :- var(A),!,B=A.
+pattern_match(t(TL),A) :- !, pattern_match(TL,A).
+pattern_match([],'').
+pattern_match([Tok|PatternToks],Atom) :-
+    nonvar(Tok),
+    !,
+    atom_concat(Tok,Rest,Atom),
+    pattern_match(PatternToks,Rest).
+pattern_match([Tok|PatternToks],Atom) :-
+    var(Tok),
+    !,
+    atom_concat(Tok,Rest,Atom),
+    Tok\='',
+    pattern_match(PatternToks,Rest).
+    
+
+pattern_match_list([],[]).
+pattern_match_list([P|Ps],[M|Ms]) :-
+        pattern_match(P,M),
+        pattern_match_list(Ps,Ms).
+
+expand_deps(Deps,Result,V) :-
+    normalize_patterns(Deps,NormDeps,V),
+    maplist(unwrap_t,NormDeps,ExpandedDeps),
+    maplist(split_spaces,ExpandedDeps,DepLists),
+    flatten_trim(DepLists,Result).
+
+expand_execs(Execs,Result,V) :-
+    normalize_patterns(Execs,NormExecs,V),
+    maplist(unwrap_t,NormExecs,ExpandedExecs),
+    maplist(split_newlines,ExpandedExecs,ExecLists),
+    flatten_trim(ExecLists,Result).
+
+flatten_trim(Lumpy,Trimmed) :-
+    flatten(Lumpy,Untrimmed),
+    include(not_empty,Untrimmed,Trimmed).
+
+not_empty(X) :- X \= "", X \= ''.
+
+% ----------------------------------------
 % PATTERN SYNTAX AND API
 % ----------------------------------------
 
@@ -777,11 +869,10 @@ normalize_patterns(P,Ns,V) :-
 
 % this is a bit hacky - parsing is too eager to add t(...) wrapper (original comment by cmungall)
 % Comment by ihh: not entirely sure what all this wrapping evaluated patterns in t(...) is about.
-% Mostly it is a royal pain in the butt, but it seems to be some kind of a marker for pattern evaluation.
+% It seems to be some kind of a marker for pattern evaluation.
 % Anyway...
 % wrap_t is a construct from cmungall's original code, abstracted into a separate term by me (ihh).
-%  Beyond the definition here, I really don't know the original intent here.
-% unwrap_t flattens a list into a string, removing any t(...) wrappers in the process,
+% unwrap_t flattens a list into an atom, removing any t(...) wrappers in the process,
 % and evaluating any postponed functions wrapped with a call(...) compound clause.
 wrap_t(t([L]),L) :- member(t(_),L), !.
 wrap_t(X,[X]).
@@ -793,8 +884,7 @@ unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
 unwrap_t([],"") :- !.
 unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), atom_concat(F,Fs,Flat), !.
 unwrap_t(N,A) :- number(A), atom_number(A,N), !.
-unwrap_t(A,F) :- atom(A), atom_string(A,F), !.
-unwrap_t(S,S) :- string(S), !.
+unwrap_t(S,A) :- string(S), atom_string(A,S), !.
 unwrap_t(S,S) :- ground(S), !.
 unwrap_t(X,_) :- type_of(X,T), format("Can't unwrap ~w ~w~n",[T,X]), fail.
 

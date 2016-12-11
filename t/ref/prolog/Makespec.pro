@@ -1,19 +1,20 @@
 % * -*- Mode: Prolog -*- */
 
 % Database of species
-sp(mouse).
-sp(human).
+mammal(mouse).
+mammal(human).
 sp(zebrafish).
+sp(X) :- mammal(X).
 
-% rule for generating a pair of (non-identical) species (asymetric)
+% rule for generating a pair of (non-identical) species (asymmetric)
 pair(X,Y) :- sp(X),sp(Y),X@<Y.
 
 % top level target
-all <-- Deps, 
+all <-- DEPS, 
 {findall( t([X,-,Y,'.pair']),
           pair(X,Y),
-          Deps),
-format("Deps=~w~n",[Deps])}.
+          DEPS),
+ format("DEPS=~w~n",[DEPS])}.
 
 % biomake rules
 '$X.single' <-- [],

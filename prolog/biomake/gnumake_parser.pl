@@ -45,6 +45,7 @@ makefile_block([],Opts,Opts,_,_,1) --> blank_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> info_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> warning_line, !.
 makefile_block([],Opts,Opts,_,_,1) --> error_line, !.
+makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> prolog_block(true,Rules,OptsOut,OptsIn,Line,File,Lines).
 makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(true,Rules,OptsOut,OptsIn,Line,File,Lines), !.
 makefile_block(Rules,OptsOut,OptsIn,_,File,1) --> include_line(true,File,Rules,OptsOut,OptsIn), !.
 makefile_block([Assignment],Opts,Opts,_,_,Lines) --> makefile_assignment(Assignment,Lines), !,
@@ -61,12 +62,57 @@ makefile_block(_,_,_,Line,File,_) -->
 	{format(string(Err),"GNU makefile parse error at line ~d of file ~w: ~w",[Line,File,L]),
 	syntax_error(Err)}.
 
+ignore_makefile_block(Opts,Opts,Line,File,Lines) --> prolog_block(false,_,_,Opts,Line,File,Lines).
 ignore_makefile_block(Opts,Line,File,Lines) --> makefile_conditional(false,_,_,Opts,Line,File,Lines), !.
 ignore_makefile_block(Opts,_,_,1) --> include_line(false,null,_,Opts,Opts), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_assignment(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_special_target(_,Lines), !.
 ignore_makefile_block(_Opts,_,_,Lines) --> makefile_recipe(_,Lines), !.
 ignore_makefile_block(Opts,Line,File,Lines) --> makefile_block([],Opts,Opts,Line,File,Lines).
+
+prolog_block(Active,Rules,OptsOut,OptsIn,Line,File,Lines) -->
+    opt_space,
+    "prolog",
+    opt_period,
+    opt_whitespace,
+    "\n",
+    { Lnext is Line + 1 },
+    prolog_block_body(RawLines,Lnext,File,Lbody),
+    { Lines is Lbody + 1,
+      read_prolog_from_string(Active,Rules,OptsOut,OptsIn,RawLines) },
+    !.
+
+prolog_block_body(_,_,File,_) -->
+    call(eos),
+    { format(string(Err),"GNU makefile parse error (expected endprolog) at end of file ~w",[File]),
+      syntax_error(Err) }.
+
+prolog_block_body([],_,_,1) -->
+    opt_space,
+    "endprolog",
+    opt_period,
+    opt_whitespace,
+    "\n",
+    !.
+
+prolog_block_body([RawLine|RawLines],Line,File,Lines) -->
+    line_as_string(RawLine),
+    { Lnext is Line + 1 },
+    prolog_block_body(RawLines,Lnext,File,Lbody),
+    { Lines is Lbody + 1 },
+    !.
+
+opt_period --> ".".
+opt_period --> [].
+
+read_prolog_from_string(false,[],Opts,Opts,_).
+read_prolog_from_string(true,Rules,OptsOut,OptsIn,RawLines) :-
+    concat_string_list(RawLines,Raw,"\n"),
+    open_string(Raw,IOS),
+    read_makeprog_stream(IOS,OptsOut,OptsIn,Terms),
+    maplist(wrap_prolog,Terms,Rules).
+
+wrap_prolog(Term,prolog(Term)).
 
 error_line -->
     opt_space,
@@ -258,7 +304,8 @@ false_rules(_,_,_,_,Line,File,_) -->
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
-xbracket(Sx) --> {char_code('(',L),char_code(')',R),char_code(',',C)}, xdelim(Sx,L,R,[C]).
+xbracket(Sx) --> xdelim(Sx,0'(,0'),[0',]).
+xbrace(Sx) --> xdelim(Sx,0'{,0'},[]).
 xdelim(Sx,L,R,X) --> delim(S,L,R,X), !, {expand_vars(S,Sx)}.
 delim(S,L,R,X) --> delim_outer(Sc,L,R,X), {string_codes(S,Sc)}.
 delim_outer(S,L,R,X) --> [L], !, delim_inner(I,L,R), [R], delim_outer(Rest,L,R,X),
@@ -273,9 +320,22 @@ xquote(Sx) --> code_list(C,['\'']), {string_codes(S,C), expand_vars(S,Sx)}.
 xdblquote(Sx) --> code_list(C,['"']), {string_codes(S,C), expand_vars(S,Sx)}.
 xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx)}.
 
-
 makefile_special_target(queue(none),Lines) -->
     makefile_recipe(rule([".NOTPARALLEL"],_,_),Lines).
+
+makefile_recipe(rule(Head,Deps,Exec,{Goal},VNs),Lines) -->
+    makefile_targets(Head),
+    ":",
+    opt_makefile_targets(Deps),
+    opt_linebreak,
+    "{",
+    xbrace(GoalAtom),
+    "}",
+    "\n",
+    !,
+    makefile_execs(Exec,Lexecs),
+    { Lines is 1 + Lexecs,
+      read_atom_as_makeprog_term(GoalAtom,Goal,VNs) }.
 
 makefile_recipe(rule(Head,Deps,Exec),Lines) -->
     makefile_targets(Head),
@@ -302,9 +362,12 @@ opt_makefile_targets([]) --> opt_space.
 makefile_targets([T|Ts]) --> opt_space, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
 makefile_targets([T]) --> opt_space, makefile_target_string(T), opt_whitespace.
 
+opt_linebreak --> [].
+opt_linebreak --> "\n", opt_whitespace.
+
 makefile_warning_text(S) --> string_from_codes(S,")").
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
-makefile_target_string(S) --> string_from_codes(S,":; \t\n").
+makefile_target_string(S) --> delim(S,0'(,0'),[0':,0';,0'\s,0'\t,0'\n]), {S \= ""}, !.
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".

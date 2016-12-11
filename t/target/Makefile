@@ -290,3 +290,21 @@ cmdline_eval%:
 	echo Value of NON_EVAL_VAR is $(NON_EVAL_VAR) >$@
 	echo Value of CMDLINE_VAR is $(CMDLINE_VAR) >>$@
 	echo Value of EVAL_VAR is $(EVAL_VAR) >>$@
+
+iota:
+	echo $(iota 10) >$@
+
+iota2:
+	echo $(iota 3,6) >$@
+
+add:
+	echo $(add 10,1 2 3) >$@
+
+multiply:
+	echo $(multiply 3,2 4 6) >$@
+
+divide:
+	echo $(divide 2,1 3 8) >$@
+
+iota_add_multiply:
+	echo $(multiply 2,$(add 10,$(iota 3,6))) >$@

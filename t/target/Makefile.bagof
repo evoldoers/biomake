@@ -1,0 +1,15 @@
+
+prolog
+sp(a).
+sp(b).
+sp(c).
+endprolog
+
+ABC = $(bagof X,sp(X))
+DEF = $(bagof X,nonexistent_predicate(X))
+
+bagof1:
+	echo $(ABC) >$@
+
+bagof2:
+	echo $(DEF) >$@

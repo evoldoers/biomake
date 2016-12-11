@@ -2,25 +2,7 @@
 
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/utils)).
-
-% ----------------------------------------
-% EXCEPTIONS
-% ----------------------------------------
-
-:- dynamic no_backtrace/0.
-:- dynamic prolog_exception_hook/4.
-
-% Intercept a couple of exceptions that are thrown by the threadpool library
-% This is kind of yucky, but only seems to affect our exception-handling code
-user:prolog_exception_hook(error(existence_error(thread,_),context(system:thread_property/2,_)),_,_,_) :- !, fail.
-user:prolog_exception_hook('$aborted',_,_,_) :- !, fail.
-
-% Default exception handler: show backtrace
-user:prolog_exception_hook(E,_,_,_) :-
-	format("Exception: ~w~n",[E]),
-        (no_backtrace; backtrace(99)),
-        !,
-        fail.
+:- use_module(library(biomake/embed)).
 
 % ----------------------------------------
 % MAIN PROGRAM
@@ -272,14 +254,17 @@ arg_info('-S','','Stop after error').
 
 simple_arg('-t',touch_only(true)).
 arg_alias('-t','--touch').
-arg_info('-t','','Touch files (and update MD5 hashes, if appropriate) instead of running recipes').
+arg_info('-t','','Touch files (& update MD5 hashes, if appropriate) instead of running recipes').
 
+parse_arg(['-D',Var,Val|L],L,assignment(Var,Val)).
+arg_alias('-D','--define').
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
     string_codes(VarEqualsVal,C),
     phrase(makefile_assign(Var,Val),C).
 recover_arg(VarEqualsVal,assignment(Var,Val)) :-
-    format(string(VarEqualsVal),"~w=~q",[Var,Val]).
-arg_info('Var=Val','','Assign Makefile variables from command line').
+    format(string(VarEqualsVal),"--define ~w ~q",[Var,Val]).
+arg_info('-D','Var Val','Assign Makefile variables from command line').
+arg_info('Var=Val','','Alternative syntax for \'-D Var Val\'').
 
 makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
 makefile_var(A) --> atom_from_codes(A,":= \t\n").
@@ -366,5 +351,5 @@ arg_info('--debug','MSG','[developers] Debugging messages. MSG can be build, pat
 parse_arg(['--trace',Pred|L],L,null) :- trace(Pred), !.
 arg_info('--trace','predicate','[developers] Print debugging trace for given predicate').
 
-parse_arg(['--no-backtrace'|L],L,null) :- assert(no_backtrace), !.
+parse_arg(['--no-backtrace'|L],L,null) :- disable_backtrace, !.
 arg_info('--no-backtrace','','[developers] Do not print a backtrace on error').
