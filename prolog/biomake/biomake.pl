@@ -15,6 +15,7 @@
 	   start_queue/1,
            build/1,
            build/2,
+           build/3,
 	   finish_queue/1,
 
 	   report/3,
@@ -45,7 +46,6 @@
            rule_dependencies/3,
            rule_execs/3,
 
-	   run_execs_if_required/3,
 	   run_execs_now/3,
 	   report_run_exec/3,
 	   update_hash/3,
@@ -151,9 +151,9 @@ build(T,SL,Opts) :-
         rule_dependencies(Rule,DL,Opts),
         report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
         build_targets(DL,[T|SL],Opts), % semidet
-	dep_bindrule(Rule,Rule2,Opts),
-        (   rebuild_required(T,DL,SL,Opts)
-        ->  run_execs_and_update(Rule2,SL,Opts)
+	dep_bindrule(Rule,Opts,Rule2,Opts2),
+        (   rebuild_required(T,DL,SL,Opts2)
+        ->  run_execs_and_update(Rule2,SL,Opts2)
         ;   report('~w is up to date',[T],SL,Opts)),
 	!.
 build(T,SL,Opts) :-
@@ -266,7 +266,7 @@ rebuild_required(T,DL,SL,Opts) :-
 	!,
         report('Target ~w has rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
-        member(queue(_),Opts),
+	building_asynchronously(Opts),
 	has_rebuilt_dependency(T,DL,D,Opts),
 	!,
         report('Target ~w has dependency ~w on rebuild queue',[T,D],SL,Opts).
@@ -280,6 +280,10 @@ rebuild_required(T,_,SL,Opts) :-
         target_bindrule(T,_,Opts),
         !,
         report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
+
+building_asynchronously(Opts) :-
+	member(queue(Q),Opts),
+	Q \= 'test'.
 
 has_newer_dependency(T,DL,D,Opts) :-
         member(D,DL),
@@ -451,33 +455,6 @@ handle_error(Fmt,Args,SL,Opts) :-
         !.
 handle_error(_,_,_,_) :-
         halt_error.
-
-
-% run_execs_if_required tests the always_make and md5 options before running a recipe.
-% When biomake is run without queues, these tests happen in rebuild_required,
-% which is called at the time of rule-binding & dependency-testing.
-% When queues are used, the tests must be performed again at the time of job execution.
-% For external queueing engines, this is managed by wrapping the job in another call to biomake.
-% For the internal queue (poolq), we make a call back to run_execs_if_required.
-run_execs_if_required(Rule,SL,Opts) :-
-	member(always_make(true),Opts),
-	!,
-	report_build(Rule,SL,Opts),
-	run_execs_now(Rule,SL,Opts).
-run_execs_if_required(Rule,SL,Opts) :-
-	member(md5(true),Opts),
-	rule_target(Rule,T,Opts),
-        rule_dependencies(Rule,DL,Opts),
-	md5_hash_up_to_date(T,DL,Opts),
-        report('Target ~w has valid checksum - no rebuild required',[T],SL,Opts),
-	!.
-run_execs_if_required(Rule,SL,Opts) :-
-	report_build(Rule,SL,Opts),
-	run_execs_now(Rule,SL,Opts).
-
-report_build(Rule,SL,Opts) :-
-	rule_target(Rule,T,Opts),
-        report('Building target ~w',[T],SL,Opts).
 
 
 % ----------------------------------------
@@ -817,8 +794,18 @@ target_bindrule(T,rb(T,Ds,DepGoal,Exec1,V),_Opts) :-
 	% and, success
 	debug(bindrule,"rule matched",[]).
 
-dep_bindrule(rb(T,Ds,DepGoal,Exec1,V),rb(T,Ds,{true},Execs,V),_Opts) :-
-	call_without_backtrace(DepGoal),
+dep_bindrule(rb(T,Ds,true,Exec1,V),Opts,rb(T,Ds,true,Execs,V),[refresh_rules(true)|Opts]) :-
+	member(md5(true),Opts),
+	!,
+	expand_execs(Exec1,Execs,V).
+
+dep_bindrule(rb(T,Ds,true,Exec1,V),Opts,rb(T,Ds,true,Execs,V),Opts) :-
+	!,
+	expand_execs(Exec1,Execs,V).
+
+dep_bindrule(rb(T,Ds,DepGoal,Exec1,V),Opts,rb(T,Ds,true,Execs,V),[refresh_rules(true)|Opts]) :-
+	(call_without_backtrace(DepGoal)
+         ; building_asynchronously(Opts)),
 	expand_execs(Exec1,Execs,V).
 
 setauto(VarLabel,Value,Bindings) :-

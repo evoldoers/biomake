@@ -74,7 +74,7 @@ qsub_rule_execs(Rule,Es,Opts) :-
 	rule_execs(Rule,Es,Opts).
 
 qsub_use_biomake(Opts) :-
-	member(md5(true),Opts).
+	member(refresh_rules(true),Opts).
 
 qsub_job_ids(Engine,[D|Ds],[N|Ns]) :-
 	qsub_job_id(Engine,D,N),
@@ -296,14 +296,13 @@ release_queue(poolq) :-
 	poolq_scheduler(Scheduler),
 	poolq_wait(Scheduler,_Status).
 
-poolq_run_execs(Rule,_SL,Opts) :-
-	rule_target(Rule,T,Opts),
-        rule_dependencies(Rule,DL,Opts),
-	md5_hash_up_to_date(T,DL,Opts),
-	!.
-
 run_execs_in_queue(poolq,Rule,SL,Opts) :-
 	poolq_scheduler(Scheduler),
 	rule_target(Rule,T,Opts),
         rule_dependencies(Rule,DL,Opts),
-	poolq_submit_job(Scheduler,run_execs_if_required(Rule,SL,Opts),T,DL,[]).
+	include(not_always_make_or_queue,Opts,Opts2),
+	poolq_submit_job(Scheduler,build(T,SL,Opts2),T,DL,[]).
+
+not_always_make_or_queue(always_make(true)) :- !, fail.
+not_always_make_or_queue(queue(_)) :- !, fail.
+not_always_make_or_queue(_).
