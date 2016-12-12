@@ -748,6 +748,7 @@ global_binding(Var,Val) :- global_lazy_binding(Var,Val).
 
 target_bindrule(T,rb(T,Ds,Execs)) :-
         mkrule_default(TP1,DP1,Exec1,Goal,Bindings),
+	debug(bindrule,"rule: T=~w D=~w E=~w G=~w B=~w",[TP1,DP1,Exec1,Goal,Bindings]),
         append(Bindings,_,Bindings_Open),
         V=v(_Base,T,Ds,Bindings_Open),
         normalize_patterns(TP1,TPs,V),
@@ -755,7 +756,7 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         % we allow multiple heads;
         % only one of the specified targets has to match
         member(TP,TPs),
-        uniq_pattern_match(TP,T),
+        pattern_match(TP,T),
 	(member(('TARGET' = T), Bindings) ; true),  % make $@ available to the Goal as variable TARGET
 
 	% Do a dummy expansion of the dependency list so that Goal has something to chew on
@@ -765,6 +766,10 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
 
 	% Check the Goal
 	call_without_backtrace(Goal),
+
+	% Commit here
+	debug(bindrule,"rule matched",[]),
+	!,
 
 	% Do a two-pass expansion of dependency list.
 	% This is ultra-hacky but allows for variable-expanded dependency lists that contain % wildcards
@@ -783,16 +788,6 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
 
 	% expansion of executables
 	expand_execs(Exec1,Execs,V).
-
-% semidet
-uniq_pattern_match(TL,A) :-
-        debug(bindrule,'Matching: ~w to ~w',[TL,A]),
-        pattern_match(TL,A),
-        debug(bindrule,' Matched: ~w to ~w',[TL,A]),
-        !.
-uniq_pattern_match(TL,A) :-
-        debug(bindrule,' NO_MATCH: ~w to ~w',[TL,A]),
-        fail.
 
 pattern_match(A,B) :- var(A),!,B=A.
 pattern_match(t(TL),A) :- !, pattern_match(TL,A).
@@ -846,8 +841,8 @@ not_empty(X) :- X \= "", X \= ''.
         mkrule/4,
         with/2.
 
-mkrule_default(T,D,E,true,VNs) :- with(mkrule(T,D,E),VNs).
 mkrule_default(T,D,E,G,VNs) :- with(mkrule(T,D,E,G),VNs).
+mkrule_default(T,D,E,true,VNs) :- with(mkrule(T,D,E),VNs).
 
 expand_vars(X,Y) :-
 	expand_vars(X,Y,v(null,null,null,[])).
