@@ -84,6 +84,8 @@ Options
     Stop after error
 -t,--touch 
     Touch files (and update MD5 hashes, if appropriate) instead of running recipes
+-N,--no-dependencies 
+    Do not test or rebuild dependencies
 -D,--define Var Val
     Assign Makefile variables from command line
 Var=Val 

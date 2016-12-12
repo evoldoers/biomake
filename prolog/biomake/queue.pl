@@ -67,8 +67,9 @@ qsub_rule_execs(Rule,[Chdir,Biomake],Opts) :-
 	member(biomake_cwd(Dir),Opts),
 	member(biomake_prog(Prog),Opts),
 	member(biomake_args(Args),Opts),
+	member(qsub_biomake_args(QArgs),Opts),
 	format(string(Chdir),"cd ~w",[Dir]),  % probably redundant: write_script_file starts with a cd to CWD
-	format(string(Biomake),"~w ~w ~w",[Prog,Args,T]).
+	format(string(Biomake),"~w ~w ~w ~w",[Prog,Args,QArgs,T]).
 
 qsub_rule_execs(Rule,Es,Opts) :-
 	rule_execs(Rule,Es,Opts).
@@ -301,7 +302,7 @@ run_execs_in_queue(poolq,Rule,SL,Opts) :-
 	rule_target(Rule,T,Opts),
         rule_dependencies(Rule,DL,Opts),
 	include(not_always_make_or_queue,Opts,Opts2),
-	poolq_submit_job(Scheduler,build(T,SL,Opts2),T,DL,[]).
+	poolq_submit_job(Scheduler,build(T,SL,[no_deps(true)|Opts2]),T,DL,[]).
 
 not_always_make_or_queue(always_make(true)) :- !, fail.
 not_always_make_or_queue(queue(_)) :- !, fail.

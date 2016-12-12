@@ -256,6 +256,10 @@ simple_arg('-t',touch_only(true)).
 arg_alias('-t','--touch').
 arg_info('-t','','Touch files (& update MD5 hashes, if appropriate) instead of running recipes').
 
+parse_arg(['-N'|L],L,no_deps(true)).
+arg_alias('-N','--no-dependencies').
+arg_info('-N','','Do not test or rebuild dependencies').
+
 parse_arg(['-D',Var,Val|L],L,assignment(Var,Val)).
 arg_alias('-D','--define').
 parse_arg([VarEqualsVal|L],L,assignment(Var,Val)) :-
@@ -305,7 +309,7 @@ arg_info('-H','','Use MD5 hashes instead of timestamps').
 % QUEUES
 % ----------------------------------------
 
-parse_arg(['-Q',Qs|L],L,queue(Q)) :-
+parse_arg(['-Q',Qs|L],L,(queue(Q),qsub_biomake_args('-N'))) :-
         ensure_loaded(library(biomake/queue)),
 	atom_string(Q,Qs),
 	queue_engine(Q),

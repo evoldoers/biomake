@@ -150,7 +150,7 @@ build(T,SL,Opts) :-
         debug_report(build,'  Bindrule: ~w',[Rule],SL),
         rule_dependencies(Rule,DL,Opts),
         report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
-        build_targets(DL,[T|SL],Opts), % semidet
+        build_deps(DL,[T|SL],Opts), % semidet
 	dep_bindrule(Rule,Opts,Rule2,Opts2),
         (   rebuild_required(T,DL,SL,Opts2)
         ->  run_execs_and_update(Rule2,SL,Opts2)
@@ -168,13 +168,11 @@ build(T,SL,Opts) :-
 build(T,SL,Opts) :-
         handle_error('~w FAILED',[T],SL,Opts).
 
-% potentially split this into two steps:
-%  phase 1 iterates through targets and initiates any jobs
-%  phase 2 checks all jobs are done
-build_targets([],_,_).
-build_targets([T|TL],SL,Opts) :-
+build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
+build_deps([],_,_).
+build_deps([T|TL],SL,Opts) :-
         build(T,SL,Opts),
-        build_targets(TL,SL,Opts).
+        build_deps(TL,SL,Opts).
 
 % Special vars
 bind_special_variables(Opts) :-
