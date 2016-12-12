@@ -1,6 +1,8 @@
 name(biomake).
 title('Prolog makefile-like system').
-version('0.0.3').
+version('0.1.0').
+download( 'https://github.com/evoldoers/biomake/releases/*.zip' ).
 author('Chris Mungall','cmungall@gmail.com').
-home('https://github.com/cmungall/biomake').
-download( 'http://www.berkeleybop.org/~cjm/packs/biomake-*.tgz' ).
+author('Ian Holmes','ihh@berkeley.edu').
+packager('Chris Mungall','cmungall@gmail.com').
+home('https://github.com/evoldoers/biomake').
