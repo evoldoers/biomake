@@ -166,7 +166,7 @@ show_help :-
 	        atomic_list_concat([X|AliasList],",",AliasStr),
 	        format("~w ~w~n    ~w~n",[AliasStr,Args,Info]))),
         nl,
-        writeln('For more info see http://github.com/cmungall/biomake'),
+        writeln('For more info see http://github.com/evoldoers/biomake'),
         nl,
         halt_success.
 
