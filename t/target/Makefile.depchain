@@ -1,0 +1,15 @@
+
+dep_chain_$A: dep1 { A = 'two_step' }
+	cp $< $@
+
+dep1: dep2
+	cp $< $@
+
+dep2:
+	echo This is dep2 >$@
+
+dep_chain_$A: dep3 { A = 'one_step' }
+	cp $< $@
+
+dep3:
+	echo This is dep3 >$@

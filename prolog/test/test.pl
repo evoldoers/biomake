@@ -216,6 +216,8 @@ test :-
 	run_test("-f Makefile.precedence","rule_precedence_specific1"),
 	run_test("-f Makefile.precedence","rule_precedence_specific2"),
 	run_test("-f Makefile.precedence","rule_precedence_generic"),
+	run_test("-f Makefile.depchain","dep_chain_one_step"),
+	run_test("-f Makefile.depchain","dep_chain_two_step"),
 
 	% All done
 	report_counts,
