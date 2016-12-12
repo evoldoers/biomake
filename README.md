@@ -219,6 +219,11 @@ Now if we type...
 (since we have required them to be _ordered_ pairs, we get e.g. "mouse-zebrafish" but not "zebrafish-mouse";
 the motivation here is that the `align` program is symmetric, and so only needs to be run once per pair).
 
+In these examples, the goals between braces are tested _after_ the dependencies have been built.
+You can also place a Prolog goal (in braces) between the target list and the colon;
+it will then be tested after the target name has been matched,
+but before trying to build the dependencies.
+
 Programming directly in Prolog
 ------------------------------
 
@@ -349,7 +354,7 @@ make_filename(F):-
  ordered_pair(X,Y),
  format(atom(F),"align-~w-~w",[X,Y]).
 
-"all" <-- DepList, {bagof(F,make_filename(F),DepList)}.
+"all", {bagof(F,make_filename(F),DepList)} <-- DepList, {true}.
 
 "align-$X-$Y" <--
  ["$X.fa","$Y.fa"],

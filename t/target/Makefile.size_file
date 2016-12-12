@@ -1,0 +1,11 @@
+size_file_%: % { DEPS = [F], size_file(F,0) }
+	echo $F is empty >$@
+
+size_file_%: % { DEPS = [F], size_file(F,S), S > 0 }
+	echo Size of $F is $S >$@
+
+empty_dep:
+	touch $@
+
+nonempty_dep:
+	echo hello >$@

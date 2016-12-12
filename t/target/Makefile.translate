@@ -36,6 +36,15 @@ XYZ := $(ABC) xyz
 DEF ?= $(ABC)
 ABC = abc
 
+HeadGoal {test}:
+	something
+
+DepGoal: {test}
+	something else
+
+HeadAndDepGoals {test1}: {test2}
+	a third thing
+
 # dummy target for the translated version of this Makefile
 # (which will actually be produced by specifying the appropriate command-line option to biomake)
 # (this is just here to trick our test framework into looking for the correct file)

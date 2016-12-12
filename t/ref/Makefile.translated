@@ -12,4 +12,7 @@ FOO = ".foo".
 XYZ := "$(ABC) xyz".
 DEF ?= "$(ABC)".
 ABC = "abc".
+"HeadGoal", {test} <-- [], {true}, "something".
+"DepGoal" <-- [], {test}, "something else".
+"HeadAndDepGoals", {test1} <-- [], {test2}, "a third thing".
 "Makefile.translated" <-- [].

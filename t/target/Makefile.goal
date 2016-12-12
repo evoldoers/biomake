@@ -5,8 +5,14 @@ valid(b).
 valid(c).
 endprolog
 
-goal_$X: { valid(X) }
+headgoal_$X { valid(X) }:
 	echo $X is valid. >$@
 
-goal_$X: { \+ valid(X) }
+headgoal_$X { \+ valid(X) }:
+	echo $X is invalid. >$@
+
+depgoal_$X: { valid(X) }
+	echo $X is valid. >$@
+
+depgoal_$X: { \+ valid(X) }
 	echo $X is invalid. >$@

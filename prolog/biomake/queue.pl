@@ -103,7 +103,7 @@ qsub_generic_job_id(Engine,T,Id) :-
 	phrase_from_file(nl_to_spc(Id),JobFilename).
 
 nl_to_spc(S) --> nl_to_spc_codes(Cs), !, {string_codes(S,Cs)}.
-nl_to_spc_codes([32|Cs]) --> [10], !, nl_to_spc_codes(Cs).
+nl_to_spc_codes([0'\s|Cs]) --> [0'\n], !, nl_to_spc_codes(Cs).
 nl_to_spc_codes([C|Cs]) --> [C], nl_to_spc_codes(Cs).
 nl_to_spc_codes([]) --> [].
 

@@ -201,7 +201,7 @@ escape_quotes(['\'','"','\'','"','\''|Cs]) --> ['\''], !, escape_quotes(Cs).  % 
 escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
 
 newlines_to_spaces([],[]).
-newlines_to_spaces([10|N],[32|S]) :- newlines_to_spaces(N,S).
+newlines_to_spaces([0'\n|N],[0'\s|S]) :- newlines_to_spaces(N,S).
 newlines_to_spaces([C|N],[C|S]) :- newlines_to_spaces(N,S).
 
 file_directory_slash(Path,Result) :-

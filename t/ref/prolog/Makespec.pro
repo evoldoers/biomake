@@ -10,11 +10,11 @@ sp(X) :- mammal(X).
 pair(X,Y) :- sp(X),sp(Y),X@<Y.
 
 % top level target
-all <-- DEPS, 
-{findall( t([X,-,Y,'.pair']),
-          pair(X,Y),
-          DEPS),
- format("DEPS=~w~n",[DEPS])}.
+all, {findall( t([X,-,Y,'.pair']),
+               pair(X,Y),
+               DEPS),
+      format("DEPS=~w~n",[DEPS])}
+ <-- DEPS, {true}.
 
 % biomake rules
 '$X.single' <-- [],

@@ -35,7 +35,7 @@
 	   
 	   global_binding/2,
 	   
-           target_bindrule/2,
+           target_bindrule/3,
            rebuild_required/4,
 
 	   normalize_pattern/3,
@@ -146,22 +146,23 @@ build(T,SL,Opts) :-
 
 build(T,SL,Opts) :-
         debug_report(build,'  Target: ~w',[T],SL),
-        target_bindrule(T,Rule),
+        target_bindrule(T,Rule,Opts),
         debug_report(build,'  Bindrule: ~w',[Rule],SL),
         rule_dependencies(Rule,DL,Opts),
         report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
-        !,
         build_targets(DL,[T|SL],Opts), % semidet
+	dep_bindrule(Rule,Rule2,Opts),
         (   rebuild_required(T,DL,SL,Opts)
-        ->  run_execs_and_update(Rule,SL,Opts)
-        ;   report('~w is up to date',[T],SL,Opts)).
+        ->  run_execs_and_update(Rule2,SL,Opts)
+        ;   report('~w is up to date',[T],SL,Opts)),
+	!.
 build(T,SL,Opts) :-
         debug_report(build,'..checking if rebuild required for ~w',[T],SL),
         \+ rebuild_required(T,[],SL,Opts),
         !,
         report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
-        \+ target_bindrule(T,_),
+        \+ target_bindrule(T,_,Opts),
         handle_error('Don\'t know how to make ~w',[T],SL,Opts),
 	!.
 build(T,SL,Opts) :-
@@ -276,7 +277,7 @@ rebuild_required(T,DL,SL,Opts) :-
         report('Target ~w does not have an up-to-date checksum - rebuilding',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         member(always_make(true),Opts),
-        target_bindrule(T,_),
+        target_bindrule(T,_,Opts),
         !,
         report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
 
@@ -316,10 +317,12 @@ exists_target(T,_Opts) :-
 exists_target(T,_Opts) :-
         exists_directory(T).
 
-rule_target(rb(T,_,_),T,_Opts).
-rule_dependencies(rb(_,DL,_),DL,_Opts).
-rule_execs(rb(_,_,X),X,_Opts) :- !.
-rule_execs(rb(_,_,X),_,_Opts) :- throw(error(no_exec(X))).
+rule_target(rb(T,_,_,_,_),T,_Opts).
+rule_dependencies(rb(_,DL,_,_,_),DL,_Opts).
+rule_dep_goal(rb(_,_,DepGoal,_,_),DepGoal,_Opts).
+rule_execs(rb(_,_,_,X,_),X,_Opts) :- !.
+rule_execs(rb(_,_,_,X,_),_,_Opts) :- throw(error(no_exec(X))).
+rule_vars(rb(_,_,_,_,V),V,_Opts).
 
 
 % internal tracking of build order
@@ -550,7 +553,9 @@ add_gnumake_clause(G,OptsOut,OptsIn) :-
     translate_gnumake_clause(G,P),
     add_spec_clause(P,OptsOut,OptsIn).
 
-translate_gnumake_clause(rule(Ts,Ds,Es,{Goal},VNs), (Ts <-- Ds,{Goal},Es), VNs):- !.
+translate_gnumake_clause(rule(Ts,Ds,Es,{HeadGoal},{true},VNs), (Ts,{HeadGoal} <-- Ds,Es), VNs):- !.
+translate_gnumake_clause(rule(Ts,Ds,Es,{HeadGoal},{DepGoal},VNs), (Ts,{HeadGoal} <-- Ds,{DepGoal},Es), VNs):- !.
+translate_gnumake_clause(rule(Ts,Ds,Es,{DepGoal},VNs), (Ts <-- Ds,{DepGoal},Es), VNs):- !.
 translate_gnumake_clause(prolog(Term,VNs), Term, VNs):- !.
 translate_gnumake_clause(rule(Ts,Ds,Es), (Ts <-- Ds,Es)):- !.
 translate_gnumake_clause(assignment(Var,"=",Val), (Var = Val)):- !.
@@ -577,13 +582,29 @@ write_clause(IO,rule(Ts,Ds,Es)) :-
 	write_list(IO,Es))),
     write(IO,'.\n').
 
-write_clause(IO,rule(Ts,Ds,Es,{Goal},VNs)) :-
+write_clause(IO,rule(Ts,Ds,Es,{DepGoal},VNs)) :-
     !,
     write_list(IO,Ts),
     write(IO,' <-- '),
     write_list(IO,Ds),
     write(IO,', {'),
-    write_term(IO,Goal,[variable_names(VNs),quoted(true)]),
+    write_term(IO,DepGoal,[variable_names(VNs),quoted(true)]),
+    write(IO,'}'),
+    (Es = []
+     ; (write(IO,', '),
+	write_list(IO,Es))),
+    write(IO,'.\n').
+
+write_clause(IO,rule(Ts,Ds,Es,{HeadGoal},{DepGoal},VNs)) :-
+    !,
+    write_list(IO,Ts),
+    write(IO,', {'),
+    write_term(IO,HeadGoal,[variable_names(VNs),quoted(true)]),
+    write(IO,'}'),
+    write(IO,' <-- '),
+    write_list(IO,Ds),
+    write(IO,', {'),
+    write_term(IO,DepGoal,[variable_names(VNs),quoted(true)]),
     write(IO,'}'),
     (Es = []
      ; (write(IO,', '),
@@ -696,12 +717,25 @@ add_spec_clause( (Var =* X), VNs, Opts, Opts) :-
         assert(global_lazy_binding(Var,Y)),
         debug(makeprog,'assign: ~w =* ~w  ==>  ~w',[Var,X,Y]).
 
-add_spec_clause( (Head <-- Deps,{Goal},Exec), VNs, Opts, Opts) :-
+add_spec_clause( (Head,{HeadGoal} <-- Deps,{DepGoal},Exec), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,Exec,Goal),VNs,Opts,Opts).
-add_spec_clause( (Head <-- Deps,{Goal}), VNs, Opts, Opts) :-
+        add_spec_clause(mkrule(Head,Deps,Exec,HeadGoal,DepGoal),VNs,Opts,Opts).
+add_spec_clause( (Head,{HeadGoal} <-- Deps,{DepGoal}), VNs, Opts, Opts) :-
         !,
-        add_spec_clause(mkrule(Head,Deps,[],Goal),VNs,Opts,Opts).
+        add_spec_clause(mkrule(Head,Deps,[],HeadGoal,DepGoal),VNs,Opts,Opts).
+add_spec_clause( (Head,{HeadGoal} <-- Deps, Exec), VNs, Opts, Opts) :-
+        !,
+        add_spec_clause(mkrule(Head,Deps,Exec,HeadGoal,true),VNs,Opts,Opts).
+add_spec_clause( (Head,{HeadGoal} <-- Deps), VNs, Opts, Opts) :-
+        !,
+        add_spec_clause(mkrule(Head,Deps,[],HeadGoal,true),VNs,Opts,Opts).
+
+add_spec_clause( (Head <-- Deps,{DepGoal},Exec), VNs, Opts, Opts) :-
+        !,
+        add_spec_clause(mkrule(Head,Deps,Exec,DepGoal),VNs,Opts,Opts).
+add_spec_clause( (Head <-- Deps,{DepGoal}), VNs, Opts, Opts) :-
+        !,
+        add_spec_clause(mkrule(Head,Deps,[],DepGoal),VNs,Opts,Opts).
 add_spec_clause( (Head <-- Deps, Exec), VNs, Opts, Opts) :-
         !,
         add_spec_clause(mkrule(Head,Deps,Exec),VNs,Opts,Opts).
@@ -746,9 +780,9 @@ global_binding(Var,Val) :- global_lazy_binding(Var,Val).
 % RULES AND PATTERN MATCHING
 % ----------------------------------------
 
-target_bindrule(T,rb(T,Ds,Execs)) :-
-        mkrule_default(TP1,DP1,Exec1,Goal,Bindings),
-	debug(bindrule,"rule: T=~w D=~w E=~w G=~w B=~w",[TP1,DP1,Exec1,Goal,Bindings]),
+target_bindrule(T,rb(T,Ds,DepGoal,Exec1,V),_Opts) :-
+        mkrule_default(TP1,DP1,Exec1,HeadGoal,DepGoal,Bindings),
+	debug(bindrule,"rule: T=~w D=~w E=~w HG=~w DG=~w B=~w",[TP1,DP1,Exec1,HeadGoal,DepGoal,Bindings]),
         append(Bindings,_,Bindings_Open),
         V=v(_Base,T,Ds,Bindings_Open),
         normalize_patterns(TP1,TPs,V),
@@ -757,19 +791,10 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
         % only one of the specified targets has to match
         member(TP,TPs),
         pattern_match(TP,T),
-	(member(('TARGET' = T), Bindings) ; true),  % make $@ available to the Goal as variable TARGET
 
-	% Do a dummy expansion of the dependency list so that Goal has something to chew on
-	% We do not however want to do the real expansion yet - because Goal might affect that
-	expand_deps(DP1,DPtmp,V),
-	(member(('DEPS' = DPtmp), Bindings) ; true),  % make $^ available to the Goal as variable DEPS
-
-	% Check the Goal
-	call_without_backtrace(Goal),
-
-	% Commit here
-	debug(bindrule,"rule matched",[]),
-	!,
+	% Check the HeadGoal
+	setauto('TARGET',T,Bindings),
+	call_without_backtrace(HeadGoal),
 
 	% Do a two-pass expansion of dependency list.
 	% This is ultra-hacky but allows for variable-expanded dependency lists that contain % wildcards
@@ -786,8 +811,20 @@ target_bindrule(T,rb(T,Ds,Execs)) :-
 	expand_deps(DP1,DP2,V),
 	expand_deps(DP2,Ds,V),
 
-	% expansion of executables
+	% Set up the DepGoal
+	setauto('DEPS',Ds,Bindings),
+
+	% and, success
+	debug(bindrule,"rule matched",[]).
+
+dep_bindrule(rb(T,Ds,DepGoal,Exec1,V),rb(T,Ds,{true},Execs,V),_Opts) :-
+	call_without_backtrace(DepGoal),
 	expand_execs(Exec1,Execs,V).
+
+setauto(VarLabel,Value,Bindings) :-
+	member((VarLabel = Value), Bindings),
+	!.
+setauto(_,_,_).
 
 pattern_match(A,B) :- var(A),!,B=A.
 pattern_match(t(TL),A) :- !, pattern_match(TL,A).
@@ -835,14 +872,17 @@ not_empty(X) :- X \= "", X \= ''.
 :- multifile
         mkrule/3,
         mkrule/4,
+        mkrule/5,
         with/2.
 :- dynamic
         mkrule/3,
         mkrule/4,
+        mkrule/5,
         with/2.
 
-mkrule_default(T,D,E,G,VNs) :- with(mkrule(T,D,E,G),VNs).
-mkrule_default(T,D,E,true,VNs) :- with(mkrule(T,D,E),VNs).
+mkrule_default(T,D,E,Ghead,Gdep,VNs) :- with(mkrule(T,D,E,Ghead,Gdep),VNs).
+mkrule_default(T,D,E,true,Gdep,VNs) :- with(mkrule(T,D,E,Gdep),VNs).
+mkrule_default(T,D,E,true,true,VNs) :- with(mkrule(T,D,E),VNs).
 
 expand_vars(X,Y) :-
 	expand_vars(X,Y,v(null,null,null,[])).
