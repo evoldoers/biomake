@@ -213,6 +213,9 @@ test :-
 	run_test("-f Makefile.goal","goal_a"),
 	run_test("-f Makefile.goal","goal_x"),
 	run_test("ref/embedded","target/embedded",["rm [hmz]*"],"",""),
+	run_test("-f Makefile.precedence","rule_precedence_specific1"),
+	run_test("-f Makefile.precedence","rule_precedence_specific2"),
+	run_test("-f Makefile.precedence","rule_precedence_generic"),
 
 	% All done
 	report_counts,
