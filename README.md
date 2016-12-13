@@ -221,10 +221,14 @@ Now if we type...
 (since we have required them to be _ordered_ pairs, we get e.g. "mouse-zebrafish" but not "zebrafish-mouse";
 the motivation here is that the `align` program is symmetric, and so only needs to be run once per pair).
 
-In these examples, the goals between braces are tested _after_ the dependencies have been built.
+In these examples, the goals between braces are tested _after_ the dependencies.
+This means that any Prolog code in these braces can safely examine the dependency files
+(for example, you could constrain a rule to apply only if a dependency file was below a certain size,
+or in a certain file format).
 You can also place a Prolog goal (in braces) between the target list and the colon;
 it will then be tested after the target name has been matched,
-but before trying to build the dependencies.
+but _before_ trying to build any dependencies.
+In such a goal, you can use the `TARGET` variable but not the `DEPS` variable.
 
 Programming directly in Prolog
 ------------------------------
@@ -411,8 +415,8 @@ To emulate this behavior faithfully, Biomake would have to do the variable expan
 We think it's worth sacrificing this edge case in order to maintain the semantic parallel between Makefile variables and Prolog variables, which allows for some powerful constructs.
 
 The implementation of [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html)
-(`ifeq`, `ifdef` and the like) must also be aligned with the syntax: you can only place a conditional
-at a point where a variable assignment, recipe, or `include` directive could go
+(`ifeq`, `ifdef` and the like) similarly requires that syntax to be aligned with the overall structure:
+you can only place a conditional at a point where a variable assignment, recipe, or `include` directive could go
 (i.e. at the top level of the `Makefile` grammar).
 
 Unlike GNU Make, Biomake does not offer domain-specific language extensions in [Scheme](https://www.gnu.org/software/guile/)
