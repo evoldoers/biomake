@@ -21,6 +21,9 @@
 	   report/3,
 	   report/4,
 
+	   comment_report/3,
+	   comment_report/4,
+
 	   consult_gnu_makefile/3,
            consult_makeprog/3,
 	   read_makeprog_stream/4,
@@ -155,19 +158,19 @@ build(T,SL,Opts) :-
         debug_report(build,'  Target: ~w',[T],SL),
         target_bindrule(T,Rule,Opts),
         rule_dependencies(Rule,DL,Opts),
-        report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
+        comment_report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
         can_build_deps(DL,[T|SL],Opts), % semidet
         build_deps(DL,[T|SL],Opts), % semidet
 	dep_bindrule(Rule,Opts,Rule2,Opts2),
         (   rebuild_required(T,DL,SL,Opts2)
         ->  run_execs_and_update(Rule2,SL,Opts2)
-        ;   report('~w is up to date',[T],SL,Opts)),
+        ;   comment_report('~w is up to date',[T],SL,Opts)),
 	!.
 build(T,SL,Opts) :-
         debug_report(build,'..checking if rebuild required for ~w',[T],SL),
         \+ rebuild_required(T,[],SL,Opts),
         !,
-        report('Nothing to be done for ~w',[T],SL,Opts).
+        comment_report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
         \+ target_bindrule(T,_,Opts),
         handle_error('Don\'t know how to make ~w',[T],SL,Opts),
@@ -242,9 +245,14 @@ report(Fmt,Args,SL,_) :-
         format(IndentedFmt,Args),
         nl.
 
+comment_report(Fmt,Args,Opts) :- comment_report(Fmt,Args,[],Opts).
+comment_report(Fmt,Args,SL,Opts) :-
+	format(string(HashFmt),"# ~w",Fmt),
+	report(HashFmt,Args,SL,Opts).
+
 stack_indent([],Text,Text).
 stack_indent([_|T],Text,Indented) :-
-        string_concat('    ',Text,Tab),
+        string_concat(' ',Text,Tab),
 	stack_indent(T,Tab,Indented).
 
 debug_report(Topic,Fmt,Args) :-
@@ -264,48 +272,48 @@ rebuild_required(T,DL,SL,Opts) :-
 	member(what_if(D),Opts),
         member(D,DL),
         !,
-        report('Target ~w has dependency ~w marked as modified from the command-line - build required',[T,D],SL,Opts).
+        comment_report('Target ~w has dependency ~w marked as modified from the command-line - build required',[T,D],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         atom_string(T,Ts),
         member(old_file(Ts),Opts),
         !,
-        report('Target ~w marked as old from the command-line - no rebuild required',[T],SL,Opts),
+        comment_report('Target ~w marked as old from the command-line - no rebuild required',[T],SL,Opts),
 	fail.
 rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
-        report('Target ~w not materialized - build required',[T],SL,Opts).
+        comment_report('Target ~w not materialized - build required',[T],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         member(D,DL),
         \+ exists_target(D,Opts),
 	\+ member(old_file(D),Opts),
         !,
-        report('Target ~w has unbuilt dependency ~w - rebuild required',[T,D],SL,Opts).
+        comment_report('Target ~w has unbuilt dependency ~w - rebuild required',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         \+ member(md5(true),Opts),
 	has_newer_dependency(T,DL,D,Opts),
 	!,
-        report('Target ~w built before dependency ~w - rebuild required',[T,D],SL,Opts).
+        comment_report('Target ~w built before dependency ~w - rebuild required',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         \+ member(md5(true),Opts),
 	has_rebuilt_dependency(T,DL,D,Opts),
 	!,
-        report('Target ~w has rebuilt dependency ~w - rebuild required',[T,D],SL,Opts).
+        comment_report('Target ~w has rebuilt dependency ~w - rebuild required',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
 	building_asynchronously(Opts),
 	has_rebuilt_dependency(T,DL,D,Opts),
 	!,
-        report('Target ~w has dependency ~w on rebuild queue',[T,D],SL,Opts).
+        comment_report('Target ~w has dependency ~w on rebuild queue',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         member(md5(true),Opts),
 	\+ md5_hash_up_to_date(T,DL,Opts),
 	!,
-        report('Target ~w does not have an up-to-date checksum - rebuild required',[T],SL,Opts).
+        comment_report('Target ~w does not have an up-to-date checksum - rebuild required',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         member(always_make(true),Opts),
         target_bindrule(T,_,Opts),
         !,
-        report('Specified --always-make; rebuild required for target ~w',[T],SL,Opts).
+        comment_report('Specified --always-make; rebuild required for target ~w',[T],SL,Opts).
 
 building_asynchronously(Opts) :-
 	member(queue(Q),Opts),
@@ -325,13 +333,13 @@ rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         member(D,DL),
 	was_built_after(D,T,Opts),
 	!,
-        report('Target ~w has rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+        comment_report('Target ~w has rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
 rebuild_required_by_time_stamp(T,DL,SL,Opts) :-
         \+ exists_directory(T),
         member(D,DL),
         has_newer_timestamp(D,T,Opts),
         !,
-        report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
+        comment_report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
 
 has_newer_timestamp(A,B,_Opts) :-
         time_file(A,TA),
@@ -409,11 +417,11 @@ dispatch_run_execs(Rule,SL,Opts) :-
 	rule_target(Rule,T,Opts),
 	(member(md5(true),Opts) -> ensure_md5_directory_exists(T) ; true),
 	run_execs_in_queue(Q,Rule,SL,Opts),
-	report('~w queued for rebuild',[T],SL,Opts).
+	comment_report('~w queued for rebuild',[T],SL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
 	run_execs_now(Rule,SL,Opts),
 	rule_target(Rule,T,Opts),
-	report('~w built',[T],SL,Opts).
+	comment_report('~w built',[T],SL,Opts).
 
 run_execs_now(Rule,SL,Opts) :-
 	member(oneshell(true),Opts),
