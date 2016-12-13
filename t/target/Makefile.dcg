@@ -1,0 +1,11 @@
+prolog
+match_dcg --> ['d','c','g'], match_rest.
+match_rest --> [_], match_rest.
+match_rest --> [].
+endprolog
+
+%test { string_chars(TARGET,C), phrase(match_dcg,C) }:
+	echo Matched dcg in $@ >$@
+
+%test:
+	echo Could not match dcg in $@ >$@

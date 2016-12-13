@@ -82,7 +82,7 @@
 
 % Intercept a couple of exceptions that are thrown by the threadpool library
 % This is kind of yucky, but only seems to affect our exception-handling code
-:- dynamic prolog_exception_hook/4.
+:- dynamic user:prolog_exception_hook/4.
 
 user:prolog_exception_hook(error(existence_error(thread,_),context(system:thread_property/2,_)),_,_,_) :- !, fail.
 user:prolog_exception_hook('$aborted',_,_,_) :- !, fail.
@@ -95,11 +95,11 @@ user:prolog_exception_hook(E,_,_,_) :-
         fail.
 
 call_without_backtrace(Term) :-
-        assert(suppress_backtrace),
+        assertz(suppress_backtrace),
 	catch(call(Term),_,fail),
 	retract(suppress_backtrace).
 
-disable_backtrace :- assert(no_backtrace).
+disable_backtrace :- assertz(no_backtrace).
 
 
 % ----------------------------------------
@@ -179,7 +179,7 @@ bind_special_variables(Opts) :-
         member(biomake_prog(Prog),Opts),
 	add_spec_clause(('MAKE' = Prog),[],[]),
 	bagof(Arg,member(biomake_args(Arg),Opts),Args),
-	atomic_list_concat(Args," ",ArgStr),
+	atomic_list_concat(Args,' ',ArgStr),
 	add_spec_clause(('MAKEFLAGS' = ArgStr),[],[]).
 
 % Queue setup/wrapup
@@ -336,17 +336,17 @@ rule_vars(rb(_,_,_,_,V),V,_Opts).
 flag_as_rebuilt(T) :-
     next_build_counter(N),
     retractall(build_count(T,_)),
-    assert(build_count(T,N)).
+    assertz(build_count(T,N)).
 
 next_build_counter(N) :-
     build_counter(Last),
     !,
     N is Last + 1,
     retract(build_counter(Last)),
-    assert(build_counter(N)).
+    assertz(build_counter(N)).
 
 next_build_counter(1) :-
-    assert(build_counter(1)).
+    assertz(build_counter(1)).
 
 
 % ----------------------------------------
@@ -608,7 +608,7 @@ write_list(IO,L) :- format(IO,"~q",[L]).
 
 add_cmdline_assignment((Var = X)) :-
         global_unbind(Var),
-        assert(global_cmdline_binding(Var,X)),
+        assertz(global_cmdline_binding(Var,X)),
         debug(makeprog,'cmdline assign: ~w = ~w',[Var,X]).
 
 add_spec_clause(Ass,Opts,Opts) :-
@@ -653,7 +653,7 @@ add_spec_clause( (Var = X), VNs, Opts, Opts) :-
 	!,
         member(Var=Var,VNs),
         global_unbind(Var),
-        assert(global_lazy_binding(Var,X)),
+        assertz(global_lazy_binding(Var,X)),
         debug(makeprog,'assign: ~w = ~w',[Var,X]).
 
 add_spec_clause( (Var := X,{Goal}), VNs, Opts, Opts) :-
@@ -664,7 +664,7 @@ add_spec_clause( (Var := X,{Goal}), VNs, Opts, Opts) :-
 	unwrap_t(Ys,Yflat),  % hack; parser adds unwanted t(...) wrapper
 	!,
         global_unbind(Var),
-        assert(global_simple_binding(Var,Yflat)),
+        assertz(global_simple_binding(Var,Yflat)),
         debug(makeprog,'assign: ~w := ~w',[Var,Yflat]).
 
 add_spec_clause( (Var := X), VNs, Opts, Opts) :-
@@ -681,7 +681,7 @@ add_spec_clause( (Var += X), VNs, Opts, Opts) :-
 	 concat_string_list([Old," ",Yflat],New);
 	 New = Yflat),
         global_unbind(Var),
-        assert(global_simple_binding(Var,New)),
+        assertz(global_simple_binding(Var,New)),
         debug(makeprog,'assign: ~w := ~w',[Var,New]).
 
 add_spec_clause( (Var =* X), VNs, Opts, Opts) :-
@@ -690,7 +690,7 @@ add_spec_clause( (Var =* X), VNs, Opts, Opts) :-
 	shell_eval_str(X,Y),
 	!,
         global_unbind(Var),
-        assert(global_lazy_binding(Var,Y)),
+        assertz(global_lazy_binding(Var,Y)),
         debug(makeprog,'assign: ~w =* ~w  ==>  ~w',[Var,X,Y]).
 
 add_spec_clause( (Head,{HeadGoal} <-- Deps,{DepGoal},Exec), VNs, Opts, Opts) :-
@@ -724,11 +724,12 @@ add_spec_clause(Rule,VNs,Opts,Opts) :-
         !,
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
 	set_default_target(T),
-        assert(with(Rule,VNs)).
+        assertz(with(Rule,VNs)).
 
 add_spec_clause(Term,_,Opts,Opts) :-
         debug(makeprog,"assert ~w",Term),
-        assert(Term).
+	expand_term(Term,Expanded),
+        assertz(Expanded).
 
 set_default_target(_) :-
 	default_target(_),
@@ -739,7 +740,7 @@ set_default_target([T|_]) :-
 	equal_as_strings(T,Tx),  % only set default target if T contains no variables
 	!,
 	debug(makeprog,"Setting default target to ~s",[Tx]),
-	assert(default_target(Tx)).
+	assertz(default_target(Tx)).
 set_default_target([_|_]) :- !.
 set_default_target(T) :- set_default_target([T]).
 

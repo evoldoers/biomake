@@ -228,6 +228,8 @@ test :-
 	run_test("-f Makefile.size_file -Q test","size_file_nonempty_test_dep"),
 	run_test("-f Makefile.size_file -Q poolq","size_file_empty_poolq_dep"),
 	run_test("-f Makefile.size_file -Q poolq","size_file_nonempty_poolq_dep"),
+	run_test("-f Makefile.dcg","dcg_test"),
+	run_test("-f Makefile.dcg","mismatch_dcg_test"),
 
 	% All done
 	report_counts,
