@@ -295,7 +295,7 @@ arg_alias('-s','--silent').
 arg_info('-s','','Silent operation; do not print recipes as they are executed').
 
 simple_arg('--one-shell',oneshell(true)).
-arg_info('--one-shell','','Run recipes in single shell (equivalent to GNU Make\'s .ONESHELL)').
+arg_info('--one-shell','','Run recipes in single shell (loosely equivalent to GNU Make\'s .ONESHELL)').
 
 % ----------------------------------------
 % MD5 CHECKSUMS
@@ -355,7 +355,7 @@ parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
 arg_info('--debug','MSG','[developers] Debugging messages. MSG can be build, pattern, makefile, md5...').
 
 parse_arg(['--trace',Pred|L],L,null) :- trace(Pred), !.
-arg_info('--trace','predicate','[developers] Print debugging trace for given predicate').
+arg_info('--trace','PREDICATE','[developers] Print debugging trace for given predicate').
 
 parse_arg(['--no-backtrace'|L],L,null) :- disable_backtrace, !.
 arg_info('--no-backtrace','','[developers] Do not print a backtrace on error').

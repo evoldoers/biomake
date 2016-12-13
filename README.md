@@ -95,7 +95,7 @@ Var=Val
 -s,--quiet,--silent 
     Silent operation; do not print recipes as they are executed
 --one-shell 
-    Run recipes in single shell (equivalent to GNU Make's .ONESHELL)
+    Run recipes in single shell (loosely equivalent to GNU Make's .ONESHELL)
 -H,--md5-hash 
     Use MD5 hashes instead of timestamps
 -Q,--queue-engine ENGINE
@@ -116,7 +116,7 @@ Var=Val
     Erase all jobs for given target/dir
 --debug MSG
     [developers] Debugging messages. MSG can be build, pattern, makefile, md5...
---trace predicate
+--trace PREDICATE
     [developers] Print debugging trace for given predicate
 --no-backtrace 
     [developers] Do not print a backtrace on error
