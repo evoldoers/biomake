@@ -111,10 +111,12 @@ parse_args([MultiArgs|Args],Opts) :-
 	!,
         append(MultiOpts,RestOpts,Opts),
         parse_args(Args,RestOpts).
-parse_args(Args,[Opt|Opts]) :-
-        parse_arg(Args,Rest,Opt),
+parse_args(Args,Opts) :-
+        parse_arg(Args,RestArgs,Opt),
         !,
-        parse_args(Rest,Opts).
+	(Opt = [_|_] -> ArgOpts = Opt; ArgOpts = [Opt]),
+	append(ArgOpts,RestOpts,Opts),
+        parse_args(RestArgs,RestOpts).
 parse_args([A|Args],[toplevel(A)|Opts]) :-
         parse_args(Args,Opts).
 
@@ -309,7 +311,7 @@ arg_info('-H','','Use MD5 hashes instead of timestamps').
 % QUEUES
 % ----------------------------------------
 
-parse_arg(['-Q',Qs|L],L,(queue(Q),qsub_biomake_args('-N'))) :-
+parse_arg(['-Q',Qs|L],L,[queue(Q),qsub_biomake_args('-N')]) :-
         ensure_loaded(library(biomake/queue)),
 	atom_string(Q,Qs),
 	queue_engine(Q),
@@ -318,7 +320,7 @@ parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
 arg_alias('-Q','--queue-engine').
 arg_info('-Q','ENGINE','Queue recipes using ENGINE (supported: test,sge,pbs,slurm,poolq)').
 
-parse_arg(['-j',Jobs|L],L,(atom_number(Jobs,NJobs),poolq_threads(NJobs))).
+parse_arg(['-j',Jobs|L],L,poolq_threads(NJobs)) :- atom_number(Jobs,NJobs).
 arg_alias('-j','--jobs').
 arg_info('-j','JOBS','Number of job threads (poolq engine)').
 

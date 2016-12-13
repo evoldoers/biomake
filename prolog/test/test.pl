@@ -34,14 +34,14 @@ test :-
 	run_failure_test("--no-backtrace -f Makefile.err","empty"),
 	run_failure_test("--no-backtrace -f Makefile.tab","empty"),
 	run_failure_test("--no-backtrace","missing_target"),
-	run_failure_test("ref","target",["echo Up to date >uptodate"],"--no-backtrace","uptodate"),
+	run_failure_test("ref","target",["echo Up to date >uptodate"],[],"--no-backtrace","uptodate"),
 	
 	announce("PROLOG SYNTAX"),
 	run_test("-p Prolog.makespec","simple_prolog"),
 	run_test("-p Prolog.makespec","lower_case_variable.pltest"),
 	run_test("-p Prolog.makespec","upper_case_var_assignment"),
-	run_test("ref/prolog","target/prolog",["rm [hmz]*"],"",""),
-	run_test("ref","target",[],"-f Makefile.translate -T Makefile.translated","Makefile.translated"),
+	run_test("ref/prolog","target/prolog",["rm [hmz]*"],[],"",""),
+	run_test("ref","target",[],[],"-f Makefile.translate -T Makefile.translated","Makefile.translated"),
 	
 	announce("BASIC GNU MAKEFILE SYNTAX"),
 	run_test("simple"),
@@ -54,8 +54,8 @@ test :-
 	run_test("-f Makefile.include","makefile_list"),
 	run_test("-f Makefile.dir1","relative_include_path"),
 	run_test("forced_rebuild"),
-	run_test("ref","target",["touch old_dep","echo Pre-update >older_dep"],"","older_dep"),
-	run_test("ref","target",["echo Pre-update >newer_dep","sleep 1","touch new_dep"],"","newer_dep"),
+	run_test("ref","target",["touch old_dep","echo Pre-update >older_dep"],[],"","older_dep"),
+	run_test("ref","target",["echo Pre-update >newer_dep","sleep 1","touch new_dep"],[],"","newer_dep"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),
@@ -163,20 +163,20 @@ test :-
 	announce("MD5 CHECKSUMS"),
 
 	% this is a test of the MD5 checksums
-	run_test("ref/md5","target/md5",[],"-B -H --debug md5","hello_world"),
+	run_test("ref/md5","target/md5",[],[],"-B -H --debug md5","hello_world"),
 
 	% the next test fakes out the MD5 checksums... kind of hacky
 	% the general idea is to test whether biomake can be tricked into NOT making a target
 	% because the MD5 checksums and file sizes look correct.
 	% this is really a way of checking that biomake is paying attention to the checksums,
 	% while only looking at the files it generates.
-	run_test("ref/md5.wrong","target/md5.wrong",["echo wrong >hello","echo wrong >world","echo wrong_wrong >hello_world"],"-H","hello_world"),
+	run_test("ref/md5.wrong","target/md5.wrong",["echo wrong >hello","echo wrong >world","echo wrong_wrong >hello_world"],[],"-H","hello_world"),
 
 	% this next test checks that the MD5 checksums *can't* be faked out if file sizes change.
 	% basically the same as the previous test, but now one of the "wrong" files (world)
 	% is also the wrong length, which should trigger its rebuild - but not the rebuild of
 	% hello_world, on which it depends, since that has the right length and its MD5 looks OK.
-	run_test("ref/md5.len","target/md5.len",["echo wrong >hello","echo wrong length >world","echo wrong_wrong >hello_world"],"-H","hello_world"),
+	run_test("ref/md5.len","target/md5.len",["echo wrong >hello","echo wrong length >world","echo wrong_wrong >hello_world"],[],"-H","hello_world"),
 
 	announce("QUEUES"),
 
@@ -184,26 +184,28 @@ test :-
 	% The first two tests just test that the Makefile is working and that commands can be run from a script.
 	run_test("-f Makefile.queue","i.am.the.garbage.flower"),
 	run_test("-f Makefile.queue --one-shell","love.will.tear.us.apart"),
-	% The remaining tests use the test queue (which just runs commands in a script)
-	% and the thread-pool queue, with and without MD5 hashes.
+	% The remaining tests use the test queue (which just runs commands in a script),
+	% the thread-pool queue, and a faked version of the SGE queue, with and without MD5 hashes.
 	run_test("-f Makefile.queue -Q test","what.difference.does.it.make"),
 	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
 	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),
 	run_test("-f Makefile.queue -Q poolq -H","the.head.on.the.door"),
+	run_test("ref","target",[],["sleep 2"],"-f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","outside.theres.a.boxcar.waiting"),
+	run_test("ref","target",[],["sleep 2"],"-f Makefile.queue -Q sge -H --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","that.was.my.favourite.dress"),
 
 	announce("COMMAND-LINE OPTIONS"),
 
 	run_test("--file=Makefile.argval","arg_equals_val"),
 	run_test("-f Makefile.subdir.include -I subdir","include_dir"),
-	run_test("ref","target",["touch what_if_dep","sleep 1","echo Pre-update >what_if"],"-W what_if_dep","what_if"),
-	run_test("ref","target",["echo Pre-update >old_file_target","sleep 1","touch old_file_target_dep"],"-o old_file_target","old_file_target"),
-	run_test("ref","target",["echo Pre-update >old_file_dep","sleep 1","touch old_file_dep_dep"],"-o old_file_dep_dep","old_file_dep"),
+	run_test("ref","target",["touch what_if_dep","sleep 1","echo Pre-update >what_if"],[],"-W what_if_dep","what_if"),
+	run_test("ref","target",["echo Pre-update >old_file_target","sleep 1","touch old_file_target_dep"],[],"-o old_file_target","old_file_target"),
+	run_test("ref","target",["echo Pre-update >old_file_dep","sleep 1","touch old_file_dep_dep"],[],"-o old_file_dep_dep","old_file_dep"),
 	run_test("-k nonexistent_target","keep_going"),
 	run_failure_test("another_nonexistent_target","stop_on_error1"),
 	run_failure_test("-k -S yet_another_nonexistent_target","stop_on_error2"),
-	run_test("ref","target",["echo Pre-update >touch"],"-B -t","touch"),
-	run_test("ref/md5.touch","target/md5.touch",["echo wrong >hello","echo wrong >world","echo wrong_wrong >hello_world"],"-t -H","hello_world"),
-	run_test("ref","target",["echo Pre-update >multi_arg"],"-Bk still_another_nonexistent_target","multi_arg"),
+	run_test("ref","target",["echo Pre-update >touch"],[],"-B -t","touch"),
+	run_test("ref/md5.touch","target/md5.touch",["echo wrong >hello","echo wrong >world","echo wrong_wrong >hello_world"],[],"-t -H","hello_world"),
+	run_test("ref","target",["echo Pre-update >multi_arg"],[],"-Bk still_another_nonexistent_target","multi_arg"),
 	run_test("CMDLINE_VAR=average --eval EVAL_VAR=worthy","cmdline_eval1"),
 	run_test("CMDLINE_VAR=mediocre. --eval-prolog EVAL_VAR=deserving.","cmdline_eval2"),
 	
@@ -214,7 +216,7 @@ test :-
 	run_test("-f Makefile.goal","headgoal_x"),
 	run_test("-f Makefile.goal","depgoal_a"),
 	run_test("-f Makefile.goal","depgoal_x"),
-	run_test("ref/embedded","target/embedded",["rm [hmz]*"],"",""),
+	run_test("ref/embedded","target/embedded",["rm [hmz]*"],[],"",""),
 	run_test("-f Makefile.precedence","rule_precedence_specific1"),
 	run_test("-f Makefile.precedence","rule_precedence_specific2"),
 	run_test("-f Makefile.precedence","rule_precedence_generic"),
@@ -263,25 +265,25 @@ report_counts :-
 run_test(Target) :-
 	default_ref_dir(RefDir),
 	default_test_dir(TestDir),
-	report_test(RefDir,TestDir,[],"",Target,"~s",[Target]).
+	report_test(RefDir,TestDir,[],[],"",Target,"~s",[Target]).
 
 run_test(Args,Target) :-
 	default_ref_dir(RefDir),
 	default_test_dir(TestDir),
-	report_test(RefDir,TestDir,[],Args,Target,"~s ~s",[Args,Target]).
+	report_test(RefDir,TestDir,[],[],Args,Target,"~s ~s",[Args,Target]).
 
-run_test(RefDir,TestDir,Setup,Args,Target) :-
-	report_test(RefDir,TestDir,Setup,Args,Target,"[t/~s,t/~s,~s ~s]",[RefDir,TestDir,Args,Target]).
+run_test(RefDir,TestDir,Setup,Cleanup,Args,Target) :-
+	report_test(RefDir,TestDir,Setup,Cleanup,Args,Target,"[t/~s,t/~s,~s ~s]",[RefDir,TestDir,Args,Target]).
 
-report_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
+report_test(RefDir,TestDir,Setup,Cleanup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
 	start_test(Fmt,Vars,Desc),
 	!,
-	(exec_test(RefDir,TestDir,Setup,Args,Target)
+	(exec_test(RefDir,TestDir,Setup,Cleanup,Args,Target)
          -> pass_test(Desc); fail_test(Desc)),
 	working_directory(_,CWD).
 
-report_test(_,_,_,_,_,_,_).
+report_test(_,_,_,_,_,_,_,_).
 
 start_test(Fmt,Vars,Desc) :-
 	inc(tests),
@@ -311,7 +313,7 @@ make_test_path(Dir,TestPath) :-
 make_test_path(Dir,Target,TestPath) :-
     format(string(TestPath),"t/~s/~s",[Dir,Target]).
 
-exec_test(RefDir,TestDir,Setup,Args,Target) :-
+exec_test(RefDir,TestDir,Setup,Cleanup,Args,Target) :-
 	make_test_path(TestDir,TestPath),
 	make_test_path(TestDir,Target,TargetPath),
 	biomake_path(Make),
@@ -332,6 +334,10 @@ exec_test(RefDir,TestDir,Setup,Args,Target) :-
 	!,
 	(Err = 0 -> true; format("Error code ~w~n",Err), fail),
 	working_directory(_,CWD),
+	% 'Cleanup' is a bit of a misnomer, it's more like a post-processing step
+	forall(member(Cmd,Cleanup),
+	       (format("~s~n",[Cmd]),
+               shell(Cmd); true)),
 	compare_output(TestDir,RefDir,Target),
 	% If no "Setup" shell commands were specified, remove the target file again at the end.
 	(Setup = [] -> (exists_file(TargetPath) -> delete_file(TargetPath); true); true).
@@ -426,20 +432,20 @@ read_string_from_file(Path,String) :-
 run_failure_test(Args,Target) :-
 	default_ref_dir(RefDir),
 	default_test_dir(TestDir),
-	report_failure_test(RefDir,TestDir,[],Args,Target,"[~s ~s] (expecting failure)",[Args,Target]).
+	report_failure_test(RefDir,TestDir,[],[],Args,Target,"[~s ~s] (expecting failure)",[Args,Target]).
 
-run_failure_test(RefDir,TestDir,Setup,Args,Target) :-
-        report_failure_test(RefDir,TestDir,Setup,Args,Target,"[t/~s,t/~s,~s ~s] (expecting failure)",[RefDir,TestDir,Args,Target]).
+run_failure_test(RefDir,TestDir,Setup,Cleanup,Args,Target) :-
+        report_failure_test(RefDir,TestDir,Setup,Cleanup,Args,Target,"[t/~s,t/~s,~s ~s] (expecting failure)",[RefDir,TestDir,Args,Target]).
 
-report_failure_test(RefDir,TestDir,Setup,Args,Target,Fmt,Vars) :-
+report_failure_test(RefDir,TestDir,Setup,Cleanup,Args,Target,Fmt,Vars) :-
 	working_directory(CWD,CWD),
 	start_test(Fmt,Vars,Desc),
 	!,
-	(exec_test(RefDir,TestDir,Setup,Args,Target)
+	(exec_test(RefDir,TestDir,Setup,Cleanup,Args,Target)
          -> fail_test(Desc); pass_test(Desc)),
 	working_directory(_,CWD).
 
-report_failure_test(_,_,_,_,_,_,_).
+report_failure_test(_,_,_,_,_,_,_,_).
 
 n_chars(N,_,[]) :- N =< 0, !.
 n_chars(N,C,[C|Ls]) :- Ndec is N - 1, n_chars(Ndec,C,Ls), !.

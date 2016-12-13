@@ -1,0 +1,26 @@
+#!/usr/bin/env perl
+
+# dummy version of qsub that just forks a process and sleeps
+
+while (@ARGV && $ARGV[0] =~ /^-/) {
+    my $arg = shift;
+    if ($arg eq '-hold_jid') {
+	my $hold_jobs = shift;
+	my @hold = split /,/, $hold_jobs;
+	for my $hold (@hold) {
+	    while (1) {
+		my $pids = `ps -opid`;
+		my @pids = split /\s+/, $pids;
+		last unless grep($_ eq $hold,@pids);
+	    }
+	}
+    }
+}
+
+my $child = fork();
+if ($child) {
+    print $child, "\n";
+} else {
+    sleep(1);
+    system "@ARGV";
+}
