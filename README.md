@@ -100,6 +100,10 @@ Var=Val
     Run recipes in single shell (loosely equivalent to GNU Make's .ONESHELL)
 -H,--md5-hash 
     Use MD5 hashes instead of timestamps
+-C,--no-md5-cache 
+    Recompute MD5 checksums whenever biomake is restarted
+-M,--no-md5-timestamp 
+    Do not recompute MD5 checksums when timestamps appear stale
 -Q,--queue-engine ENGINE
     Queue recipes using ENGINE (supported: poolq,sge,pbs,slurm,test)
 -j,--jobs JOBS
