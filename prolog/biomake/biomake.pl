@@ -144,12 +144,19 @@ build(T,SL,Opts) :-
 	report("Cyclic dependency detected: ~w <-- ~w",[Chain,T],SL,Opts),
         halt_error.
 
+build(_T,SL,Opts) :-
+	length(SL,Depth),
+	Depth > 100,
+	report("Exceeded maximum length of dependency chain (~w)",[Depth],SL,Opts),
+	!,
+	fail.
+
 build(T,SL,Opts) :-
         debug_report(build,'  Target: ~w',[T],SL),
         target_bindrule(T,Rule,Opts),
-        debug_report(build,'  Bindrule: ~w',[Rule],SL),
         rule_dependencies(Rule,DL,Opts),
         report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
+        can_build_deps(DL,[T|SL],Opts), % semidet
         build_deps(DL,[T|SL],Opts), % semidet
 	dep_bindrule(Rule,Opts,Rule2,Opts2),
         (   rebuild_required(T,DL,SL,Opts2)
@@ -167,6 +174,27 @@ build(T,SL,Opts) :-
 	!.
 build(T,SL,Opts) :-
         handle_error('~w FAILED',[T],SL,Opts).
+
+can_build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
+can_build_deps([],_,_).
+can_build_deps([T|TL],SL,Opts) :-
+	can_build(T,SL,Opts),
+	can_build_deps(TL,SL,Opts).
+
+can_build(T,SL,_Opts) :-
+	member(Dep,SL),
+	equal_as_strings(Dep,T),
+	!,
+	fail.
+can_build(T,SL,Opts) :-
+	debug_report(build,'checking ~w',[T],SL),
+        target_bindrule(T,Rule,Opts),
+        rule_dependencies(Rule,DL,Opts),
+        can_build_deps(DL,[T|SL],Opts),
+	debug_report(build,'know how to build ~w',[T],SL).
+can_build(T,SL,_) :-
+	exists_file(T),
+	debug_report(build,'can find ~w',[T],SL).
 
 build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
 build_deps([],_,_).
@@ -236,33 +264,33 @@ rebuild_required(T,DL,SL,Opts) :-
 	member(what_if(D),Opts),
         member(D,DL),
         !,
-        report('Target ~w has dependency ~w marked as modified from the command-line - building',[T,D],SL,Opts).
+        report('Target ~w has dependency ~w marked as modified from the command-line - build required',[T,D],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         atom_string(T,Ts),
         member(old_file(Ts),Opts),
         !,
-        report('Target ~w marked as old from the command-line - will not rebuild',[T],SL,Opts),
+        report('Target ~w marked as old from the command-line - no rebuild required',[T],SL,Opts),
 	fail.
 rebuild_required(T,_,SL,Opts) :-
         \+ exists_target(T,Opts),
         !,
-        report('Target ~w not materialized - building',[T],SL,Opts).
+        report('Target ~w not materialized - build required',[T],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         member(D,DL),
         \+ exists_target(D,Opts),
 	\+ member(old_file(D),Opts),
         !,
-        report('Target ~w has unbuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+        report('Target ~w has unbuilt dependency ~w - rebuild required',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         \+ member(md5(true),Opts),
 	has_newer_dependency(T,DL,D,Opts),
 	!,
-        report('Target ~w built before dependency ~w - rebuilding',[T,D],SL,Opts).
+        report('Target ~w built before dependency ~w - rebuild required',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
         \+ member(md5(true),Opts),
 	has_rebuilt_dependency(T,DL,D,Opts),
 	!,
-        report('Target ~w has rebuilt dependency ~w - rebuilding',[T,D],SL,Opts).
+        report('Target ~w has rebuilt dependency ~w - rebuild required',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
 	building_asynchronously(Opts),
 	has_rebuilt_dependency(T,DL,D,Opts),
@@ -272,12 +300,12 @@ rebuild_required(T,DL,SL,Opts) :-
         member(md5(true),Opts),
 	\+ md5_hash_up_to_date(T,DL,Opts),
 	!,
-        report('Target ~w does not have an up-to-date checksum - rebuilding',[T],SL,Opts).
+        report('Target ~w does not have an up-to-date checksum - rebuild required',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         member(always_make(true),Opts),
         target_bindrule(T,_,Opts),
         !,
-        report('Specified --always-make; rebuilding target ~w',[T],SL,Opts).
+        report('Specified --always-make; rebuild required for target ~w',[T],SL,Opts).
 
 building_asynchronously(Opts) :-
 	member(queue(Q),Opts),
