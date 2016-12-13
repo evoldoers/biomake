@@ -19,7 +19,7 @@ while (@ARGV && $ARGV[0] =~ /^-/) {
 
 my $child = fork();
 if ($child) {
-    print $child, "\n";
+    print "Job number is ", $child, "\n";
 } else {
     sleep(1);
     system "@ARGV";
