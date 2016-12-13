@@ -42,9 +42,17 @@ md5_hash_up_to_date(T,DL,Opts) :-
 % read_md5_file attempts to find the MD5 hash of a target and (if known) the conditions under which this target is still valid.
 % It does this by first trying to read the file .biomake/md5/{targetName}, then trying to lookup the hash in its database,
 % and finally (if all else fails) computing the hash on-the-fly, using the md5 program.
-read_md5_file(T) :-
+read_md5_file(T,Opts) :-
     md5_filename(T,F),
+    exists_file(T),
     exists_file(F),
+    (member(ignore_md5_timestamp(true),Opts)
+    ; (time_file(T,Ttime),
+       time_file(F,Ftime),
+       (Ttime > Ftime
+        -> (debug(md5,'MD5 hash file ~w has an older timestamp than ~w - ignoring',[F,T]),
+	    fail)
+	; true))),
     !,
     debug(md5,'Reading MD5 hash file: ~w',[F]),
     retract_md5_hash(T),
@@ -61,9 +69,16 @@ read_md5_file(T) :-
 
 md5_check_size(File,Size,Hash,_Opts) :- exists_file(File), size_file(File,Size), md5_hash(File,Size,Hash).
 
-md5_check(File,Size,Hash,Opts) :- md5_check_size(File,Size,Hash,Opts), !.
-md5_check(File,Size,Hash,Opts) :- read_md5_file(File), !, md5_check_size(File,Size,Hash,Opts).
-md5_check(File,Size,Hash,Opts) :- compute_md5(File,Size,Hash,Opts).
+md5_check(File,Size,Hash,Opts) :-
+	md5_check_size(File,Size,Hash,Opts),
+	!.
+md5_check(File,Size,Hash,Opts) :-
+	\+ member(no_md5_cache(true),Opts),
+	read_md5_file(File,Opts),
+	!,
+	md5_check_size(File,Size,Hash,Opts).
+md5_check(File,Size,Hash,Opts) :-
+	compute_md5(File,Size,Hash,Opts).
 
 retract_md5_hash(T) :-
     md5_hash(T,_,_),
@@ -96,7 +111,8 @@ try_md5_prog(Filename,Hash) :-
     phrase_from_file(first_n(32,HashCodes),TmpFile),
     string_codes(HashStr,HashCodes),
     debug(md5,'output of ~w ~w: ~w',[Md5Prog,Filename,HashStr]),
-    string_lower(HashStr,Hash).
+    string_lower(HashStr,Hash),
+    !.
 
 % this version uses pipes; unfortunately, that crashes on some Macs :-(
 try_md5_prog_using_pipes(Filename,Hash) :-

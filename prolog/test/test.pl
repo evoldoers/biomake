@@ -170,13 +170,16 @@ test :-
 	% because the MD5 checksums and file sizes look correct.
 	% this is really a way of checking that biomake is paying attention to the checksums,
 	% while only looking at the files it generates.
-	run_test("ref/md5.wrong","target/md5.wrong",["echo wrong >hello","echo wrong >world","echo wrong_wrong >hello_world"],[],"-H","hello_world"),
+	run_test("ref/md5.wrong","target/md5.wrong",["echo wrong >hello","echo wrong >world","echo wrong_wrong >hello_world","sleep 1","mkdir -p .biomake/md5","cp ../md5.checksums/* .biomake/md5"],[],"-H","hello_world"),
 
 	% this next test checks that the MD5 checksums *can't* be faked out if file sizes change.
 	% basically the same as the previous test, but now one of the "wrong" files (world)
 	% is also the wrong length, which should trigger its rebuild - but not the rebuild of
 	% hello_world, on which it depends, since that has the right length and its MD5 looks OK.
-	run_test("ref/md5.len","target/md5.len",["echo wrong >hello","echo wrong length >world","echo wrong_wrong >hello_world"],[],"-H","hello_world"),
+	run_test("ref/md5.len","target/md5.len",["echo wrong >hello","echo wrong length >world","echo wrong_wrong >hello_world","sleep 1","mkdir -p .biomake/md5","cp ../md5.checksums/* .biomake/md5"],[],"-H","hello_world"),
+
+	% this next test checks that the MD5 checksums are recomputed if the MD5 cache file modification times look stale.
+	run_test("ref/md5.time","target/md5.time",["echo wrong >hello","echo wrong_wrong >hello_world","sleep 1","mkdir -p .biomake/md5","cp ../md5.checksums/* .biomake/md5","sleep 1","echo wrong >world"],[],"-H","hello_world"),
 
 	announce("QUEUES"),
 

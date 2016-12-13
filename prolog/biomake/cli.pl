@@ -307,6 +307,14 @@ arg_alias('-H','--md5-checksum').
 recover_arg(['-H'],md5(true)).
 arg_info('-H','','Use MD5 hashes instead of timestamps').
 
+simple_arg('-C',no_md5_cache(true)).
+arg_alias('-C','--no-md5-cache').
+arg_info('-C','','Recompute MD5 checksums whenever biomake is restarted').
+
+simple_arg('-M',ignore_md5_timestamp(true)).
+arg_alias('-M','--no-md5-timestamp').
+arg_info('-M','','Do not recompute MD5 checksums when timestamps appear stale').
+
 % ----------------------------------------
 % QUEUES
 % ----------------------------------------
