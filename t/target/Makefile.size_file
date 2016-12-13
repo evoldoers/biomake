@@ -4,8 +4,8 @@ size_file_%: % { DEPS = [F], size_file(F,0) }
 size_file_%: % { DEPS = [F], size_file(F,S), S > 0 }
 	echo Size of $F is $S >$@
 
-empty_dep:
-	touch $@
-
-nonempty_dep:
+nonempty_%:
 	echo hello >$@
+
+empty_%:
+	touch $@

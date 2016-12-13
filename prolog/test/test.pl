@@ -222,6 +222,10 @@ test :-
 	run_test("-f Makefile.depchain","dep_chain_two_step"),
 	run_test("-f Makefile.size_file","size_file_empty_dep"),
 	run_test("-f Makefile.size_file","size_file_nonempty_dep"),
+	run_test("-f Makefile.size_file -Q test","size_file_empty_test_dep"),
+	run_test("-f Makefile.size_file -Q test","size_file_nonempty_test_dep"),
+	run_test("-f Makefile.size_file -Q poolq","size_file_empty_poolq_dep"),
+	run_test("-f Makefile.size_file -Q poolq","size_file_nonempty_poolq_dep"),
 
 	% All done
 	report_counts,
