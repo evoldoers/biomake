@@ -185,7 +185,6 @@ bind_special_variables(Opts) :-
 % Queue setup/wrapup
 start_queue(Opts) :-
 	member(queue(Q),Opts),
-	format("queue=~w~n",[Q]),
 	!,
 	ensure_loaded(library(biomake/queue)),
 	init_queue(Q,Opts).
@@ -411,7 +410,7 @@ run_execs_in_script(Rule,SL,Opts) :-
 update_hash(T,DL,Opts) :-
     member(md5(true),Opts),
     !,
-    update_md5_file(T,DL).
+    update_md5_file(T,DL,Opts).
 update_hash(_,_,_).
 
 run_execs([],_,_).

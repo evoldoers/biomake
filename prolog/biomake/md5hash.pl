@@ -4,7 +4,7 @@
           [
 	      md5_hash_up_to_date/3,
 	      ensure_md5_directory_exists/1,
-	      update_md5_file/2
+	      update_md5_file/3
           ]).
 
 :- use_module(library(readutil)).
@@ -36,7 +36,7 @@ md5_hash_up_to_date(T,DL,Opts) :-
 md5_hash_up_to_date(T,DL,Opts) :-
     !,
     debug(md5,"Checking MD5 hash validity for ~w <-- ~w",[T,DL]),
-    md5_check(T,S,H),
+    md5_check(T,S,H,Opts),
     md5_valid(T,S,H,Opts).
 
 % read_md5_file attempts to find the MD5 hash of a target and (if known) the conditions under which this target is still valid.
@@ -59,11 +59,11 @@ read_md5_file(T) :-
          fail),
     close(IO).
 
-md5_check_size(File,Size,Hash) :- exists_file(File), size_file(File,Size), md5_hash(File,Size,Hash).
+md5_check_size(File,Size,Hash,_Opts) :- exists_file(File), size_file(File,Size), md5_hash(File,Size,Hash).
 
-md5_check(File,Size,Hash) :- md5_check_size(File,Size,Hash), !.
-md5_check(File,Size,Hash) :- read_md5_file(File), !, md5_check_size(File,Size,Hash).
-md5_check(File,Size,Hash) :- compute_md5(File,Size,Hash).
+md5_check(File,Size,Hash,Opts) :- md5_check_size(File,Size,Hash,Opts), !.
+md5_check(File,Size,Hash,Opts) :- read_md5_file(File), !, md5_check_size(File,Size,Hash,Opts).
+md5_check(File,Size,Hash,Opts) :- compute_md5(File,Size,Hash,Opts).
 
 retract_md5_hash(T) :-
     md5_hash(T,_,_),
@@ -71,7 +71,7 @@ retract_md5_hash(T) :-
     retractall(md5_hash(T,_,_));true.
 retract_md5_hash(_).
 
-compute_md5(T,Size,Hash) :-
+compute_md5(T,Size,Hash,_) :-
     exists_file(T),
     size_file(T,Size),
     try_md5_prog(T,Hash),
@@ -150,26 +150,26 @@ make_md5_hash_term(T,S,H,Str) :-
     format(string(Str),"md5_hash(\"~w\",~d,\"~w\")",[T,S,H]).
 
 make_md5_valid_term(T,S,H,Str) :-
-    format(string(Str),"md5_valid(\"~w\",~d,\"~w\",_)",[T,S,H]).
+    format(string(Str),"md5_valid(\"~w\",~d,\"~w\",X)",[T,S,H]).
 
 make_md5_check_term(T,S,H,Str) :-
-    format(string(Str),"md5_check(\"~w\",~d,\"~w\")",[T,S,H]).
+    format(string(Str),"md5_check(\"~w\",~d,\"~w\",X)",[T,S,H]).
 
-make_md5_valid_goal_list([Dep|Deps],[Goal|Goals]) :-
-    md5_check(Dep,Size,Hash),
+make_md5_valid_goal_list([Dep|Deps],[Goal|Goals],Opts) :-
+    md5_check(Dep,Size,Hash,Opts),
     !,
     make_md5_check_term(Dep,Size,Hash,Goal),
-    make_md5_valid_goal_list(Deps,Goals).
-make_md5_valid_goal_list([_|Deps],Goals) :- make_md5_valid_goal_list(Deps,Goals), !.
-make_md5_valid_goal_list([],[]).
+    make_md5_valid_goal_list(Deps,Goals,Opts).
+make_md5_valid_goal_list([_|Deps],Goals,Opts) :- make_md5_valid_goal_list(Deps,Goals,Opts), !.
+make_md5_valid_goal_list([],[],_).
 
-update_md5_file(T,DL) :-
+update_md5_file(T,DL,Opts) :-
     debug(md5,'updating MD5 hash file for ~w <-- ~w',[T,DL]),
     delete_md5_file(T),
-    md5_check(T,SizeT,HashT),
+    md5_check(T,SizeT,HashT,Opts),
     make_md5_hash_term(T,SizeT,HashT,HashTerm),
     make_md5_valid_term(T,SizeT,HashT,ValidTerm),
-    make_md5_valid_goal_list(DL,ValidGoals),
+    make_md5_valid_goal_list(DL,ValidGoals,Opts),
     open_md5_file(T,IO),
     format(IO,"~w.~n",[HashTerm]),
     debug(md5,' ~w',[HashTerm]),
@@ -180,6 +180,6 @@ update_md5_file(T,DL) :-
     close(IO),
     !.
 
-update_md5_file(T,DL) :-
+update_md5_file(T,DL,_) :-
     format("Warning: could not update MD5 file for ~w <-- ~w~n",[T,DL]),
     !.

@@ -1,2 +1,2 @@
 md5_hash("hello",6,"b1946ac92492d2347c6235b4d2611184").
-md5_valid("hello",6,"b1946ac92492d2347c6235b4d2611184",_).
+md5_valid("hello",6,"b1946ac92492d2347c6235b4d2611184",X).
