@@ -1,6 +1,6 @@
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 MAKEFILE_DIR := $(dir $(MAKEFILE_PATH))
-SWIPL = $(MAKEFILE_DIR)bin/swipl
+SWIPL = $(MAKEFILE_DIR)bin/swipl_wrap
 
 prefix = /usr/local
 exec_prefix = $(prefix)
