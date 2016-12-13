@@ -318,7 +318,7 @@ parse_arg(['-Q',Qs|L],L,[queue(Q),qsub_biomake_args('-N')]) :-
 	!.
 parse_arg(['-Q',Qs|L],L,null) :- format("Warning: unknown queue '~w'~n",Qs), !.
 arg_alias('-Q','--queue-engine').
-arg_info('-Q','ENGINE','Queue recipes using ENGINE (supported: test,sge,pbs,slurm,poolq)').
+arg_info('-Q','ENGINE','Queue recipes using ENGINE (supported: poolq,sge,pbs,slurm,test)').
 
 parse_arg(['-j',Jobs|L],L,poolq_threads(NJobs)) :- atom_number(Jobs,NJobs).
 arg_alias('-j','--jobs').

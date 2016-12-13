@@ -99,7 +99,7 @@ Var=Val
 -H,--md5-hash 
     Use MD5 hashes instead of timestamps
 -Q,--queue-engine ENGINE
-    Queue recipes using ENGINE (supported: test,sge,pbs,slurm,poolq)
+    Queue recipes using ENGINE (supported: poolq,sge,pbs,slurm,test)
 -j,--jobs JOBS
     Number of job threads (poolq engine)
 --qsub-exec PATH
@@ -457,6 +457,7 @@ There are several queueing engines currently supported:
 - `-Q sge` uses [Sun Grid Engine](https://en.wikipedia.org/wiki/Oracle_Grid_Engine)
 - `-Q pbs` uses [PBS](https://en.wikipedia.org/wiki/Portable_Batch_System)
 - `-Q slurm` uses [SLURM](https://slurm.schedmd.com/)
+- `-Q test` just runs the jobs synchronously. Used for testing purposes only
 
 For Sun Grid Engine, PBS and SLURM, the paths to the relevant job control executables, and any arguments to those executables
 (such as the name of the queue that jobs should be run on), can be controlled using various command-line arguments.
