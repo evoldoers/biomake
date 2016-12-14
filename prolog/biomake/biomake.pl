@@ -164,9 +164,8 @@ build(T,SL,Opts) :-
         ;   comment_report('~w is up to date',[T],SL,Opts)),
 	!.
 build(T,SL,Opts) :-
-        debug_report(build,'No rules for ~w. Checking if rebuild required',[T],SL),
-        \+ rebuild_required(T,[],SL,Opts),
-        !,
+        exists_file(T),
+	!,
         comment_report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
         \+ target_bindrule(T,_,Opts),
@@ -323,7 +322,6 @@ rebuild_required(T,DL,SL,Opts) :-
         comment_report('Target ~w does not have an up-to-date checksum - rebuild required',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         get_opt(always_make,true,Opts),
-        target_bindrule(T,_,Opts),
         !,
         comment_report('Specified --always-make; rebuild required for target ~w',[T],SL,Opts).
 

@@ -80,6 +80,13 @@ one_line: ; echo Recipe on one line >$@
 
 one_line_with_deps: one_line; cp $< $@
 
+comment_in_rule:
+# comment inside rule
+	echo First line >$@
+# another comment inside rule
+# it can be more than one line
+	echo Second line >>$@
+
 # biomake's output for split_recipe_lines is as the GNU Make documentation describes,
 # but not (in our experience) the way GNU Make actually behaves...
 # GNU Make 3.81 vs https://www.gnu.org/software/make/manual/html_node/Splitting-Recipe-Lines.html
@@ -100,10 +107,12 @@ word2:
 words:
 	echo $(words $S) >$@
 
-FEAR = Fear is the mind killer
 wordlist:
-# this also tests a variable nested inside a command
-# and a comment in a rule block (i.e. this comment)
+	echo $(wordlist 3,5,He who controls the spice controls the universe) >$@
+
+# test a parenthetical variable nested inside a command
+FEAR = Fear is the mind killer
+var_in_command:
 	echo $(wordlist 3,4,$(FEAR)) >$@
 
 subst:

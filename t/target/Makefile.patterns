@@ -1,5 +1,4 @@
-# This test Makefile highlights a few differences between BioMake and GNU Make,
-# in the way that dependency chains are processed.
+# This test Makefile highlights a few quirks in the way that pattern rules are processed.
 
 # GNU Make will refuse to build deps_exist_but_rules_fail, even if dep1 exists,
 # because the rule for building dep1 doesn't have a wildcard in.
@@ -23,3 +22,14 @@ pattern_deps_exist_but_rules_fail: pattern.dep altdep2 altdep3
 
 %.dep: %.nonexistent_dep
 	echo Rebuilt $@ >$@
+
+# In the following case, if a file X.txt exists but a file X.src doesn't,
+# Biomake should still go ahead and run the X.test rule, even if -B is specified.
+setup_always_make_with_missing_pattern_dep:
+	echo Made it >always_make_with_missing_pattern_dep.txt
+
+%.txt: %.src
+	cp $< $@
+
+%.test: %.txt
+	cat $< >$@
