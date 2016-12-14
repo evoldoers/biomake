@@ -447,11 +447,12 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
     - There is a rule that could be used to build `D`, the target goal for that rule is satisfied, and there is a theoretical path to all the dependencies of that rule;
     - File `D` already exists, and the only applicable rules to rebuild `D`, if any exist at all, are wildcard (pattern) rules; that is, there are no rules that _explicitly and uniquely_ rebuild `D`.
 - It attempts to build all the dependencies
-- It tests whether the Prolog _dependencies goal_ (if there is one) is satisfied
+- It tests whether the Prolog _deps goal_ (if there is one) is satisfied
 - It tests whether the target is stale. Details depend on the various options:
-    - If using the queueing engine, targets are flagged as stale if any of their dependency tree has been submitted to the queue for a rebuild
-    - If using MD5 signatures (and _not_ the queueing engine), a target is stale if its MD5 checksum appears to be out of date
-    - Otherwise (no queues and no MD5), Biomake looks at the file timestamps and/or the dependency tree
+    - If using the queueing engine, targets are flagged as stale if any of their dependency tree has been submitted to the queue for a rebuild;
+    - If using MD5 signatures (and _not_ the queueing engine), a target is stale if its MD5 checksum appears to be out of date;
+    - If using MD5 _and_ queues, the MD5 signature will not be checked until the queueing engine executes the job. This is accomplished by re-running biomake recursively, so biomake has to be available on the worker machines, and not just the cluster head. (The same is true, incidentally, when using a cluster to execute any rule that has a Prolog deps goal: the submitted job is wrapped by biomake, in order that the goal can be tested after the dependencies are built.)
+    - Otherwise (no queues and no MD5), Biomake looks at the file timestamps and/or the dependency tree.
 
 If any of these tests fail, Biomake will backtrack and attempt to build the target using a different rule, or a different pattern-match to the same rule.
 If all the tests pass, Biomake will commit to using the rule, and will attempt to execute the recipe using the shell (or the queueing engine).
