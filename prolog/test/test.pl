@@ -63,6 +63,7 @@ test :-
 	run_test("ref","target",["touch pattern.dep"],[],"-f Makefile.alt","pattern_deps_exist_but_rules_fail"),
 	run_test("escape_dollar"),
 	run_test("percent_in_body"),
+	run_test("split_lines"),
 	run_test("split_recipe_lines"),
 
 	announce("AUTOMATIC VARIABLES"),

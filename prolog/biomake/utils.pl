@@ -58,14 +58,16 @@
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
 atom_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], atom_codes(S,C)}.
 
-code_list(['\\'|Cs],XL) --> ['\\','\\'], {code_list(Cs,XL)}.
-code_list([C|Cs],XL) --> ['\\',C], {member(C,XL)}, code_list(Cs,XL).
+code_list([0'\s|Cs],XL) --> [0'\\,0'\n], {code_list(Cs,XL)}.
+code_list([0'\\|Cs],XL) --> [0'\\,0'\\], {code_list(Cs,XL)}.
+code_list([C|Cs],XL) --> [0'\\,C], {member(C,XL)}, code_list(Cs,XL).
 code_list([C|Cs],XL) --> [C], {forall(member(X,XL),C\=X)}, code_list(Cs,XL).
 code_list([],_) --> [].
 
 string_from_chars(S,XS) --> {string_chars(XS,XL)}, char_list(C,XL), {C\=[], string_chars(S,C)}.
 atom_from_chars(S,XS) --> {string_chars(XS,XL)}, char_list(C,XL), {C\=[], atom_chars(S,C)}.
 
+char_list([' '|Cs],XL) --> ['\\','\n'], {code_list(Cs,XL)}.
 char_list(['\\'|Cs],XL) --> ['\\','\\'], {char_list(Cs,XL)}.
 char_list([C|Cs],XL) --> ['\\'], [C], {member(C,XL)}, char_list(Cs,XL).
 char_list([C|Cs],XL) --> [C], {forall(member(X,XL),C\=X)}, char_list(Cs,XL).

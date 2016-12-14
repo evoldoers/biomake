@@ -199,6 +199,14 @@ test_at:
 two_lines:
 	$(two-lines)
 
+split_lines = split \
+over \
+multiple \
+lines
+
+split_lines:
+	echo $(split_lines) >$@
+
 FUNC = echo $1 is $2
 call:
 	$(call FUNC,chris,reekin) >$@

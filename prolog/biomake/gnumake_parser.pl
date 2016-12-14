@@ -96,7 +96,7 @@ prolog_block_body([],_,_,1) -->
     !.
 
 prolog_block_body([RawLine|RawLines],Line,File,Lines) -->
-    line_as_string(RawLine),
+    line_as_string(RawLine,1),
     { Lnext is Line + 1 },
     prolog_block_body(RawLines,Lnext,File,Lbody),
     { Lines is Lbody + 1 },
@@ -211,13 +211,13 @@ makefile_assignment(assignment(Var,"=",Val),Lines) -->
     {string_codes(Val,Cs),
      Lines is BodyLines + 1}.
 
-makefile_assignment(assignment(Var,Op,Val),1) -->
+makefile_assignment(assignment(Var,Op,Val),Lines) -->
     opt_space,
     makefile_var_atom_from_codes(Var),
     opt_whitespace,
     op_string(Op),
     opt_whitespace,
-    line_as_string(Val).
+    line_as_string(Val,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifeq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
@@ -421,20 +421,27 @@ makefile_execs([],0) --> !.
 makefile_exec(E,L) --> "\t", !, exec_line_as_string(E,L).
 
 exec_line([],0) --> call(eos), !.
-exec_line(C,Lplus1) --> "\\\n\t", !, exec_line(Cs,L), {append(`\\\n`,Cs,C), Lplus1 is L + 1}.
-exec_line(C,Lplus1) --> "\\\n", !, exec_line(Cs,L), {append(`\\\n`,Cs,C), Lplus1 is L + 1}.
+exec_line([0'\\,0'\n|Cs],Lplus1) --> "\\\n\t", !, exec_line(Cs,L), {Lplus1 is L + 1}.
+exec_line([0'\\,0'\n|Cs],Lplus1) --> "\\\n", !, exec_line(Cs,L), {Lplus1 is L + 1}.
 exec_line([],1) --> "\n", !.
 exec_line([],1) --> comment.
 exec_line([C|Cs],L) --> [C], exec_line(Cs,L).
 exec_line_as_string(S,L) --> exec_line(C,L), {string_codes(S,C)}.
 
-line([]) --> ( "\n" ; call(eos) ), !.
-line([]) --> comment.
-line([C|Cs]) --> [C], line(Cs).
-line_as_string(S) --> line(C), {string_codes(S,C)}.
+line([],0) --> call(eos), !.
+line([0'\s|Cs],Lplus1) --> "\\\n", !, line(Cs,L), {Lplus1 is L + 1}.
+line([],1) --> "\n", !.
+line([],1) --> comment.
+line([C|Cs],L) --> [C], line(Cs,L).
+line_as_string(S,L) --> line(C,L), {string_codes(S,C)}.
+line_as_string(S) --> line_as_string(S,_).
 
 makefile_def_body([],1) --> opt_space, "endef", !, opt_whitespace, "\n".
 makefile_def_body(['\n'|Cs],Lplus1) --> ['\n'], !, makefile_def_body(Cs,L), {Lplus1 is L + 1}.
 makefile_def_body([C|Cs],Lines) --> [C], makefile_def_body(Cs,Lines).
 
-comment --> opt_space, "#", line(_).
+comment --> opt_space, "#", ignore_line.
+ignore_line --> ("\n" ; call(eos)), !.
+ignore_line --> [_], ignore_line.
+ignore_line --> [].
+
