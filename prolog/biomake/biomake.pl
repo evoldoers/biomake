@@ -126,7 +126,7 @@ build_default :-
 	build_default([]).
 
 build_default(Opts) :-
-	default_target(T),
+        default_target(T),
 	!,
 	build(T,Opts).
 
@@ -237,11 +237,6 @@ finish_queue(Opts) :-
 	!,
 	release_queue(Q).
 finish_queue(_).
-
-
-% finish
-halt_success :- halt(0).
-halt_error :- halt(2).
 
 
 % ----------------------------------------

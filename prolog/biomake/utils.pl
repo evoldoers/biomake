@@ -3,6 +3,8 @@
 :- module(utils,
           [
 	   get_opt/3,
+	   halt_success/0,
+	   halt_error/0,
            show_type/1,
            type_of/2,
 	   string_from_codes/4,
@@ -60,6 +62,9 @@ get_opt(Name,Val,Opts) :-
     Template =.. [Name,Val],
     member(Template,Opts),
     !.
+
+halt_success :- halt(0).
+halt_error :- halt(2).
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
 atom_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], atom_codes(S,C)}.

@@ -84,7 +84,9 @@ consult_makefile(AllOpts,Opts) :-
 	  (find_file(DefaultMakeprog,DefaultMakeprogs)
 	   -> consult_makeprog(DefaultMakeprog,AllOpts,Opts);
 	   (find_file(DefaultGnuMakefile,DefaultGnuMakefiles)
-	    -> consult_gnu_makefile(DefaultGnuMakefile,AllOpts,Opts))))).
+	    -> consult_gnu_makefile(DefaultGnuMakefile,AllOpts,Opts)
+	    ; (format("No Makefile found~n"),
+	       halt_error))))).
 
 find_file(File,List) :-
     member(File,List),
@@ -182,7 +184,7 @@ arg_alias('-v','--version').
 arg_info('-v','','Show version').
 
 show_version :-
-        writeln('Biomake 1.0'),
+        writeln('Biomake v0.1.0'),
         writeln('Copyright (C) 2016 Evolutionary Software Foundation, Inc.'),
         writeln('Authors: Chris Mungall, Ian Holmes.'),
         writeln('This is free software; see the source for copying conditions.'),

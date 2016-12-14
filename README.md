@@ -37,10 +37,11 @@ required. Just add it to your path (changing the directory if necessary):
 Alternate installation instructions
 -----------------------------------
 
-If you want to install biomake in `/usr/local/bin` instead of adding it to your path, type `make install` in the top level directory of the repository.
-(This just creates a symlink, so be sure to put the repository somewhere safe beforehand, and don't remove it after installation.)
+If you want to install biomake system-wide, instead of adding it to your path, type `make install` (or `bin/biomake install`) in the top level directory of the repository.
+This will copy the repository into `/usr/local/share` and create a symlink to `/usr/local/bin`.
+(If you just want to create the symlink and leave the repository where it is, type `make symlink` instead.)
 
-You can also try `make test` to run the test suite.
+You can also try `make test` (or, equivalently, `biomake test`) to run the test suite.
 
 The program can also be installed via the SWI-Prolog pack system.
 Just start SWI and type:
