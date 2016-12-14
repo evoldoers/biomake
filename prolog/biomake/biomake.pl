@@ -293,18 +293,8 @@ rebuild_required(T,_,SL,Opts) :-
         !,
         comment_report('Target ~w not materialized - build required',[T],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
-        member(D,DL),
-        \+ exists_target(D,Opts),
-	\+ member(old_file(D),Opts),
-        !,
-        comment_report('Target ~w has unbuilt dependency ~w - rebuild required',[T,D],SL,Opts).
-rebuild_required(T,DL,SL,Opts) :-
-        \+ member(md5(true),Opts),
-	has_newer_dependency(T,DL,D,Opts),
-	!,
-        comment_report('Target ~w built before dependency ~w - rebuild required',[T,D],SL,Opts).
-rebuild_required(T,DL,SL,Opts) :-
-        \+ member(md5(true),Opts),
+        (get_opt(dry_run,true,Opts)
+         ; \+ get_opt(md5,true,Opts)),
 	has_rebuilt_dependency(T,DL,D,Opts),
 	!,
         comment_report('Target ~w has rebuilt dependency ~w - rebuild required',[T,D],SL,Opts).
@@ -312,9 +302,20 @@ rebuild_required(T,DL,SL,Opts) :-
 	building_asynchronously(Opts),
 	has_rebuilt_dependency(T,DL,D,Opts),
 	!,
-        comment_report('Target ~w has dependency ~w on rebuild queue',[T,D],SL,Opts).
+        comment_report('Target ~w has dependency ~w on rebuild queue - rebuild required',[T,D],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
-        member(md5(true),Opts),
+        member(D,DL),
+        \+ exists_target(D,Opts),
+	\+ member(old_file(D),Opts),
+        !,
+        comment_report('Target ~w has unbuilt dependency ~w - rebuild required',[T,D],SL,Opts).
+rebuild_required(T,DL,SL,Opts) :-
+        \+ get_opt(md5,true,Opts),
+	has_newer_dependency(T,DL,D,Opts),
+	!,
+        comment_report('Target ~w built before dependency ~w - rebuild required',[T,D],SL,Opts).
+rebuild_required(T,DL,SL,Opts) :-
+        get_opt(md5,true,Opts),
 	\+ md5_hash_up_to_date(T,DL,Opts),
 	!,
         comment_report('Target ~w does not have an up-to-date checksum - rebuild required',[T],SL,Opts).
@@ -423,7 +424,7 @@ dispatch_run_execs(Rule,SL,Opts) :-
 	get_opt(queue,Q,Opts),
 	!,
 	rule_target(Rule,T,Opts),
-	(member(md5(true),Opts) -> ensure_md5_directory_exists(T) ; true),
+	(get_opt(md5,true,Opts) -> ensure_md5_directory_exists(T) ; true),
 	run_execs_in_queue(Q,Rule,SL,Opts),
 	comment_report('~w queued for rebuild',[T],SL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
@@ -452,7 +453,7 @@ run_execs_in_script(Rule,SL,Opts) :-
 	update_hash(T,DL,Opts).
 
 update_hash(T,DL,Opts) :-
-    member(md5(true),Opts),
+    get_opt(md5,true,Opts),
     !,
     update_md5_file(T,DL,Opts).
 update_hash(_,_,_).
@@ -850,7 +851,7 @@ target_bindrule(T,rb(T,Ds,DepGoal,Exec1,V),_Opts) :-
 	debug(bindrule,"rule matched",[]).
 
 dep_bindrule(rb(T,Ds,true,Exec1,V),Opts,rb(T,Ds,true,Execs,V),[qsub_use_biomake(true)|Opts]) :-
-	member(md5(true),Opts),
+	get_opt(md5,true,Opts),
 	!,
 	expand_execs(Exec1,Execs,V).
 

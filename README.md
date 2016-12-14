@@ -452,7 +452,7 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
 - It tests whether the Prolog _deps goal_ (if there is one) is satisfied
 - It tests whether the target is stale. Details depend on the various options:
     - Command-line options for marking targets as stale or new (`-W`, `-B`, `-o`) can override any of the following behavior
-    - If using the queueing engine, targets are flagged as stale if any of their dependency tree has been submitted to the queue for a rebuild;
+    - If using the queueing engine, or if doing a dry-run (`-n`), targets are flagged as stale if any of their dependency tree has been rebuilt (or submitted to the queue for a rebuild);
     - If using MD5 signatures (and _not_ the queueing engine), a target is stale if its MD5 checksum appears to be out of date;
     - If using MD5 _and_ queues, the MD5 signature will not be checked until the queueing engine executes the job (which is guaranteed to happen after any dependencies are rebuilt). Otherwise the dependencies might change after the MD5 checksum was tested. This is accomplished by wrapping the recipe script with a recursive call to biomake; so biomake has to be available on the worker machines, and not just the cluster head. (The same is true, incidentally, when using a cluster to execute any rule that has a Prolog deps goal: the submitted job is wrapped by biomake, in order that the goal can be tested after the dependencies are built.)
     - Otherwise (no queues and no MD5), Biomake looks at the file timestamps and/or the dependency tree.
