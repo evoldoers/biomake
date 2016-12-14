@@ -184,7 +184,7 @@ arg_alias('-v','--version').
 arg_info('-v','','Show version').
 
 show_version :-
-        writeln('Biomake v0.1.0'),
+        writeln('Biomake v0.1.1'),
         writeln('Copyright (C) 2016 Evolutionary Software Foundation, Inc.'),
         writeln('Authors: Chris Mungall, Ian Holmes.'),
         writeln('This is free software; see the source for copying conditions.'),
