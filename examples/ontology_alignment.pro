@@ -23,10 +23,11 @@ outfmt(closure).
 
 ont_fmt(Ont,Fmt) :- ont(Ont),outfmt(Fmt).
 
-all <-- Deps,
-       {findall(t([Ont,'.',Fmt]),
-                ont_fmt(Ont,Fmt),
-                Deps)}.
+all, {findall(t([Ont,'.',Fmt]),
+              ont_fmt(Ont,Fmt),
+              Deps)}
+    <-- Deps, {true}.
+   
 
 % all formats from obo
 'all-%' <-- ['%.owl', '%.owx'].
@@ -58,10 +59,10 @@ suffix_fmt(owl,'RDFXML').
 
 anatomy_pair(A,B) :- anatomy(A),anatomy(B),A@<B.
 
-align_all <-- Deps,
-     {findall( t(['align/all-align-',A,'-',B]),
-               anatomy_pair(A,B),
-               Deps)}.
+align_all, {findall( t(['align/all-align-',A,'-',B]),
+		     anatomy_pair(A,B),
+		     Deps)}
+	       <-- Deps, {true}.
 
 'align/align-$A-$B.tbl' <-- ['align/stamp'],
        {anatomy(A),anatomy(B)},
