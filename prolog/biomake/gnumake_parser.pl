@@ -42,9 +42,9 @@ eos([], []).
 
 makefile_block([],Opts,Opts,_,_,1) --> comment, !.
 makefile_block([],Opts,Opts,_,_,1) --> blank_line, !.
-makefile_block([],Opts,Opts,_,_,1) --> info_line, !.
-makefile_block([],Opts,Opts,_,_,1) --> warning_line, !.
-makefile_block([],Opts,Opts,_,_,1) --> error_line, !.
+makefile_block([],Opts,Opts,_,_,Lines) --> info_line(Lines), !.
+makefile_block([],Opts,Opts,Line,File,Lines) --> warning_line(Line,File,Lines), !.
+makefile_block([],Opts,Opts,Line,File,_) --> error_line(Line,File), !.
 makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> prolog_block(true,Rules,OptsOut,OptsIn,Line,File,Lines).
 makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(true,Rules,OptsOut,OptsIn,Line,File,Lines), !.
 makefile_block(Rules,OptsOut,OptsIn,_,File,1) --> include_line(true,File,Rules,OptsOut,OptsIn), !.
@@ -114,41 +114,43 @@ read_prolog_from_string(true,Rules,OptsOut,OptsIn,RawLines) :-
 
 wrap_prolog(Term,prolog(Term)).
 
-error_line -->
+error_line(Line,File) -->
     opt_space,
     "$(error",
     whitespace,
-    makefile_warning_text(W),
+    makefile_warning_text(W,_),
     ")",
     opt_whitespace,
     "\n",
     !,
-    {format(string(Warning),"~w~n",[W]),
+    {format(string(Warning),"~w:~w: ~w~n",[File,Line,W]),
      write(user_error,Warning),
      throw(Warning)}.
 
-warning_line -->
+warning_line(Line,File,Lines) -->
     opt_space,
     "$(warning",
     whitespace,
-    makefile_warning_text(W),
+    makefile_warning_text(W,NL),
     ")",
     opt_whitespace,
     "\n",
     !,
-    {format(string(Warning),"~w~n",[W]),
-     write(user_error,Warning)}.
+    {format(string(Warning),"~w:~w: ~w~n",[File,Line,W]),
+     write(user_error,Warning),
+     Lines is NL + 1}.
 
-info_line -->
+info_line(Lines) -->
     opt_space,
     "$(info",
     whitespace,
-    makefile_warning_text(W),
+    makefile_warning_text(W,NL),
     ")",
     opt_whitespace,
     "\n",
     !,
-    {format("~w~n",[W])}.
+    {format("~w~n",[W]),
+     Lines is NL + 1}.
 
 include_line(Active,CurrentFile,Rules,OptsOut,OptsIn) -->
     opt_space,
@@ -304,19 +306,21 @@ false_rules(_,_,_,_,Line,File,_) -->
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
-xbracket(Sx) --> xdelim(Sx,0'(,0'),[0',],0).
-xbrace(Sx,NL) --> xdelim(Sx,0'{,0'},[],NL).
-xdelim(Sx,L,R,X,NL) --> delim(S,L,R,X,NL), !, {expand_vars(S,Sx)}.
-delim(S,L,R,X,NL) --> delim_outer(Sc,L,R,X,NL), {string_codes(S,Sc)}.
-delim_outer(S,L,R,X,NL) --> [L], !, delim_inner(I,L,R,NLi), [R], delim_outer(Rest,L,R,X,NLo),
+xbracket(Sx) --> xdelim(Sx,0'(,0'),[0',,0'\\],[0'\\],0).
+xbrace(Sx,NL) --> xdelim(Sx,0'{,0'},[],[],NL).
+xdelim(Sx,L,R,XO,XI,NL) --> delim(S,L,R,XO,XI,NL), !, {expand_vars(S,Sx)}.
+delim(S,L,R,XO,XI,NL) --> delim_outer(Sc,L,R,XO,XI,NL), {string_codes(S,Sc)}.
+delim_outer([0'\s|S],L,R,XO,XI,NL) --> [0'\\,0'\n], !, delim_outer(S,L,R,XO,XI,NLnext), {NL is NLnext + 1}.
+delim_outer([0'\n|S],L,R,XO,XI,NL) --> {NL \= 0}, [0'\n], !, delim_outer(S,L,R,XO,XI,NLnext), {NL is NLnext + 1}.
+delim_outer(S,L,R,XO,XI,NL) --> [L], !, delim_inner(I,L,R,XI,NLi), [R], delim_outer(Rest,L,R,XO,XI,NLo),
        { append([L|I],[R],LIR), append(LIR,Rest,S), NL is NLi + NLo }.
-delim_outer([0'\n|S],L,R,X,NL) --> {NL \= 0}, [0'\n], !, delim_outer(S,L,R,X,NLnext), {NL is NLnext + 1}.
-delim_outer(S,L,R,X,NL) --> code_list([Start1|Start],[L,R|X]), !, delim_outer(Rest,L,R,X,NL), {append([Start1|Start],Rest,S)}.
-delim_outer([],_,_,_,0) --> !.
-delim_inner(S,L,R,NL) --> [L], !, delim_inner(I,L,R,NL), [R], {append([L|I],[R],S)}.
-delim_inner([0'\n|S],L,R,NL) --> {NL \= 0}, [0'\n], !, delim_inner(S,L,R,NLnext), {NL is NLnext + 1}.
-delim_inner(S,L,R,NL) --> code_list([Start1|Start],[L,R]), !, delim_inner(Rest,L,R,NL), {append([Start1|Start],Rest,S)}.
-delim_inner([],_,_,0) --> !.
+delim_outer(S,L,R,XO,XI,NL) --> code_list([Start1|Start],[L,R|XO]), !, delim_outer(Rest,L,R,XO,XI,NL), {append([Start1|Start],Rest,S)}.
+delim_outer([],_,_,_,_,0) --> !.
+delim_inner([0'\s|S],L,R,X,NL) --> [0'\\,0'\n], !, delim_inner(S,L,R,X,NLnext), {NL is NLnext + 1}.
+delim_inner([0'\n|S],L,R,X,NL) --> {NL \= 0}, [0'\n], !, delim_inner(S,L,R,X,NLnext), {NL is NLnext + 1}.
+delim_inner(S,L,R,X,NL) --> [L], !, delim_inner(I,L,R,X,NL), [R], {append([L|I],[R],S)}.
+delim_inner(S,L,R,X,NL) --> code_list([Start1|Start],[L,R|X]), !, delim_inner(Rest,L,R,X,NL), {append([Start1|Start],Rest,S)}.
+delim_inner([],_,_,_,0) --> !.
 
 xquote(Sx) --> code_list(C,['\'','\n']), {string_codes(S,C), expand_vars(S,Sx)}.
 xdblquote(Sx) --> code_list(C,['"','\n']), {string_codes(S,C), expand_vars(S,Sx)}.
@@ -403,9 +407,9 @@ makefile_targets([T]) --> opt_space, makefile_target_string(T), opt_whitespace.
 opt_linebreak --> [].
 opt_linebreak --> "\n", opt_whitespace.
 
-makefile_warning_text(S) --> string_from_codes(S,")").
+makefile_warning_text(S,NL) --> delim(S,0'(,0'),[0'),0'\\],[0'\\],NL).
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
-makefile_target_string(S) --> delim(S,0'(,0'),[0':,0';,0'\s,0'\t,0'\n],0), {S \= ""}, !.
+makefile_target_string(S) --> delim(S,0'(,0'),[0':,0';,0'\s,0'\t,0'\n,0'\\],[0'\\],0), {S \= ""}, !.
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".

@@ -1,0 +1,9 @@
+$(warning This\
+should\
+work\
+fine)
+
+$(warning The line number for this warning should be 6)
+
+escaped_nl2:
+	echo This works >$@
