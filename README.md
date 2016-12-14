@@ -459,6 +459,7 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
 
 If any of these tests fail, Biomake will backtrack and attempt to build the target using a different rule, or a different pattern-match to the same rule.
 If all the tests pass, Biomake will commit to using the rule, and will attempt to execute the recipe using the shell (or the queueing engine).
+
 Failure during execution of the recipe (or execution of any recipes in the dependency tree) will never cause Biomake to backtrack; it will either halt, or (if the `-k` command-line option was specified) soldier on obliviously.
 
 Arithmetic functions
