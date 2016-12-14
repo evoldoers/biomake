@@ -436,6 +436,21 @@ you can only place a conditional at a point where a variable assignment, recipe,
 Unlike GNU Make, Biomake does not offer domain-specific language extensions in [Scheme](https://www.gnu.org/software/guile/)
 (even though this is one of the cooler aspects of GNU Make), but you can program it in Prolog instead - it's quite hackable.
 
+Detailed build logic
+--------------------
+
+Before attempting to build a target `T` using a rule `R`, Biomake performs the following steps:
+- It tries to match the target name `T` to one of the target names in `R`
+- It tests whether the Prolog _target goal_ (if there is one) is satisfied
+- It checks whether there is a _theoretical path_ to all the dependencies. A theoretical path to a dependency `D` exists if either of the following is true:
+    - There is a rule that could be used to build `D`, the target goal for that rule is satisfied, and there is a theoretical path to all its dependencies;
+    - File `D` already exists, and the only rules available to rebuild `D` are wildcard (pattern) rules.
+- It attempts to build all the dependencies
+- It tests whether the Prolog _dependents goal_ (if there is one) is satisfied
+- It tests whether the target is stale by looking at the file timestamps or (if using MD5) the MD5 checksums
+If any of these tests fail, Biomake will backtrack and attempt to build the target using another rule, or another pattern match.
+If all the tests are satisfied, Biomake will attempt to execute the recipe.
+
 Arithmetic functions
 --------------------
 
