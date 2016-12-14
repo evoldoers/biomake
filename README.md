@@ -447,7 +447,10 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
     - File `D` already exists, and the only applicable rules to rebuild `D`, if any exist at all, are wildcard (pattern) rules; that is, there are no rules that _explicitly and uniquely_ rebuild `D`.
 - It attempts to build all the dependencies
 - It tests whether the Prolog _dependencies goal_ (if there is one) is satisfied
-- It tests whether the target is stale by looking at the file timestamps or (if using MD5) the MD5 checksums
+- It tests whether the target is stale. Details depend on the various options:
+    - If using the queueing engine, targets are flagged as stale if any of their dependency tree has been submitted to the queue for a rebuild
+    - If using MD5 signatures (and _not_ the queueing engine), a target is stale if its MD5 checksum appears to be out of date
+    - Otherwise (no queues and no MD5), Biomake looks at the file timestamps and/or the dependency tree
 
 If any of these tests fail, Biomake will backtrack and attempt to build the target using a different rule, or a different pattern-match to the same rule.
 If all the tests pass, Biomake will commit to using the rule, and will attempt to execute the recipe using the shell (or the queueing engine).
