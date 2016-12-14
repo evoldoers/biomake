@@ -188,7 +188,7 @@ recursion_too_deep(SL,Opts) :-
 	Depth > D,
 	report("Exceeds maximum length of dependency chain (~w)",[D],SL,Opts).
 
-can_build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
+can_build_deps(_,_,Opts) :- get_opt(no_deps,true,Opts), !.
 can_build_deps([],_,_).
 can_build_deps([T|TL],SL,Opts) :-
         can_build_dep(T,SL,Opts),
@@ -211,7 +211,7 @@ can_build_dep(T,SL,Opts) :-
         rule_dependencies(Rule,DL,Opts),
         can_build_deps(DL,[T|SL],Opts).
 
-build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
+build_deps(_,_,Opts) :- get_opt(no_deps,true,Opts), !.
 build_deps([],_,_).
 build_deps([T|TL],SL,Opts) :-
         build(T,SL,Opts),
@@ -219,7 +219,7 @@ build_deps([T|TL],SL,Opts) :-
 
 % Special vars
 bind_special_variables(Opts) :-
-        member(biomake_prog(Prog),Opts),
+        get_opt(biomake_prog,Prog,Opts),
 	add_spec_clause(('MAKE' = Prog),[],[]),
 	bagof(Arg,member(biomake_args(Arg),Opts),Args),
 	atomic_list_concat(Args,' ',ArgStr),
@@ -227,14 +227,14 @@ bind_special_variables(Opts) :-
 
 % Queue setup/wrapup
 start_queue(Opts) :-
-	member(queue(Q),Opts),
+	get_opt(queue,Q,Opts),
 	!,
 	ensure_loaded(library(biomake/queue)),
 	init_queue(Q,Opts).
 start_queue(_).
 
 finish_queue(Opts) :-
-	member(queue(Q),Opts),
+	get_opt(queue,Q,Opts),
 	!,
 	release_queue(Q).
 finish_queue(_).
@@ -322,13 +322,13 @@ rebuild_required(T,DL,SL,Opts) :-
 	!,
         comment_report('Target ~w does not have an up-to-date checksum - rebuild required',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
-        member(always_make(true),Opts),
+        get_opt(always_make,true,Opts),
         target_bindrule(T,_,Opts),
         !,
         comment_report('Specified --always-make; rebuild required for target ~w',[T],SL,Opts).
 
 building_asynchronously(Opts) :-
-	member(queue(Q),Opts),
+	get_opt(queue,Q,Opts),
 	Q \= 'test'.
 
 has_newer_dependency(T,DL,D,Opts) :-
@@ -401,7 +401,7 @@ next_build_counter(1) :-
 % ----------------------------------------
 
 run_execs_and_update(Rule,SL,Opts) :-
-    member(dry_run(true),Opts),
+    get_opt(dry_run,true,Opts),
     !,
     rule_target(Rule,T,Opts),
     rule_execs(Rule,Execs,Opts),
@@ -415,16 +415,16 @@ run_execs_and_update(Rule,SL,Opts) :-
     flag_as_rebuilt(T).
 
 dispatch_run_execs(Rule,SL,Opts) :-
-        member(touch_only(true),Opts),
+        get_opt(touch_only,true,Opts),
 	!,
         rule_target(Rule,T,Opts),
         rule_dependencies(Rule,DL,Opts),
 	format(string(Cmd),"touch ~w",[T]),
 	shell(Cmd),
-	(member(silent(true),Opts) -> true; report('~w',[Cmd],SL,Opts)),
+	(get_opt(silent,true,Opts) -> true; report('~w',[Cmd],SL,Opts)),
 	update_hash(T,DL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
-	member(queue(Q),Opts),
+	get_opt(queue,Q,Opts),
 	!,
 	rule_target(Rule,T,Opts),
 	(member(md5(true),Opts) -> ensure_md5_directory_exists(T) ; true),
@@ -436,7 +436,7 @@ dispatch_run_execs(Rule,SL,Opts) :-
 	comment_report('~w built',[T],SL,Opts).
 
 run_execs_now(Rule,SL,Opts) :-
-	member(oneshell(true),Opts),
+	get_opt(oneshell,true,Opts),
 	!,
 	run_execs_in_script(Rule,SL,Opts).
 run_execs_now(Rule,SL,Opts) :-
@@ -472,7 +472,7 @@ run_exec(Exec,SL,Opts) :-
 	string_chars(Silent,SilentChars),
 	silent_run_exec(Silent,SL,Opts).
 run_exec(Exec,SL,Opts) :-
-	member(silent(true),Opts),
+	get_opt(silent,true,Opts),
 	silent_run_exec(Exec,SL,Opts).
 run_exec(Exec,SL,Opts) :-
 	report_run_exec(Exec,SL,Opts).
@@ -499,8 +499,8 @@ handle_error(Fmt,Args,SL,Opts) :-
 	handle_error(Opts).
 
 handle_error(Opts) :-
-        member(keep_going_on_error(true),Opts),
-        \+ member(stop_on_error(true),Opts),
+        get_opt(keep_going_on_error,true,Opts),
+        \+ get_opt(stop_on_error,true,Opts),
         !.
 handle_error(_) :-
         halt_error.
@@ -853,7 +853,7 @@ target_bindrule(T,rb(T,Ds,DepGoal,Exec1,V),_Opts) :-
 	% and, success
 	debug(bindrule,"rule matched",[]).
 
-dep_bindrule(rb(T,Ds,true,Exec1,V),Opts,rb(T,Ds,true,Execs,V),[refresh_rules(true)|Opts]) :-
+dep_bindrule(rb(T,Ds,true,Exec1,V),Opts,rb(T,Ds,true,Execs,V),[qsub_use_biomake(true)|Opts]) :-
 	member(md5(true),Opts),
 	!,
 	expand_execs(Exec1,Execs,V).
@@ -862,7 +862,7 @@ dep_bindrule(rb(T,Ds,true,Exec1,V),Opts,rb(T,Ds,true,Execs,V),Opts) :-
 	!,
 	expand_execs(Exec1,Execs,V).
 
-dep_bindrule(rb(T,Ds,DepGoal,Exec1,V),Opts,rb(T,Ds,true,Execs,V),[refresh_rules(true)|Opts]) :-
+dep_bindrule(rb(T,Ds,DepGoal,Exec1,V),Opts,rb(T,Ds,true,Execs,V),[qsub_use_biomake(true)|Opts]) :-
 	(call_without_backtrace(DepGoal)
          ; building_asynchronously(Opts)),
 	expand_execs(Exec1,Execs,V).

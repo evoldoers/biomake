@@ -2,6 +2,7 @@
 
 :- module(utils,
           [
+	   get_opt/3,
            show_type/1,
            type_of/2,
 	   string_from_codes/4,
@@ -54,6 +55,11 @@
 	   open_biomake_private_file/4,
 	   open_biomake_private_file/5
 	  ]).
+
+get_opt(Name,Val,Opts) :-
+    Template =.. [Name,Val],
+    member(Template,Opts),
+    !.
 
 string_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], string_codes(S,C)}.
 atom_from_codes(S,XS) --> {string_codes(XS,XL)}, code_list(C,XL), {C\=[], atom_codes(S,C)}.

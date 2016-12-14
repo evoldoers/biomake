@@ -43,9 +43,9 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 	rule_target(Rule,T,Opts),
         rule_dependencies(Rule,DL,Opts),
 	qsub_kill(Engine,T,SL,Opts),
-	(member(qsub_exec(QsubExec),Opts); default_qsub_exec(Engine,QsubExec)),
-	(member(qsub_args(QsubArgs),Opts); QsubArgs = ""),
-	(member(queue_args(QArgs),Opts); QArgs = ""),
+	(get_opt(qsub_exec,QsubExec,Opts); default_qsub_exec(Engine,QsubExec)),
+	(get_opt(qsub_args,QsubArgs,Opts); QsubArgs = ""),
+	(get_opt(queue_args,QArgs,Opts); QArgs = ""),
 	qsub_extra_args(Engine,ExtraArgs),
 	biomake_private_filename_dir_exists(T,Engine,JobFilename),
 	format(string(RemoveJobFile),"rm ~w",[JobFilename]),
@@ -64,10 +64,10 @@ qsub_rule_execs(Rule,[Chdir,Biomake],Opts) :-
 	qsub_use_biomake(Opts),
 	!,
 	rule_target(Rule,T,Opts),
-	member(biomake_cwd(Dir),Opts),
-	member(biomake_prog(Prog),Opts),
-	member(biomake_args(Args),Opts),
-	member(qsub_biomake_args(QArgs),Opts),
+	get_opt(biomake_cwd,Dir,Opts),
+	get_opt(biomake_prog,Prog,Opts),
+	get_opt(biomake_args,Args,Opts),
+	get_opt(qsub_biomake_args,QArgs,Opts),
 	format(string(Chdir),"cd ~w",[Dir]),  % probably redundant: write_script_file starts with a cd to CWD
 	format(string(Biomake),"~w ~w ~w ~w",[Prog,Args,QArgs,T]).
 
@@ -75,7 +75,7 @@ qsub_rule_execs(Rule,Es,Opts) :-
 	rule_execs(Rule,Es,Opts).
 
 qsub_use_biomake(Opts) :-
-	member(refresh_rules(true),Opts).
+	get_opt(qsub_use_biomake,true,Opts).
 
 qsub_job_ids(Engine,[D|Ds],[N|Ns]) :-
 	qsub_job_id(Engine,D,N),
@@ -123,9 +123,9 @@ qsub_make_dep_arg(Engine,DepJobs,DepArg) :-
 
 qsub_kill(Engine,T,SL,Opts) :-
 	qsub_job_id(Engine,T,Id),
-	(member(qdel_exec(QdelExec),Opts); default_qdel_exec(Engine,QdelExec)),
-	(member(qdel_args(QdelArgs),Opts); QdelArgs = ""),
-	(member(queue_args(QArgs),Opts); QArgs = ""),
+	(get_opt(qdel_exec,QdelExec,Opts); default_qdel_exec(Engine,QdelExec)),
+	(get_opt(qdel_args,QdelArgs,Opts); QdelArgs = ""),
+	(get_opt(queue_args,QArgs,Opts); QArgs = ""),
 	format(string(QdelCmd),"~w ~w ~w ~w",[QdelExec,QArgs,QdelArgs,Id]),
 	comment_report("Killing previous job: ~w",[QdelCmd],SL,Opts),
 	(shell(QdelCmd); true),
@@ -134,7 +134,7 @@ qsub_kill(Engine,T,SL,Opts) :-
 qsub_kill(_,_,_,_).
 
 flush_queue_recursive(Dir,Opts) :-
-	member(queue(Engine),Opts),
+	get_opt(queue,Engine,Opts),
 	absolute_file_name(Dir,AbsDir),  % guard against Dir='.'
 	flush_queue_recursive(Engine,AbsDir,[],Opts).
 
@@ -167,7 +167,7 @@ write_script_file(T,Es,Opts,ScriptFilename) :-
 	write_script_file(T,[],Es,Opts,ScriptFilename).
 
 write_script_file(T,Headers,Es,Opts,ScriptFilename) :-
-	member(oneshell(true),Opts),
+	get_opt(oneshell,true,Opts),
 	!,
 	maplist(echo_wrap,Es,EchoedEs),
 	write_script_file_contents(T,Headers,EchoedEs,Opts,ScriptFilename).
@@ -290,7 +290,7 @@ default_poolq_threads(4).
 queue_engine(poolq).
 init_queue(poolq,Opts) :-
 	ensure_loaded(library(poolq/poolq)),
-	(member(poolq_threads(Size),Opts) ; default_poolq_threads(Size)),
+	(get_opt(poolq_threads,Size,Opts) ; default_poolq_threads(Size)),
 	poolq_create(Scheduler,Size,[]),
 	assert(poolq_scheduler(Scheduler)).
 release_queue(poolq) :-

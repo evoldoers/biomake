@@ -132,7 +132,12 @@ get_cmd_args(FlatOpts,Opts) :-
 	biomake_prog(Cmd),
 	absolute_file_name(Cmd,CmdPath),
 	working_directory(CWD,CWD),
-	Opts = [biomake_prog(CmdPath),biomake_args(CoreStr),biomake_cwd(CWD)|FlatOpts].
+	default_qsub_biomake_args(DQ),
+	CmdOpts = [biomake_prog(CmdPath),
+		   biomake_args(CoreStr),
+		   biomake_cwd(CWD),
+		   qsub_biomake_args(DQ)],
+	append(FlatOpts,CmdOpts,Opts).
 
 arg_from_opts(Arg,Opts) :-
 	member(Opt,Opts),
@@ -319,7 +324,7 @@ arg_info('-M','','Do not recompute MD5 checksums when timestamps appear stale').
 % QUEUES
 % ----------------------------------------
 
-parse_arg(['-Q',Qs|L],L,[queue(Q),qsub_biomake_args('-N')]) :-
+parse_arg(['-Q',Qs|L],L,queue(Q)) :-
         ensure_loaded(library(biomake/queue)),
 	atom_string(Q,Qs),
 	queue_engine(Q),
@@ -341,15 +346,27 @@ arg_alias('--qdel-exec','--scancel-exec').
 arg_info('--qdel-exec','PATH','Path to qdel (sge,pbs) or scancel (slurm)').
 
 parse_arg(['--queue-args',X|L],L,queue_args(X)).
-arg_info('--queue-args','"ARGS"','Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)').
+arg_info('--queue-args','\'ARGS\'','Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)').
 
 parse_arg(['--qsub-args',X|L],L,qsub_args(X)).
 arg_alias('--qsub-args','--sbatch-args').
-arg_info('--qsub-args','"ARGS"','Additional arguments for qsub (sge,pbs) or sbatch (slurm)').
+arg_info('--qsub-args','\'ARGS\'','Additional arguments for qsub (sge,pbs) or sbatch (slurm)').
+
+parse_arg(['--qsub-use-biomake'|L],L,qsub_use_biomake(true)).
+arg_alias('--qsub-use-biomake','--sbatch-use-biomake').
+arg_info('--qsub-use-biomake','','Force qsub/sbatch to always call biomake recursively').
+
+parse_arg(['--qsub-biomake-args',X|L],L,qsub_args(X)).
+parse_arg(['--qsub-biomake-args',X|L],L,qsub_args(X)).
+arg_alias('--qsub-biomake-args','--sbatch-biomake-args').
+default_qsub_biomake_args('-N').
+arg_info('--qsub-biomake-args','\'ARGS\'',S) :-
+    default_qsub_biomake_args(Default),
+    format(atom(S),'Arguments passed recursively to biomake by qsub/sbatch (default: ~q)',[Default]).
 
 parse_arg(['--qdel-args',X|L],L,qdel_args(X)).
 arg_alias('--qdel-args','--scancel-args').
-arg_info('--qdel-args','"ARGS"','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
+arg_info('--qdel-args','\'ARGS\'','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
 
 parse_arg(['--flush',X|L],L,flush_queue(X)).
 arg_alias('--flush','--qsub-flush').
