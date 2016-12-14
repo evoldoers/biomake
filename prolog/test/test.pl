@@ -35,6 +35,8 @@ test :-
 	run_failure_test("--no-backtrace -f Makefile.tab","empty"),
 	run_failure_test("--no-backtrace","missing_target"),
 	run_failure_test("ref","target",["echo Up to date >uptodate"],[],"--no-backtrace","uptodate"),
+	run_failure_test("ref","target",["touch altdep1"],[],"-f Makefile.alt","deps_exist_but_rules_fail"),
+	run_failure_test("ref","target",["touch pattern.dep"],[],"-f Makefile.alt","pattern_deps_exist_but_rules_fail"),
 	
 	announce("PROLOG SYNTAX"),
 	run_test("-p Prolog.makespec","simple_prolog"),

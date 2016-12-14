@@ -428,6 +428,9 @@ you can only place a conditional at a point where a variable assignment, recipe,
 Unlike GNU Make, Biomake does not offer domain-specific language extensions in [Scheme](https://www.gnu.org/software/guile/)
 (even though this is one of the cooler aspects of GNU Make), but you can program it in Prolog instead - it's quite hackable.
 
+GNU Make and BioMake differ slightly in the way they process missing dependencies.
+GNU Make distinguishes between rules that contain wildcards (which are ignored if dependencies are missing), and rules that don't contain wildcards (which are never ignored). BioMake, in contrast, treats both types of rule identically: it never ignores a rule that matches. Note that both GNU Make and BioMake can be directed to continue despite such errors, using the `-k` command-line option.
+
 Arithmetic functions
 --------------------
 

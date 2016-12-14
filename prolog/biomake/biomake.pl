@@ -68,6 +68,9 @@
 :- user:op(1103,xfy,+=).
 :- user:op(1104,xfy,=*).
 
+% Configuration
+max_recurse_depth(100).
+
 /** <module> Prolog implementation of Makefile-inspired build system
 
   See the README
@@ -149,55 +152,33 @@ build(T,SL,Opts) :-
 
 build(_T,SL,Opts) :-
 	length(SL,Depth),
-	Depth > 100,
-	report("Exceeded maximum length of dependency chain (~w)",[Depth],SL,Opts),
+	max_recurse_depth(D),
+	Depth > D,
+	report("Exceeded maximum length of dependency chain (~w)",[D],SL,Opts),
 	!,
 	fail.
 
 build(T,SL,Opts) :-
-        debug_report(build,'  Target: ~w',[T],SL),
+        debug_report(build,'Target: ~w',[T],SL),
         target_bindrule(T,Rule,Opts),
         rule_dependencies(Rule,DL,Opts),
-        comment_report('Checking dependencies: ~w <-- ~w',[T,DL],SL,Opts),
-        can_build_deps(DL,[T|SL],Opts), % semidet
-        build_deps(DL,[T|SL],Opts), % semidet
+        build_deps(DL,[T|SL],Opts),
 	dep_bindrule(Rule,Opts,Rule2,Opts2),
         (   rebuild_required(T,DL,SL,Opts2)
         ->  run_execs_and_update(Rule2,SL,Opts2)
         ;   comment_report('~w is up to date',[T],SL,Opts)),
 	!.
 build(T,SL,Opts) :-
-        debug_report(build,'..checking if rebuild required for ~w',[T],SL),
+        debug_report(build,'No rules for ~w. Checking if rebuild required',[T],SL),
         \+ rebuild_required(T,[],SL,Opts),
         !,
         comment_report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
         \+ target_bindrule(T,_,Opts),
-        handle_error('Don\'t know how to make ~w',[T],SL,Opts),
+	handle_error('Don\'t know how to make ~w',[T],SL,Opts),
 	!.
 build(T,SL,Opts) :-
         handle_error('~w FAILED',[T],SL,Opts).
-
-can_build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
-can_build_deps([],_,_).
-can_build_deps([T|TL],SL,Opts) :-
-	can_build(T,SL,Opts),
-	can_build_deps(TL,SL,Opts).
-
-can_build(T,SL,_Opts) :-
-	member(Dep,SL),
-	equal_as_strings(Dep,T),
-	!,
-	fail.
-can_build(T,SL,Opts) :-
-	debug_report(build,'checking ~w',[T],SL),
-        target_bindrule(T,Rule,Opts),
-        rule_dependencies(Rule,DL,Opts),
-        can_build_deps(DL,[T|SL],Opts),
-	debug_report(build,'know how to build ~w',[T],SL).
-can_build(T,SL,_) :-
-	exists_file(T),
-	debug_report(build,'can find ~w',[T],SL).
 
 build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
 build_deps([],_,_).
@@ -484,10 +465,13 @@ handle_exec_error(Exec,Err,SL,Opts) :-
 
 handle_error(Fmt,Args,SL,Opts) :-
         report(Fmt,Args,SL),
+	handle_error(Opts).
+
+handle_error(Opts) :-
         member(keep_going_on_error(true),Opts),
         \+ member(stop_on_error(true),Opts),
         !.
-handle_error(_,_,_,_) :-
+handle_error(_) :-
         halt_error.
 
 

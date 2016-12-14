@@ -1,0 +1,28 @@
+# This test Makefile highlights a few differences between BioMake and GNU Make,
+# in the way that dependency chains are processed.
+
+# GNU Make will refuse to build deps_exist_but_rules_fail, even if dep1 exists,
+# because the rule for building dep1 doesn't have a wildcard in.
+# BioMake's behavior is slightly different: it will fail if a rule can't be applied,
+# regardless of whether or not that rule contains wildcards.
+# (Both BioMake and GNU Make will soldier on if the -k option is specified.)
+deps_exist_but_rules_fail: altdep1 altdep2 altdep3
+	cat $^ >$@
+	echo Built $@ >>$@
+
+altdep1: nonexistent_dep
+	echo Rebuilt $@ >$@
+
+altdep2 altdep3:
+	echo $@ >$@
+
+# GNU Make will build pattern_deps_exist_but_rules_fail, as long as pattern.dep exists,
+# because the rule for building pattern.dep has a wildcard, so it ignores it.
+# BioMake, again, will fail.
+# (Both BioMake and GNU Make will soldier on if the -k option is specified.)
+pattern_deps_exist_but_rules_fail: pattern.dep altdep2 altdep3
+	cat $^ >$@
+	echo Built $@ >>$@
+
+%.dep: %.nonexistent_dep
+	echo Rebuilt $@ >$@
