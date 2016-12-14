@@ -494,7 +494,7 @@ simply by specifying the number of threads with `-j`; you need `-Q` as well.
 There are several queueing engines currently supported:
 
 - `-Q poolq` uses an internal thread pool for running jobs in parallel on the same machine that `biomake` is running on
-- `-Q sge` uses [Sun Grid Engine](https://en.wikipedia.org/wiki/Oracle_Grid_Engine)
+- `-Q sge` uses [Sun Grid Engine](https://en.wikipedia.org/wiki/Oracle_Grid_Engine) or compatible (e.g. [Open Grid Scheduler](http://gridscheduler.sourceforge.net/))
 - `-Q pbs` uses [PBS](https://en.wikipedia.org/wiki/Portable_Batch_System)
 - `-Q slurm` uses [SLURM](https://slurm.schedmd.com/)
 - `-Q test` just runs the jobs synchronously. Used for testing purposes only
