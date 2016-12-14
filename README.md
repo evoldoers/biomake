@@ -446,7 +446,7 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
 - It checks whether there is a _theoretical path_ to all the dependencies. A theoretical path to a dependency `D` exists if either of the following is true:
     - There is a rule that could be used to build `D`, the target goal for that rule is satisfied, and there is a theoretical path to all the dependencies of that rule;
     - File `D` already exists, and the only applicable rules to rebuild `D`, if any exist at all, are wildcard (pattern) rules; that is, there are no rules that _explicitly and uniquely_ rebuild `D`.
-- It attempts to build all the dependencies.
+- It attempts to build all the dependencies
 - It tests whether the Prolog _deps goal_ (if there is one) is satisfied
 - It tests whether the target is stale. Details depend on the various options:
     - Command-line options for marking targets as stale or new (`-W`, `-B`, `-o`) can override any of the following behavior
@@ -457,7 +457,7 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
 
 If any of these tests fail, Biomake will backtrack and attempt to build the target using a different rule, or a different pattern-match to the same rule.
 If all the tests pass, Biomake will commit to using the rule, and will attempt to execute the recipe using the shell (or the queueing engine).
-Failure during execution of the recipe will never cause Biomake to backtrack; it will either halt, or (if the `-k` command-line option was specified) soldier on obliviously.
+Failure during execution of the recipe (or execution of any recipes in the dependency tree) will never cause Biomake to backtrack; it will either halt, or (if the `-k` command-line option was specified) soldier on obliviously.
 
 Arithmetic functions
 --------------------
