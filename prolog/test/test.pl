@@ -31,12 +31,11 @@ test :-
 
 	announce("FAILURE TESTS"),
 	run_failure_test("-f Makefile.cyclic","test1"),
+	run_failure_test("-f Makefile.cyclic","cyclic.test1"),
 	run_failure_test("--no-backtrace -f Makefile.err","empty"),
 	run_failure_test("--no-backtrace -f Makefile.tab","empty"),
 	run_failure_test("--no-backtrace","missing_target"),
 	run_failure_test("ref","target",["echo Up to date >uptodate"],[],"--no-backtrace","uptodate"),
-	run_failure_test("ref","target",["touch altdep1"],[],"-f Makefile.alt","deps_exist_but_rules_fail"),
-	run_failure_test("ref","target",["touch pattern.dep"],[],"-f Makefile.alt","pattern_deps_exist_but_rules_fail"),
 	
 	announce("PROLOG SYNTAX"),
 	run_test("-p Prolog.makespec","simple_prolog"),
@@ -58,6 +57,10 @@ test :-
 	run_test("forced_rebuild"),
 	run_test("ref","target",["touch old_dep","echo Pre-update >older_dep"],[],"","older_dep"),
 	run_test("ref","target",["echo Pre-update >newer_dep","sleep 1","touch new_dep"],[],"","newer_dep"),
+	run_test("altrules1.type1"),
+	run_test("altrules2.type1"),
+	run_failure_test("ref","target",["touch altdep1"],[],"-f Makefile.alt","deps_exist_but_rules_fail"),
+	run_test("ref","target",["touch pattern.dep"],[],"-f Makefile.alt","pattern_deps_exist_but_rules_fail"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),

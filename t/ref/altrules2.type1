@@ -1,0 +1,4 @@
+Starting from type5
+building type4 from type5: altrules2.type5
+building type3 from type4: altrules2.type4
+building type1 from type3: altrules2.type3

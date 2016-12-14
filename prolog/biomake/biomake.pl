@@ -142,12 +142,8 @@ build(T,Opts) :-
         build(T,[],Opts).
 
 build(T,SL,Opts) :-
-	member(Dep,SL),
-	equal_as_strings(Dep,T),
+	cyclic_dependency(T,SL,Opts),
 	!,
-	reverse(SL,SLrev),
-	concat_string_list(SLrev,Chain," <-- "),
-	report("Cyclic dependency detected: ~w <-- ~w",[Chain,T],SL,Opts),
         halt_error.
 
 build(_T,SL,Opts) :-
@@ -162,6 +158,8 @@ build(T,SL,Opts) :-
         debug_report(build,'Target: ~w',[T],SL),
         target_bindrule(T,Rule,Opts),
         rule_dependencies(Rule,DL,Opts),
+        can_build_deps(DL,[T|SL],Opts),
+        debug_report(build,'Rule: ~w',[Rule],SL),
         build_deps(DL,[T|SL],Opts),
 	dep_bindrule(Rule,Opts,Rule2,Opts2),
         (   rebuild_required(T,DL,SL,Opts2)
@@ -179,6 +177,32 @@ build(T,SL,Opts) :-
 	!.
 build(T,SL,Opts) :-
         handle_error('~w FAILED',[T],SL,Opts).
+
+cyclic_dependency(T,SL,Opts) :-
+	member(Dep,SL),
+	equal_as_strings(Dep,T),
+	reverse(SL,SLrev),
+	concat_string_list(SLrev,Chain," <-- "),
+	report("Cyclic dependency detected: ~w <-- ~w",[Chain,T],SL,Opts).
+
+can_build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
+can_build_deps([],_,_).
+can_build_deps([T|TL],SL,Opts) :-
+        can_build_dep(T,SL,Opts),
+        can_build_deps(TL,SL,Opts).
+
+can_build_dep(T,SL,Opts) :-
+	cyclic_dependency(T,SL,Opts),
+	!,
+        fail.
+can_build_dep(T,_,_) :-
+	\+ target_bindrule_exact(T),
+	exists_file(T),
+	!.
+can_build_dep(T,SL,Opts) :-
+        target_bindrule(T,Rule,Opts),
+        rule_dependencies(Rule,DL,Opts),
+        can_build_deps(DL,[T|SL],Opts).
 
 build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
 build_deps([],_,_).
@@ -776,9 +800,18 @@ global_binding(Var,Val) :- global_lazy_binding(Var,Val).
 % RULES AND PATTERN MATCHING
 % ----------------------------------------
 
+target_bindrule_exact(T) :-
+        mkrule_default(TP1,_,_,HeadGoal,_,Bindings),
+	V=v(null,T,_,Bindings),
+        normalize_patterns(TP1,TPs,V),
+	member(TP,TPs),
+	exact_match(TP,T),
+	setauto('TARGET',T,Bindings),
+	call_without_backtrace(HeadGoal).
+
 target_bindrule(T,rb(T,Ds,DepGoal,Exec1,V),_Opts) :-
         mkrule_default(TP1,DP1,Exec1,HeadGoal,DepGoal,Bindings),
-	debug(bindrule,"rule: T=~w D=~w E=~w HG=~w DG=~w B=~w",[TP1,DP1,Exec1,HeadGoal,DepGoal,Bindings]),
+	debug(bindrule,"rule: T=~w TP1=~w DP1=~w E1=~w HG=~w DG=~w B=~w",[T,TP1,DP1,Exec1,HeadGoal,DepGoal,Bindings]),
         append(Bindings,_,Bindings_Open),
         V=v(_Base,T,Ds,Bindings_Open),
         normalize_patterns(TP1,TPs,V),
@@ -832,6 +865,20 @@ setauto(VarLabel,Value,Bindings) :-
 	!.
 setauto(_,_,_).
 
+exact_match(t(TL),A) :- !, exact_match(TL,A).
+exact_match([],'').
+exact_match([Tok|PatternToks],Atom) :-
+    nonvar(Tok),
+    !,
+    atom_concat(Tok,Rest,Atom),
+    exact_match(PatternToks,Rest).
+exact_match([Tok|PatternToks],Atom) :-
+    var(Tok),
+    !,
+    atom_concat(Tok,Rest,Atom),
+    Tok\='',
+    exact_match(PatternToks,Rest).
+
 pattern_match(A,B) :- var(A),!,B=A.
 pattern_match(t(TL),A) :- !, pattern_match(TL,A).
 pattern_match([],'').
@@ -846,7 +893,6 @@ pattern_match([Tok|PatternToks],Atom) :-
     atom_concat(Tok,Rest,Atom),
     Tok\='',
     pattern_match(PatternToks,Rest).
-    
 
 pattern_match_list([],[]).
 pattern_match_list([P|Ps],[M|Ms]) :-

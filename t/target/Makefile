@@ -25,6 +25,7 @@ newer_dep: new_dep
 older_dep: old_dep
 	echo Updated older_dep >$@
 
+# Variables
 FOO = .foo
 
 %.bar: %$(FOO)
@@ -56,12 +57,18 @@ hyphenated_var:
 unbound_var:
 	echo $(nonexistent_variable) >$@
 
-escape_dollar:
-	echo $$ >$@
-
 DEPS := yorks.lancasters.foo starks.lannisters.foo
 multi_targets_from_var: $(DEPS)
 	cat $(DEPS) >$@
+
+S := hello
+S += world
+append_var:
+	echo $S >$@
+
+# General syntax
+escape_dollar:
+	echo $$ >$@
 
 silent:
 	@echo silent >$@
@@ -70,11 +77,7 @@ one_line: ; echo Recipe on one line >$@
 
 one_line_with_deps: one_line; cp $< $@
 
-S := hello
-S += world
-append_var:
-	echo $S >$@
-
+# Functions
 firstword:
 	echo $(firstword $S) >$@
 
@@ -89,7 +92,7 @@ words:
 
 FEAR = Fear is the mind killer
 wordlist:
-# note this also tests a variable nested inside a command
+# this also tests a variable nested inside a command
 # and a comment in a rule block (i.e. this comment)
 	echo $(wordlist 3,4,$(FEAR)) >$@
 
@@ -152,6 +155,7 @@ abspath:
 realpath:
 	echo $(realpath /this/file/does/not/exist) >$@
 
+# computed vars
 x1 = y1
 y1 = z
 a1 := $($(x1))
@@ -197,6 +201,7 @@ shell_assign != echo hello there
 shell_assign:
 	echo $(shell_assign) >$@
 
+# advanced automatic variables
 subdir/target_file:
 	echo $(@F) >$@
 
@@ -221,6 +226,7 @@ deps_file: subdir/foo subdir/bar/empty
 deps_dir: subdir/foo subdir/bar/empty
 	echo $(^D) >$@
 
+# forced rebuild
 forced_rebuild_setup := $(shell touch forced_rebuild)
 forced_rebuild: FORCE
 	echo test2 >$@
@@ -228,6 +234,7 @@ forced_rebuild: FORCE
 FORCE:
 	echo wrong >forced_rebuild
 
+# more functions
 foreach:
 	echo $(foreach thing,Life Death Tax,$(thing) is constant.) >$@
 
@@ -270,6 +277,7 @@ old_file_target: old_file_target_dep
 old_file_dep: old_file_dep_dep
 	echo Updated old_file_dep >$@
 
+# command-line options
 keep_going:
 	echo Bravely, in the face of all odds >$@
 
@@ -291,6 +299,7 @@ cmdline_eval%:
 	echo Value of CMDLINE_VAR is $(CMDLINE_VAR) >>$@
 	echo Value of EVAL_VAR is $(EVAL_VAR) >>$@
 
+# arithmetic functions
 iota:
 	echo $(iota 10) >$@
 
@@ -308,3 +317,26 @@ divide:
 
 iota_add_multiply:
 	echo $(multiply 2,$(add 10,$(iota 3,6))) >$@
+
+# alternate pattern rules to build a target
+%.type1: %.type2
+	cat $< >$@
+	echo building type1 from type2: $< >>$@
+
+%.type1: %.type3
+	cat $< >$@
+	echo building type1 from type3: $< >>$@
+
+%.type3: %.type4
+	cat $< >$@
+	echo building type3 from type4: $< >>$@
+
+%.type4: %.type5
+	cat $< >$@
+	echo building type4 from type5: $< >>$@
+
+altrules1.type4:
+	echo Starting from type4 >$@
+
+altrules2.type5:
+	echo Starting from type5 >$@

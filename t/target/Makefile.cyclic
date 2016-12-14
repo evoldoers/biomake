@@ -4,3 +4,11 @@ test1: test2
 
 test2: test1
 	echo This is test2 >$@
+
+%.test2: %.test1
+	 cat $< >$@
+	 echo Test2 >>$@
+
+%.test1: %.test2
+	 cat $< >$@
+	 echo Test1 >>$@
