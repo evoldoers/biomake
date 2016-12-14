@@ -440,6 +440,8 @@ Unlike GNU Make, Biomake does not offer domain-specific language extensions in [
 Detailed build logic
 --------------------
 
+The build logic for biomake should _usually_ yield the same results as GNU Make, though there may be subtle differences.
+
 Before attempting to build a target `T` using a rule `R`, Biomake performs the following steps:
 - It tries to match the target name `T` to one of the target names in `R`
 - It tests whether the Prolog _target goal_ (if there is one) is satisfied
