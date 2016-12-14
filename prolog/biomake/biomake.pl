@@ -147,10 +147,7 @@ build(T,SL,Opts) :-
         halt_error.
 
 build(_T,SL,Opts) :-
-	length(SL,Depth),
-	max_recurse_depth(D),
-	Depth > D,
-	report("Exceeded maximum length of dependency chain (~w)",[D],SL,Opts),
+	recursion_too_deep(SL,Opts),
 	!,
 	fail.
 
@@ -185,6 +182,12 @@ cyclic_dependency(T,SL,Opts) :-
 	concat_string_list(SLrev,Chain," <-- "),
 	report("Cyclic dependency detected: ~w <-- ~w",[Chain,T],SL,Opts).
 
+recursion_too_deep(SL,Opts) :-
+	length(SL,Depth),
+	max_recurse_depth(D),
+	Depth > D,
+	report("Exceeds maximum length of dependency chain (~w)",[D],SL,Opts).
+
 can_build_deps(_,_,Opts) :- member(no_deps(true),Opts), !.
 can_build_deps([],_,_).
 can_build_deps([T|TL],SL,Opts) :-
@@ -193,6 +196,10 @@ can_build_deps([T|TL],SL,Opts) :-
 
 can_build_dep(T,SL,Opts) :-
 	cyclic_dependency(T,SL,Opts),
+	!,
+        fail.
+can_build_dep(_,SL,Opts) :-
+	recursion_too_deep(SL,Opts),
 	!,
         fail.
 can_build_dep(T,_,_) :-
@@ -906,7 +913,7 @@ expand_deps(Deps,Result,V) :-
     flatten_trim(DepLists,Result).
 
 expand_execs(Execs,Result,V) :-
-    normalize_patterns(Execs,NormExecs,V),
+    normalize_patterns_body(Execs,NormExecs,V),
     maplist(unwrap_t,NormExecs,ExpandedExecs),
     maplist(split_newlines,ExpandedExecs,ExecLists),
     flatten_trim(ExecLists,Result).
@@ -986,14 +993,43 @@ normalize_pattern(Term,t(Args),_) :-
 normalize_pattern(X,t(Toks),V) :-
         debug(pattern,'PARSING: ~w // ~w',[X,V]),
         atom_chars(X,Chars),
-        phrase(toks(Toks,V),Chars),
+        phrase(head_toks(Toks,V),Chars),
         debug(pattern,'PARSED: ~w ==> ~w',[X,Toks]),
 %	backtrace(20),
         !.
 
-toks([],_) --> [].
-toks([Tok|Toks],V) --> tok(Tok,V),!,toks(Toks,V).
-tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
+normalize_patterns_body(X,X,_) :- var(X),!.
+normalize_patterns_body([],[],_) :- !.
+normalize_patterns_body([P|Ps],[N|Ns],V) :-
+        !,
+        debug(pattern,'*norm: ~w',[P]),
+        normalize_pattern_body(P,N,V),
+        normalize_patterns_body(Ps,Ns,V).
+normalize_patterns_body(P,Ns,V) :-
+        normalize_pattern_body(P,N,V),
+	wrap_t(N,Ns).
+
+normalize_pattern_body(X,X,_) :- var(X),!.
+normalize_pattern_body(t(X),t(X),_) :- !.
+normalize_pattern_body(Term,t(Args),_) :-
+        Term =.. [t|Args],!.
+normalize_pattern_body(X,t(Toks),V) :-
+        debug(pattern,'PARSING: ~w // ~w',[X,V]),
+        atom_chars(X,Chars),
+        phrase(body_toks(Toks,V),Chars),
+        debug(pattern,'PARSED: ~w ==> ~w',[X,Toks]),
+        !.
+
+body_toks([],_) --> [].
+body_toks([Tok|Toks],V) --> body_tok(Tok,V),!,body_toks(Toks,V).
+body_tok('%',_) --> ['%'], !.
+body_tok(Tok,V) --> tok(Tok,V).
+
+head_toks([],_) --> [].
+head_toks([Tok|Toks],V) --> head_tok(Tok,V),!,head_toks(Toks,V).
+head_tok(Var,V) --> ['%'],!,{bindvar_debug('%',V,Var)}.
+head_tok(Tok,V) --> tok(Tok,V).
+
 tok('$',_V) --> ['$','$'], !.  % escape $'s
 tok(Var,V) --> ['$'], varlabel(VL),{bindvar_debug(VL,V,Var)}.
 tok(Var,V) --> ['$'], makefile_subst_ref(Var,V), !.

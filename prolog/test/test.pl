@@ -61,6 +61,8 @@ test :-
 	run_test("altrules2.type1"),
 	run_failure_test("ref","target",["touch altdep1"],[],"-f Makefile.alt","deps_exist_but_rules_fail"),
 	run_test("ref","target",["touch pattern.dep"],[],"-f Makefile.alt","pattern_deps_exist_but_rules_fail"),
+	run_test("escape_dollar"),
+	run_test("percent_in_body"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),
@@ -82,7 +84,6 @@ test :-
 	run_test("ABC=123","vars3"),
 	run_test("hyphenated_var"),
 	run_test("unbound_var"),
-	run_test("escape_dollar"),
 	run_test("multi_targets_from_var"),
 	run_test("append_var"),
 	run_test("computed_var1"),

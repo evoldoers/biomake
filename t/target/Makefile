@@ -70,6 +70,9 @@ append_var:
 escape_dollar:
 	echo $$ >$@
 
+%_in_body:
+	echo % vs $* >$@
+
 silent:
 	@echo silent >$@
 
