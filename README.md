@@ -119,6 +119,8 @@ Var=Val
     Queue-specifying arguments for qsub/qdel (sge,pbs) or sbatch/scancel (slurm)
 --qsub-args,--sbatch-args 'ARGS'
     Additional arguments for qsub (sge,pbs) or sbatch (slurm)
+--qsub-use-biomake,--sbatch-use-biomake 
+    Force qsub/sbatch to always call biomake recursively
 --qsub-biomake-args,--sbatch-biomake-args 'ARGS'
     Arguments passed recursively to biomake by qsub/sbatch (default: '-N')
 --qdel-args,--scancel-args 'ARGS'
