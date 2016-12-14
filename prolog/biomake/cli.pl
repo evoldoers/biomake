@@ -273,7 +273,7 @@ arg_info('-D','Var Val','Assign Makefile variables from command line').
 arg_info('Var=Val','','Alternative syntax for \'-D Var Val\'').
 
 makefile_assign(Var,Val) --> makefile_var(Var), "=", makefile_val(Val).
-makefile_var(A) --> atom_from_codes(A,":= \t\n").
+makefile_var(A) --> makefile_var_atom_from_codes(A).
 makefile_val(S) --> "\"", string_from_codes(S,"\""), "\"".
 makefile_val(S) --> string_from_codes(S," ").
 

@@ -16,3 +16,11 @@ depgoal_$X: { valid(X) }
 
 depgoal_$X: { \+ valid(X) }
 	echo $X is invalid. >$@
+
+multiline_depgoal_$X_$Y: { valid(X),
+		           valid(Y) }
+	echo $X and $Y are valid >$@
+
+multiline_depgoal_$X_$Y: { \+ (valid(X),
+		               valid(Y)) }
+	echo Either $X or $Y, or both, are invalid >$@

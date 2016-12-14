@@ -17,7 +17,6 @@
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/embed)).
 :- use_module(library(biomake/biomake)).
-:- use_module(library(biomake/gnumake_parser)).
 
 makefile_function(Result) --> makefile_function(Result,v(null,null,null,[])).
 
