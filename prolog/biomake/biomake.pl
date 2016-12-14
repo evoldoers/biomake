@@ -153,14 +153,14 @@ build(_T,SL,Opts) :-
 
 build(T,SL,Opts) :-
         debug_report(build,'Target: ~w',[T],SL),
-        target_bindrule(T,Rule,Opts),
+        target_bindrule(T,Rule,Opts),   % match target name, test target goal
         rule_dependencies(Rule,DL,Opts),
-        can_build_deps(DL,[T|SL],Opts),
+        can_build_deps(DL,[T|SL],Opts),  % test theoretical path to dependencies
         debug_report(build,'Rule: ~w',[Rule],SL),
-        build_deps(DL,[T|SL],Opts),
-	dep_bindrule(Rule,Opts,Rule2,Opts2),
-        (   rebuild_required(T,DL,SL,Opts2)
-        ->  run_execs_and_update(Rule2,SL,Opts2)
+        build_deps(DL,[T|SL],Opts),  % build dependencies
+	dep_bindrule(Rule,Opts,Rule2,Opts2),  % test dependencies goal
+        (   rebuild_required(T,DL,SL,Opts2)  % test if target is stale
+        ->  run_execs_and_update(Rule2,SL,Opts2)  % (re)build
         ;   comment_report('~w is up to date',[T],SL,Opts)),
 	!.
 build(T,SL,Opts) :-
@@ -174,6 +174,7 @@ build(T,SL,Opts) :-
 build(T,SL,Opts) :-
         handle_error('~w FAILED',[T],SL,Opts).
 
+% tests of pathological conditions
 cyclic_dependency(T,SL,Opts) :-
 	member(Dep,SL),
 	equal_as_strings(Dep,T),
@@ -187,6 +188,7 @@ recursion_too_deep(SL,Opts) :-
 	Depth > D,
 	report("Exceeds maximum length of dependency chain (~w)",[D],SL,Opts).
 
+% test whether theoretical path exists
 can_build_deps(_,_,Opts) :- get_opt(no_deps,true,Opts), !.
 can_build_deps([],_,_).
 can_build_deps([T|TL],SL,Opts) :-
@@ -210,6 +212,7 @@ can_build_dep(T,SL,Opts) :-
         rule_dependencies(Rule,DL,Opts),
         can_build_deps(DL,[T|SL],Opts).
 
+% recursive build dependencies
 build_deps(_,_,Opts) :- get_opt(no_deps,true,Opts), !.
 build_deps([],_,_).
 build_deps([T|TL],SL,Opts) :-

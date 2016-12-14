@@ -444,9 +444,9 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
 - It tests whether the Prolog _target goal_ (if there is one) is satisfied
 - It checks whether there is a _theoretical path_ to all the dependencies. A theoretical path to a dependency `D` exists if either of the following is true:
     - There is a rule that could be used to build `D`, the target goal for that rule is satisfied, and there is a theoretical path to all the dependencies of that rule;
-    - File `D` already exists, and the only rules available to rebuild `D` are wildcard (pattern) rules; that is, there are no rules that _explicitly and uniquely_ rebuild `D`.
+    - File `D` already exists, and the only applicable rules to rebuild `D`, if any exist at all, are wildcard (pattern) rules; that is, there are no rules that _explicitly and uniquely_ rebuild `D`.
 - It attempts to build all the dependencies
-- It tests whether the Prolog _dependents goal_ (if there is one) is satisfied
+- It tests whether the Prolog _dependencies goal_ (if there is one) is satisfied
 - It tests whether the target is stale by looking at the file timestamps or (if using MD5) the MD5 checksums
 
 If any of these tests fail, Biomake will backtrack and attempt to build the target using a different rule, or a different pattern-match to the same rule.
