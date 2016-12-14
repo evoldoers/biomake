@@ -432,6 +432,7 @@ The implementation of [conditional syntax](https://www.gnu.org/software/make/man
 (`ifeq`, `ifdef` and the like) similarly requires that syntax to be aligned with the overall structure:
 you can only place a conditional at a point where a variable assignment, recipe, or `include` directive could go
 (i.e. at the top level of the `Makefile` grammar).
+Conditional syntax _is_ implemented as a preprocessing step.
 
 Unlike GNU Make, Biomake does not offer domain-specific language extensions in [Scheme](https://www.gnu.org/software/guile/)
 (even though this is one of the cooler aspects of GNU Make), but you can program it in Prolog instead - it's quite hackable.
