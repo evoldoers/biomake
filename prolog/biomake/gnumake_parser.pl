@@ -197,7 +197,7 @@ makefile_assignment(assignment(Var,Op,Val),Lines) -->
     opt_whitespace,
     "\n",
     makefile_def_body(Cs,BodyLines),
-    {string_chars(Val,Cs),
+    {string_codes(Val,Cs),
      Lines is BodyLines + 1}.
 
 makefile_assignment(assignment(Var,"=",Val),Lines) -->
@@ -208,7 +208,7 @@ makefile_assignment(assignment(Var,"=",Val),Lines) -->
     opt_whitespace,
     "\n",
     makefile_def_body(Cs,BodyLines),
-    {string_chars(Val,Cs),
+    {string_codes(Val,Cs),
      Lines is BodyLines + 1}.
 
 makefile_assignment(assignment(Var,Op,Val),1) -->
@@ -388,10 +388,11 @@ makefile_recipe(rule(Head,Deps,[Efirst|Erest]),Lines) -->
     ":",
     opt_makefile_targets(Deps),
     ";",
-    line_as_string(Efirst),
+    opt_space,
+    exec_line_as_string(Efirst,Lfirst),
     !,
     makefile_execs(Erest,Lexecs),
-    {Lines is 1 + Lexecs}.
+    {Lines is Lfirst + Lexecs}.
 
 opt_makefile_targets(T) --> makefile_targets(T).
 opt_makefile_targets([]) --> opt_space.
@@ -413,17 +414,24 @@ op_string("?=") --> "?=".
 op_string("+=") --> "+=".
 op_string("!=") --> "!=".
 
-makefile_execs([E|Es],Lines) --> makefile_exec(E), !, {Lines = Lrest + 1}, makefile_execs(Es,Lrest).
+makefile_execs([E|Es],Lines) --> makefile_exec(E,L), !, {Lines = Lrest + L}, makefile_execs(Es,Lrest).
 makefile_execs(Es,Lines) --> comment, !, {Lines = Lrest + 1}, makefile_execs(Es,Lrest).
 makefile_execs([],0) --> !.
 
-makefile_exec(E) --> "\t", !, line_as_string(E).
+makefile_exec(E,L) --> "\t", !, exec_line_as_string(E,L).
+
+exec_line([],0) --> call(eos), !.
+exec_line(C,Lplus1) --> "\\\n\t", !, exec_line(Cs,L), {append(`\\\n`,Cs,C), Lplus1 is L + 1}.
+exec_line(C,Lplus1) --> "\\\n", !, exec_line(Cs,L), {append(`\\\n`,Cs,C), Lplus1 is L + 1}.
+exec_line([],1) --> "\n", !.
+exec_line([],1) --> comment.
+exec_line([C|Cs],L) --> [C], exec_line(Cs,L).
+exec_line_as_string(S,L) --> exec_line(C,L), {string_codes(S,C)}.
 
 line([]) --> ( "\n" ; call(eos) ), !.
 line([]) --> comment.
-line([L|Ls]) --> [L], line(Ls).
-
-line_as_string(S) --> line(Sc), {string_chars(S,Sc)}.
+line([C|Cs]) --> [C], line(Cs).
+line_as_string(S) --> line(C), {string_codes(S,C)}.
 
 makefile_def_body([],1) --> opt_space, "endef", !, opt_whitespace, "\n".
 makefile_def_body(['\n'|Cs],Lplus1) --> ['\n'], !, makefile_def_body(Cs,L), {Lplus1 is L + 1}.

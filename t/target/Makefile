@@ -80,6 +80,13 @@ one_line: ; echo Recipe on one line >$@
 
 one_line_with_deps: one_line; cp $< $@
 
+# biomake's output for split_recipe_lines is as the GNU Make documentation describes,
+# but not (in our experience) the way GNU Make actually behaves...
+# GNU Make 3.81 vs https://www.gnu.org/software/make/manual/html_node/Splitting-Recipe-Lines.html
+split_recipe_lines : ; @(echo 'hello \
+	world'; echo "hello \
+    world") >$@
+
 # Functions
 firstword:
 	echo $(firstword $S) >$@

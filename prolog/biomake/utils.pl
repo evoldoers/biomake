@@ -108,7 +108,14 @@ split_spaces(S,L) :-
 	split_string(S," "," ",L).
 
 split_newlines(S,L) :-
-	split_string(S,"\n","\n",L).
+        string_codes(S,C),
+	phrase(split_unescaped_newlines(A),C),
+	maplist(string_codes,L,A).
+
+split_unescaped_newlines([['\\','\n'|Cs]|L]) --> ['\\','\n'], !, split_unescaped_newlines([Cs|L]).
+split_unescaped_newlines([[]|L]) --> ['\n'], !, split_unescaped_newlines(L).
+split_unescaped_newlines([[C|Cs]|L]) --> [C], !, split_unescaped_newlines([Cs|L]).
+split_unescaped_newlines([[]]) --> [].
 
 last_element([],"").
 last_element([X],X).
