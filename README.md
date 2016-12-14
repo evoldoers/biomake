@@ -449,8 +449,8 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
 - It tests whether the Prolog _dependents goal_ (if there is one) is satisfied
 - It tests whether the target is stale by looking at the file timestamps or (if using MD5) the MD5 checksums
 
-If any of these tests fail, Biomake will backtrack and attempt to build the target using another rule, or another pattern match.
-If all the tests are satisfied, Biomake will attempt to execute the recipe.
+If any of these tests fail, Biomake will backtrack and attempt to build the target using a different rule, or a different pattern-match to the same rule.
+If all the tests pass, Biomake will commit to using the rule, and will attempt to execute the recipe using the shell.
 
 Arithmetic functions
 --------------------

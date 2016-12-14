@@ -3,6 +3,9 @@ prolog
 valid(a).
 valid(b).
 valid(c).
+valid('abc').
+valid('def.ghi').
+valid('jkl').
 endprolog
 
 headgoal_$X { valid(X) }:
@@ -24,3 +27,7 @@ multiline_depgoal_$X_$Y: { valid(X),
 multiline_depgoal_$X_$Y: { \+ (valid(X),
 		               valid(Y)) }
 	echo Either $X or $Y, or both, are invalid >$@
+
+multi_matches_$X.$Y.$Z: { valid(X), valid(Y), valid(Z) }
+	echo X=$X Y=$Y Z=$Z >$@
+
