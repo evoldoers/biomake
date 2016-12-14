@@ -142,7 +142,8 @@ Brief overview:
 
 - Prolog can be embedded within `prolog` and `endprolog` directives
 - `$(bagof Template,Goal)` expands to the space-separated `List` from the Prolog `bagof(Template,Goal,List)`
-- Following the dependent list with `{Goal}` causes the rule to match only if `Goal` is satisfied. The special variables `TARGET` and `DEPS`, if used, will be bound to the target and dependency-list (i.e. `$@` and `$^`, loosely speaking; except the latter is a true Prolog list, not encoded as a string with whitespace separators as in GNU Make)
+- Following the target list with `{TargetGoal}` causes the rule to match only if `TargetGoal` is satisfied. This goal will be tested _before_ any dependencies are built. The special variable `TARGET`, if used, will be bound to the target filename (i.e. `$@`)
+- Following the dependent list with `{DepGoal}` causes the recipe to be executed only if `DepGoal` is satisfied. This goal will be tested _after_ any dependencies are built (so it can examine the dependent files). The special variables `TARGET` and `DEPS`, if used, will be bound to the target and dependency-list (i.e. `$@` and `$^`, loosely speaking; except the latter is a true Prolog list, not encoded as a string with whitespace separators as in GNU Make)
 
 Examples
 --------
