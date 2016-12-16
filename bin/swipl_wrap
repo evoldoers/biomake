@@ -16,4 +16,4 @@ if [ -z `which swipl` ]; then
     fi
 fi
 
-$SWIPL $@
+$SWIPL "$@"

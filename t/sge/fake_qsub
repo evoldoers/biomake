@@ -14,6 +14,8 @@ while (@ARGV && $ARGV[0] =~ /^-/) {
 		last unless grep($_ eq $hold,@pids);
 	    }
 	}
+    } elsif ($arg eq '--fake-arg') {
+	shift;
     }
 }
 
