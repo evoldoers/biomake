@@ -145,3 +145,19 @@ ifeq_dblquote: ; echo correct >$@
 else
 ifeq_dblquote: ; echo incorrect >$@
 endif
+
+ifeq ($(ABC)/whatever,$(shell echo $(FOO))/whatever)
+COMPLEX = correct
+else
+COMPLEX = incorrect
+endif
+complex_ifeq:
+	echo $(COMPLEX) >$@
+
+ifeq (,$(shell echo))
+EMPTY = correct
+else
+EMPTY = incorrect
+endif
+empty_ifeq:
+	echo $(EMPTY) >$@

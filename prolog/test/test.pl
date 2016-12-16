@@ -117,6 +117,8 @@ test :-
 	run_test("-f Makefile.cond","ifeq_space3"),
 	run_test("-f Makefile.cond","ifeq_quote"),
 	run_test("-f Makefile.cond","ifeq_dblquote"),
+	run_test("-f Makefile.cond","empty_ifeq"),
+	run_test("-f Makefile.cond","complex_ifeq"),
 
 	announce("TEXT FUNCTIONS"),
 	run_test("subst"),

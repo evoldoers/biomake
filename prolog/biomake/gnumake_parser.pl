@@ -250,7 +250,7 @@ test_inequal(false,_,_,null).
 test_inequal(true,X,X,false) :- !.
 test_inequal(true,_,_,true).
 
-conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",", opt_whitespace, xbracket(Arg2), ")".
+conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",",  opt_whitespace, xbracket(Arg2), ")".
 conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), "'", whitespace, "'", xquote(Arg2), "'".
 conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), "\"", whitespace, "\"", xdblquote(Arg2), "\"".
 
@@ -320,7 +320,7 @@ delim_outer([C|Cs],L,R,XO,XI,NL) --> [C], {\+ member(C,XO)}, !, delim_outer(Cs,L
 delim_outer([],_,_,_,_,0) --> !.
 delim_inner([0'\s|S],L,R,X,NL) --> [0'\\,0'\n], !, delim_inner(S,L,R,X,NLnext), {NL is NLnext + 1}.
 delim_inner([0'\n|S],L,R,X,NL) --> {NL \= 0}, [0'\n], !, delim_inner(S,L,R,X,NLnext), {NL is NLnext + 1}.
-delim_inner(S,L,R,X,NL) --> [L], !, delim_inner(I,L,R,X,NL), [R], {append([L|I],[R],S)}.
+delim_inner(S,L,R,X,NL) --> [L], !, delim_inner(I,L,R,X,NL), [R], delim_inner(Rest,L,R,X,NL), {append([L|I],[R|Rest],S)}.
 delim_inner([C|Cs],L,R,X,NL) --> [0'\\,C], {member(C,X)}, !, delim_inner(Cs,L,R,X,NL).
 delim_inner([C|Cs],L,R,X,NL) --> [C], {\+ member(C,X)}, !, delim_inner(Cs,L,R,X,NL).
 delim_inner([],_,_,_,0) --> !.

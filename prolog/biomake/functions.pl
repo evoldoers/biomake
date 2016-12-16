@@ -118,10 +118,10 @@ makefile_function(Result,V) --> lb("foreach"), var_arg(Var), opt_whitespace, com
 	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("if"), xstr_arg(Condition,V), opt_whitespace, comma, str_arg(Then), comma, str_arg(Else), rb, !,
-        { Condition = "" -> expand_vars(Else,Result,V); expand_vars(Then,Result,V) }.
+        { (Condition = ''; Condition = "") -> expand_vars(Else,Result,V); expand_vars(Then,Result,V) }.
 
 makefile_function(Result,V) --> lb("if"), xstr_arg(Condition,V), opt_whitespace, comma, str_arg(Then), rb, !,
-        { Condition = "" -> Result = ""; expand_vars(Then,Result,V) }.
+        { (Condition = ''; Condition = "") -> Result = ""; expand_vars(Then,Result,V) }.
 
 makefile_function(Result,V) --> lb("or"), opt_whitespace, cond_param_list(L), rb, !,
         { makefile_or(L,Result,V) }.
@@ -230,13 +230,13 @@ makefile_foreach(Var,[L|Ls],Text,[R|Rs],V) :-
 cond_param_list([P|Ps]) --> str_arg(P), comma, !, cond_param_list(Ps).
 cond_param_list([P]) --> str_arg(P), !.
 
-makefile_or([],"",_) :- !.
-makefile_or([C|_],Result,V) :- expand_vars(C,Result,V), Result \= "", !.
+makefile_or([],'',_) :- !.
+makefile_or([C|_],Result,V) :- expand_vars(C,Result,V), Result \= "", Result \= '', !.
 makefile_or([_|Cs],Result,V) :- makefile_or(Cs,Result,V).
 
 makefile_and([C],Result,V) :- expand_vars(C,Result,V), !.
-makefile_and([C|Cs],Result,V) :- expand_vars(C,X,V), X \= "", !, makefile_and(Cs,Result,V).
-makefile_and(_,"",_).
+makefile_and([C|Cs],Result,V) :- expand_vars(C,X,V), X \= "", X \= '', !, makefile_and(Cs,Result,V).
+makefile_and(_,'',_).
 
 subst(Cs,Ds,Result) --> Cs, !, subst(Cs,Ds,Rest), {append(Ds,Rest,Result)}.
 subst(Cs,Ds,[C|Rest]) --> [C], !, subst(Cs,Ds,Rest).

@@ -979,10 +979,10 @@ wrap_t(t([L]),L) :- member(t(_),L), !.
 wrap_t(X,[X]).
 
 %unwrap_t(_,_) :- backtrace(20), fail.
-unwrap_t(X,"") :- var(X), !.
+unwrap_t(X,'') :- var(X), !.
 unwrap_t(Call,Flat) :- nonvar(Call), Call =.. [call,_|_], !, unwrap_t_call(Call,F), unwrap_t(F,Flat).
 unwrap_t(t(X),Flat) :- unwrap_t(X,Flat), !.
-unwrap_t([],"") :- !.
+unwrap_t([],'') :- !.
 unwrap_t([L|Ls],Flat) :- unwrap_t(L,F), unwrap_t(Ls,Fs), atom_concat(F,Fs,Flat), !.
 unwrap_t(N,A) :- number(A), atom_number(A,N), !.
 unwrap_t(S,A) :- string(S), atom_string(A,S), !.
