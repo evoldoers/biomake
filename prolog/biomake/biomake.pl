@@ -482,7 +482,8 @@ run_exec(Exec,SL,Opts) :-
 	string_chars(Silent,SilentChars),
 	silent_run_exec(Silent,SL,Opts).
 run_exec(Exec,SL,Opts) :-
-	silent_run_exec(Exec,SL,Opts).
+        running_silent(Opts),
+        silent_run_exec(Exec,SL,Opts).
 run_exec(Exec,SL,Opts) :-
 	report_run_exec(Exec,SL,Opts).
 
