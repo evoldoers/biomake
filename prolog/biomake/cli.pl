@@ -378,8 +378,11 @@ arg_info('--flush','<target or directory>','Erase all jobs for given target/dir'
 % DEBUGGING
 % ----------------------------------------
 
+parse_arg(['-d'|L],L,null) :- debug(verbose), set_prolog_flag(verbose,normal).
+arg_info('-d','','[developers] Print debugging messages. Equivalent to \'--debug verbose\'').
+
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).
-arg_info('--debug','MSG','[developers] Debugging messages. MSG can be build, pattern, makefile, md5...').
+arg_info('--debug','MSG','[developers] Richer debugging messages. MSG can be verbose, bindrule, build, pattern, makefile, makeprog, md5...').
 
 parse_arg(['--trace',Pred|L],L,null) :- trace(Pred), !.
 arg_info('--trace','PREDICATE','[developers] Print debugging trace for given predicate').

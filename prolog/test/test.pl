@@ -164,6 +164,7 @@ test :-
 	run_test("foreach"),
 	run_test("value"),
 	run_test("bad_function_syntax"),
+	run_test("function_whose_args_are_both_expressions"),
 
 	announce("ARITHMETIC FUNCTIONS"),
 	run_test("iota"),
@@ -206,8 +207,8 @@ test :-
 	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
 	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),
 	run_test("-f Makefile.queue -Q poolq -H","the.head.on.the.door"),
-	run_test("ref","target",[],["sleep 2"],"-f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","outside.theres.a.boxcar.waiting"),
-	run_test("ref","target",[],["sleep 2"],"-f Makefile.queue -Q sge -H --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","that.was.my.favourite.dress"),
+	run_test("ref","target",[],["sleep 2"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","outside.theres.a.boxcar.waiting"),
+	run_test("ref","target",[],["sleep 2"],"-d -f Makefile.queue -Q sge -H --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","that.was.my.favourite.dress"),
 
 	announce("COMMAND-LINE OPTIONS"),
 

@@ -196,12 +196,17 @@ shell_eval(Exec,CodeList) :-
 	shell_path(Sh),
 	working_directory(CWD,CWD),
         setup_call_cleanup(process_create(Sh,['-c',Exec],[stdout(pipe(Stream)),
-							  stderr(null),
+							  stderr(pipe(ErrStream)),
 							  cwd(CWD),
 							  process(Pid)]),
 			   (read_stream_to_codes(Stream,CodeList),
-			    process_wait(Pid,_Status)),
-			   close(Stream)).
+			    process_wait(Pid,Status)),
+			   ((Status = 0
+			     -> true
+			     ; (read_string(ErrStream,_,Err),
+				format("biomake: ~w",[Err]))),
+			    close(ErrStream),
+			    close(Stream))).
 
 shell_eval_str(Exec,Result) :-
         shell_eval(Exec,Rnl),

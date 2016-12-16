@@ -57,7 +57,7 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 	!,
 	write_script_file(T,Headers,ExecsWithCleanup,Opts,ScriptFilename),
 	format(string(QsubCmd),"~w ~w ~w ~w ~w ~w >~w",[QsubExec,QArgs,QsubArgs,DepArg,ExtraArgs,ScriptFilename,JobFilename]),
-	comment_report("Submitting job: ~w",[QsubCmd],SL,Opts),
+	verbose_report("Submitting job: ~w",[QsubCmd],SL,Opts),
 	shell(QsubCmd).
 
 qsub_rule_execs(Rule,[Chdir,Biomake],Opts) :-
@@ -127,7 +127,7 @@ qsub_kill(Engine,T,SL,Opts) :-
 	(get_opt(qdel_args,QdelArgs,Opts); QdelArgs = ""),
 	(get_opt(queue_args,QArgs,Opts); QArgs = ""),
 	format(string(QdelCmd),"~w ~w ~w ~w",[QdelExec,QArgs,QdelArgs,Id]),
-	comment_report("Killing previous job: ~w",[QdelCmd],SL,Opts),
+	verbose_report("Killing previous job: ~w",[QdelCmd],SL,Opts),
 	(shell(QdelCmd); true),
 	biomake_private_filename(T,Engine,JobFilename),
 	(exists_file(JobFilename) -> delete_file(JobFilename); true).
@@ -144,7 +144,7 @@ flush_queue_recursive(_,X,_,_) :-
 flush_queue_recursive(Engine,Dir,SL,Opts) :-
 	exists_directory(Dir),
 	!,
-	comment_report("Scanning ~w",[Dir],SL,Opts),
+	verbose_report("Scanning ~w",[Dir],SL,Opts),
 	directory_files(Dir,Files),
 	forall(member(File,Files),
 	       flush_queue_recursive(Engine,File,[Dir|SL],Opts)).

@@ -127,8 +127,10 @@ Var=Val
     Additional arguments for qdel (sge,pbs) or scancel (slurm)
 --flush,--qsub-flush <target or directory>
     Erase all jobs for given target/dir
+-d 
+    [developers] Print debugging messages. Equivalent to '--debug verbose'
 --debug MSG
-    [developers] Debugging messages. MSG can be build, pattern, makefile, md5...
+    [developers] Richer debugging messages. MSG can be verbose, bindrule, build, pattern, makefile, makeprog, md5...
 --trace PREDICATE
     [developers] Print debugging trace for given predicate
 --no-backtrace 
@@ -286,19 +288,21 @@ Now if we type...
     touch x.foo
     biomake x.baz
 
-...we get the following output, showing the tree structure of the dependencies:
+...we get something like the following output:
 
-    Checking dependencies: test.baz <-- [test.bar]
-        Checking dependencies: test.bar <-- [test.foo]
-            Nothing to be done for test.foo
-        Target test.bar not materialized - will rebuild if required
-        foo2bar x.foo > x.bar
-        test.bar is up to date
-    Target test.baz not materialized - will rebuild if required
-    bar2baz x.bar > x.baz
-    test.baz is up to date
+~~~~
+% Checking dependencies: x.baz <-- [x.bar]
+%  Checking dependencies: x.bar <-- [x.foo]
+%   Nothing to be done for x.foo
+%  Target x.bar not materialized - build required
+ foo2bar x.foo > x.bar
+%  x.bar built
+% Target x.baz not materialized - build required
+bar2baz x.bar > x.baz
+% x.baz built
+~~~~
 
-The syntax in the makeprog above is designed to be similar to what is
+The syntax in the makeprog above is designed to be similar to the automatic variable syntax
 already used in makefiles. You can bypass this and use Prolog
 variables. The following form is functionally equivalent:
 

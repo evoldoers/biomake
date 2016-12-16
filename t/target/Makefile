@@ -143,10 +143,10 @@ sort:
 	echo $(sort rabbit cow duck fox duck elephant) >$@
 
 dir:
-	echo $(dir a/bc/def/g) >$@
+	echo $(dir a/bc/def/g hij/k/l m/n/o/p/q) >$@
 
 notdir:
-	echo $(notdir a/bc/def/g) >$@
+	echo $(notdir a/bc/def/g hij/k/l m/n/o/p/q) >$@
 
 basename:
 	echo $(basename punk.rock classical.music thrash.metal) >$@
@@ -173,6 +173,11 @@ abspath:
 
 realpath:
 	echo $(realpath /this/file/does/not/exist) >$@
+
+FIRST_PERSON_SINGULAR_PRONOUN = i
+I_LOVE_PICKLES = $(wildcard ../dir/*)
+function_whose_args_are_both_expressions:
+	echo $(filter-out $(FIRST_PERSON_SINGULAR_PRONOUN), $(notdir $(I_LOVE_PICKLES))) >$@
 
 # computed vars
 x1 = y1

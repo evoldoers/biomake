@@ -24,7 +24,7 @@ makefile_function(Result,V) --> lb("subst"), xchr_arg(From,V), comma, xchr_arg(T
 	{ phrase(subst(From,To,Rc),Src),
 	  string_chars(Result,Rc) }.
 
-makefile_function(Result,V) --> lb("patsubst"), chr_arg(From), comma, chr_arg(To), comma, xlst_arg(Src,V), rb, !,
+makefile_function(Result,V) --> lb("patsubst"), xchr_arg(From,V), comma, xchr_arg(To,V), comma, xlst_arg(Src,V), rb, !,
 	{ phrase(patsubst_lr(FL,FR),From),
 	  phrase(patsubst_lr(TL,TR),To),
 	  patsubst_all(FL,FR,TL,TR,Src,R),
@@ -36,12 +36,12 @@ makefile_function(Result,V) --> lb("strip"), xlst_arg(L,V), rb, !,
 makefile_function(Result,V) --> lb("findstring"), xstr_arg(S,V), comma, xlst_arg(L,V), rb, !,
 	{ findstring(S,L,Result) }.
 
-makefile_function(Result,V) --> lb("filter"), chr_arg(P), comma, xlst_arg(L,V), rb, !,
+makefile_function(Result,V) --> lb("filter"), xchr_arg(P,V), comma, xlst_arg(L,V), rb, !,
 	{ phrase(patsubst_lr(PL,PR),P),
 	  filter(PL,PR,L,R),
 	  concat_string_list_spaced(R,Result) }.
 
-makefile_function(Result,V) --> lb("filter-out"), chr_arg(P), comma, xlst_arg(L,V), rb, !,
+makefile_function(Result,V) --> lb("filter-out"), xchr_arg(P,V), comma, xlst_arg(L,V), rb, !,
 	{ phrase(patsubst_lr(PL,PR),P),
 	  filter_out(PL,PR,L,R),
 	  concat_string_list_spaced(R,Result) }.
@@ -51,10 +51,10 @@ makefile_function(Result,V) --> lb("sort"), xlst_arg(L,V), rb, !,
 	  remove_dups(S,R),
 	  concat_string_list_spaced(R,Result) }.
 
-makefile_function(Result,V) --> lb("word"), int_arg(N), comma, xlst_arg(L,V), rb, !,
+makefile_function(Result,V) --> lb("word"), xnum_arg(N,V), comma, xlst_arg(L,V), rb, !,
 	{ nth_element(N,L,Result) }.
 
-makefile_function(Result,V) --> lb("wordlist"), int_arg(S), comma, int_arg(E), comma, xlst_arg(L,V), rb, !,
+makefile_function(Result,V) --> lb("wordlist"), xnum_arg(S,V), comma, xnum_arg(E,V), comma, xlst_arg(L,V), rb, !,
 	{ slice(S,E,L,Sliced),
 	  concat_string_list(Sliced,Result," ") }.
 
@@ -66,11 +66,13 @@ makefile_function(Result,V) --> lb("firstword"), xlst_arg([Result|_],V), rb, !.
 makefile_function(Result,V) --> lb("lastword"), xlst_arg(L,V), rb, !,
 	{ last_element(L,Result) }.
 
-makefile_function(Result,V) --> lb("dir"), xstr_arg(Path,V), rb, !,
-	{ file_directory_slash(Path,Result) }.
+makefile_function(Result,V) --> lb("dir"), xlst_arg(Paths,V), rb, !,
+	{ maplist(file_directory_slash,Paths,R),
+	  concat_string_list_spaced(R,Result) }.
 
-makefile_function(Result,V) --> lb("notdir"), xstr_arg(Path,V), rb, !,
-	{ file_base_name(Path,Result) }.
+makefile_function(Result,V) --> lb("notdir"), xlst_arg(Paths,V), rb, !,
+	{ maplist(file_base_name,Paths,R),
+	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("basename"), xlst_arg(Paths,V), rb, !,
 	{ maplist(basename,Paths,R),
@@ -109,7 +111,7 @@ makefile_function(Result,V) --> lb("call"), xvar_arg(UserFunc,V), opt_whitespace
 	  eval_var(UserFunc,Result,v(V1,V2,V3,BL)) }.
 
 makefile_function(Result,V) --> lb("shell"), xstr_arg(Exec,V), rb, !,
-        { shell_eval_str(Exec,Result) }.
+	{ shell_eval_str(Exec,Result) }.
 
 makefile_function(Result,V) --> lb("foreach"), var_arg(Var), opt_whitespace, comma, xlst_arg(List,V), comma, str_arg(Text), rb, !,
         { makefile_foreach(Var,List,Text,R,V),
@@ -186,7 +188,7 @@ str_arg(S) --> opt_whitespace, str_arg_outer(S).
 str_arg_outer(S) --> ['('], !, str_arg_inner(Si), [')'], str_arg_outer(Rest), {concat_string_list(["(",Si,")",Rest],S)}.
 str_arg_outer(S) --> string_from_chars(Start,"(),"), !, str_arg_outer(Rest), {string_concat(Start,Rest,S)}.
 str_arg_outer("") --> !.
-str_arg_inner(S) --> ['('], !, str_arg_inner(Si), [')'], {concat_string_list(["(",Si,")"],S)}.
+str_arg_inner(S) --> ['('], !, str_arg_inner(Si), [')'], str_arg_inner(Rest), {concat_string_list(["(",Si,")",Rest],S)}.
 str_arg_inner(S) --> string_from_chars(Start,"()"), !, str_arg_inner(Rest), {string_concat(Start,Rest,S)}.
 str_arg_inner("") --> !.
 
@@ -235,11 +237,6 @@ makefile_or([_|Cs],Result,V) :- makefile_or(Cs,Result,V).
 makefile_and([C],Result,V) :- expand_vars(C,Result,V), !.
 makefile_and([C|Cs],Result,V) :- expand_vars(C,X,V), X \= "", !, makefile_and(Cs,Result,V).
 makefile_and(_,"",_).
-
-int_arg(N) --> opt_whitespace, int_chars(C), {C\=[],number_chars(N,C)}.
-int_chars([]) --> [].
-int_chars([C|Cs]) --> int_char(C), int_chars(Cs).
-int_char(X) --> [X],{X@>='0',X@=<'9'},!.    % foo('0') %
 
 subst(Cs,Ds,Result) --> Cs, !, subst(Cs,Ds,Rest), {append(Ds,Rest,Result)}.
 subst(Cs,Ds,[C|Rest]) --> [C], !, subst(Cs,Ds,Rest).
