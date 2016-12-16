@@ -47,6 +47,7 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 	(get_opt(qsub_args,QsubArgs,Opts); QsubArgs = ""),
 	(get_opt(queue_args,QArgs,Opts); QArgs = ""),
 	qsub_extra_args(Engine,ExtraArgs),
+	qsub_get_var_args(VarArgs,Rule,Opts),
 	biomake_private_filename_dir_exists(T,Engine,JobFilename),
 	format(string(RemoveJobFile),"rm ~w",[JobFilename]),
 	qsub_rule_execs(Rule,Es,Opts),
@@ -56,7 +57,7 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 	qsub_dep_arg(Engine,DepJobs,DepArg),
 	!,
 	write_script_file(T,Headers,ExecsWithCleanup,Opts,ScriptFilename),
-	format(string(QsubCmd),"~w ~w ~w ~w ~w ~w >~w",[QsubExec,QArgs,QsubArgs,DepArg,ExtraArgs,ScriptFilename,JobFilename]),
+	format(string(QsubCmd),"~w ~w ~w ~w ~w ~w ~w >~w",[QsubExec,QArgs,QsubArgs,VarArgs,DepArg,ExtraArgs,ScriptFilename,JobFilename]),
 	verbose_report("Submitting job: ~w",[QsubCmd],SL,Opts),
 	shell(QsubCmd).
 
@@ -76,6 +77,9 @@ qsub_rule_execs(Rule,Es,Opts) :-
 
 qsub_use_biomake(Opts) :-
 	get_opt(qsub_use_biomake,true,Opts).
+
+qsub_get_var_args(QA,Rule,Opts) :-
+        bindvar_rule('QsubArgs',Rule,Opts,QA).
 
 qsub_job_ids(Engine,[D|Ds],[N|Ns]) :-
 	qsub_job_id(Engine,D,N),

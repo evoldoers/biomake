@@ -48,12 +48,14 @@
            rule_target/3,
            rule_dependencies/3,
            rule_execs/3,
+           rule_vars/6,
 
 	   run_execs_now/3,
 	   report_run_exec/3,
 	   update_hash/3,
 
 	   bindvar/3,
+           bindvar_rule/4,
 	   expand_vars/2,
 	   expand_vars/3
            ]).
@@ -380,8 +382,7 @@ rule_dependencies(rb(_,DL,_,_,_),DL,_Opts).
 rule_dep_goal(rb(_,_,DepGoal,_,_),DepGoal,_Opts).
 rule_execs(rb(_,_,_,X,_),X,_Opts) :- !.
 rule_execs(rb(_,_,_,X,_),_,_Opts) :- throw(error(no_exec(X))).
-rule_vars(rb(_,_,_,_,V),V,_Opts).
-
+rule_vars(rb(_,_,_,_,v(S,T,D,BL)),S,T,D,BL,_Opts).
 
 % internal tracking of build order
 % a bit hacky to use global assertions/retractions for this
@@ -1093,19 +1094,6 @@ varlabel(A) --> ['{'],makefile_var_atom_from_chars(A),['}'].
 bracketed(L) --> ['('],L,[')'].
 bracketed(L) --> ['{'],L,['}'].
 
-bindvar(VL,v(S,T,D,BL),X) :- bindauto(VL,v(S,T,D,BL),X), !.
-bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
-bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
-bindvar(VL,v(_,_,_,_),X) :- getenv(VL,X).
-bindvar(VL,v(V1,V2,V3,BL),X) :-
-	global_lazy_binding(VL,Y),
-	append(BL,[VL=VL],BL2),
-	normalize_pattern(Y,Z,v(V1,V2,V3,BL2)),
-	unwrap_t(Z,X),
-	!.
-bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
-bindvar(_,v(_,_,_,_),'') :- !.  % default: bind to empty string
-
 bindauto('%',v(X,_,_,_),X) :- !.
 bindauto('*',v(X,_,_,_),X) :- !.
 bindauto('@',v(_,X,_,_),X) :- !.
@@ -1120,6 +1108,38 @@ bindauto('<D',v(_,_,[X|_],_),call(file_directory_name,X)) :- !.
 bindauto('^F',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_base_name,X))) :- !.
 bindauto('^D',v(_,_,X,_),call(concat_string_list_spaced,call(maplist,file_directory_name,X))) :- !.
 
+% bind variables, creating new variable if doesn't exist yet
+bindvar(VL,v(S,T,D,BL),X) :- bindauto(VL,v(S,T,D,BL),X), !.
+bindvar(VL,v(_,_,_,_),X) :- global_cmdline_binding(VL,X),!.
+bindvar(VL,v(_,_,_,_),X) :- global_simple_binding(VL,X),!.
+bindvar(VL,v(_,_,_,_),X) :- getenv(VL,X).
+bindvar(VL,v(V1,V2,V3,BL),X) :-
+	global_lazy_binding(VL,Y),
+	append(BL,[VL=VL],BL2),
+	normalize_pattern(Y,Z,v(V1,V2,V3,BL2)),
+	unwrap_t(Z,X),
+	!.
+bindvar(VL,v(_,_,_,BL),X) :- member(VL=X,BL),!.
+bindvar(_,v(_,_,_,_),'') :- !.  % default: bind to empty string
+
+% bind variables WITHOUT adding anything new
+bindvar_rule(VL,_Rule,_Opts,X) :- global_cmdline_binding(VL,X), !.
+bindvar_rule(VL,_Rule,_Opts,X) :- global_simple_binding(VL,X), !.
+bindvar_rule(VL,_Rule,_Opts,X) :- getenv(VL,X), !.
+bindvar_rule(VL,Rule,Opts,X) :-
+	rule_vars(Rule,V1,V2,V3,BL,Opts),
+	global_lazy_binding(VL,Y),
+	append(BL,[VL=VL],BL2),
+	normalize_pattern(Y,Z,v(V1,V2,V3,BL2)),
+	unwrap_t(Z,X),
+	!.
+bindvar_rule(VL,Rule,Opts,X) :-
+	rule_vars(Rule,_,_,_,BL,Opts),
+        member(VL=X,BL),
+        (var(X) -> X = ''; true),
+	!.
+bindvar_rule(_,_,_,'').
+
 % debugging variable binding
 bindvar_debug(VL,V,Var) :-
     debug(pattern,"binding ~w",[VL]),
@@ -1130,4 +1150,3 @@ bindvar_debug(VL,V,Var) :-
 show_global_bindings :-
     forall(global_binding(Var,Val),
 	   format("global binding: ~w = ~w\n",[Var,Val])).
-    

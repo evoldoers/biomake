@@ -16,6 +16,10 @@ while (@ARGV && $ARGV[0] =~ /^-/) {
 	}
     } elsif ($arg eq '--fake-arg') {
 	shift;
+    } elsif ($arg eq '--echo') {
+	my $text = shift;
+	my $file = shift;
+	system "echo $text >$file";
     }
 }
 

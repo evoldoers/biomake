@@ -408,8 +408,23 @@ Biomake supports most of the functionality of GNU Make, including
 - the [include](https://www.gnu.org/software/make/manual/html_node/Include.html) directive
 - various other quirks of GNU Make syntax e.g. single-line recipes, forced rebuilds
 
-Differences from GNU Make
--------------------------
+Currently unsupported features of GNU Make
+------------------------------------------
+
+The following features of GNU Make are not (yet) implemented:
+
+- [Order-only prerequisites](https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html)
+- [Wildcards in dependency lists](https://www.gnu.org/software/make/manual/html_node/Wildcards.html)
+- [Phony targets](https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html)
+- Most of the [special built-in targets](https://www.gnu.org/software/make/manual/html_node/Special-Targets.html) (exceptions: `.NOTPARALLEL`, `.ONESHELL`)
+- [Multiple rules per target](https://www.gnu.org/software/make/manual/html_node/Multiple-Rules.html)
+- [Static pattern rules](https://www.gnu.org/software/make/manual/html_node/Static-Pattern.html)
+- [Double-colon rules](https://www.gnu.org/software/make/manual/html_node/Double_002dColon.html)
+
+Please [submit a GitHub issue](https://github.com/evoldoers/biomake/issues) if any of these are important to you.
+
+Other differences from GNU Make
+-------------------------------
 
 There are slight differences in the way variables are expanded, which arise from the fact that Biomake
 treats variable expansion as a post-processing step (part of the language) rather than a pre-processing step (which is how GNU Make does it).
@@ -505,6 +520,10 @@ There are several queueing engines currently supported:
 
 For Sun Grid Engine, PBS and SLURM, the paths to the relevant job control executables, and any arguments to those executables
 (such as the name of the queue that jobs should be run on), can be controlled using various command-line arguments.
+In particular, the `--qsub-args` command-line option (applying to all recipes)
+and the `QsubArgs` Prolog variable (on a per-recipe basis)
+can be used to pass parameters such as the queue name.
+
 
 More
 ----

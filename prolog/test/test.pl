@@ -213,6 +213,7 @@ test :-
 	run_test("ref","target",[],["sleep 2"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","outside.theres.a.boxcar.waiting"),
 	run_test("ref","target",[],["sleep 2"],"-d -f Makefile.queue -Q sge -H --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","that.was.my.favourite.dress"),
 	run_test("ref","target",[],["sleep 2"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel --queue-args '--fake-arg dummy'","walk.right.through.the.door"),
+	run_test("ref","target",["rm test_file"],["sleep 2"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","your-own-personal-jesus"),
 
 	announce("COMMAND-LINE OPTIONS"),
 
