@@ -331,6 +331,7 @@ rebuild_required(T,DL,SL,Opts) :-
         verbose_report('Target ~w does not have an up-to-date checksum - rebuild required',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         get_opt(always_make,true,Opts),
+        \+ build_count(T,_),  % don't always_make the same target twice
         !,
         verbose_report('Specified --always-make; rebuild required for target ~w',[T],SL,Opts).
 
