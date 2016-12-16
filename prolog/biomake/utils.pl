@@ -201,10 +201,10 @@ shell_eval(Exec,CodeList) :-
 							  process(Pid)]),
 			   (read_stream_to_codes(Stream,CodeList),
 			    process_wait(Pid,Status)),
-			   ((Status = 0
+			   ((Status = exit(0)
 			     -> true
 			     ; (read_string(ErrStream,_,Err),
-				format("biomake: ~w",[Err]))),
+				format("biomake: ~w~n",[Err]))),
 			    close(ErrStream),
 			    close(Stream))).
 

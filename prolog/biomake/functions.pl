@@ -95,7 +95,8 @@ makefile_function(Result,V) --> lb("join"), xlst_arg(Prefixes,V), comma, xlst_ar
 	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("wildcard"), xstr_arg(W,V), rb, !,
-	{ expand_file_name(W,R),
+	{ expand_file_name(W,Rx),
+	  include(exists_file,Rx,R),
 	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("abspath"), xstr_arg(Path,V), rb, !,

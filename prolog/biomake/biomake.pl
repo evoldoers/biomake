@@ -413,7 +413,10 @@ run_execs_and_update(Rule,SL,Opts) :-
     rule_target(Rule,T,Opts),
     rule_execs(Rule,Execs,Opts),
     forall(member(Exec,Execs),
-           report('~w',[Exec],SL,Opts)),
+	   (string_chars(Exec,['@'|EC])
+	    -> (string_chars(ES,EC),
+		report('~w',[ES],SL,Opts))
+	    ; report('~w',[Exec],SL,Opts))),
     flag_as_rebuilt(T).
 
 run_execs_and_update(Rule,SL,Opts) :-
@@ -428,7 +431,7 @@ dispatch_run_execs(Rule,SL,Opts) :-
         rule_dependencies(Rule,DL,Opts),
 	format(string(Cmd),"touch ~w",[T]),
 	shell(Cmd),
-	(get_opt(silent,true,Opts) -> true; report('~w',[Cmd],SL,Opts)),
+	(running_silent(Opts) -> true; report('~w',[Cmd],SL,Opts)),
 	update_hash(T,DL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
 	get_opt(queue,Q,Opts),
@@ -479,7 +482,6 @@ run_exec(Exec,SL,Opts) :-
 	string_chars(Silent,SilentChars),
 	silent_run_exec(Silent,SL,Opts).
 run_exec(Exec,SL,Opts) :-
-	get_opt(silent,true,Opts),
 	silent_run_exec(Exec,SL,Opts).
 run_exec(Exec,SL,Opts) :-
 	report_run_exec(Exec,SL,Opts).
@@ -487,6 +489,10 @@ run_exec(Exec,SL,Opts) :-
 report_run_exec(Exec,SL,Opts) :-
         report('~w',[Exec],SL,Opts),
 	silent_run_exec(Exec,SL,Opts).
+
+running_silent(Opts) :-
+        get_opt(silent,true,Opts),
+        \+ get_opt(dry_run,true,Opts).
 
 silent_run_exec(Exec,SL,Opts) :-
         get_time(T1),
@@ -794,6 +800,7 @@ set_default_target(_) :-
 	!.
 set_default_target([T|_]) :-
 	expand_vars_head(T,Tx),
+	\+ string_chars(T,['.'|_]),
 	equal_as_strings(T,Tx),  % only set default target if T contains no variables
 	!,
 	debug(makeprog,"Setting default target to ~s",[Tx]),

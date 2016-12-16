@@ -166,6 +166,9 @@ join:
 wildcard:
 	echo $(wildcard ../dir/*) >$@
 
+wildcard_nonexistent:
+	echo $(wildcard ../dir/this_file_does_not_exist) >$@
+
 abspath:
 	echo $(abspath /usr/share/../lib) >$@
 	echo $(abspath /etc//hosts) >>$@

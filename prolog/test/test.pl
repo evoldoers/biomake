@@ -146,6 +146,7 @@ test :-
 	run_test("addprefix"),
 	run_test("join"),
 	run_test("wildcard"),
+	run_test("wildcard_nonexistent"),
 	run_test("abspath"),
 	run_test("realpath"),
 
