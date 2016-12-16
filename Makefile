@@ -17,7 +17,7 @@ test-%:
 	$(SWIPL) -q -t "test($*)" -l prolog/test/test
 
 clean:
-	git clean -fd t/target
+	git clean -fd t/target || true
 
 symlink:
 	ln -sf $(MAKEFILE_DIR)bin/biomake $(bindir)/biomake
