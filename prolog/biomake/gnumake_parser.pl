@@ -168,6 +168,7 @@ include_makefiles(Active,CurrentFile,Rules,OptsOut,OptsIn) -->
 	{append(R,Next,Rules)}.
 
 include_gnu_makefile(F,CurrentFile,R,Opts,OptsIn) :-
+        expand_vars(F,XF),
 	(bagof(Dslash,
 	       (member(include_dir(D),OptsIn),
 	        format(atom(Dslash),"~w/",[D])),
@@ -176,7 +177,7 @@ include_gnu_makefile(F,CurrentFile,R,Opts,OptsIn) :-
 	reverse(RevDirs,Dirs),
 	file_directory_name(CurrentFile,CurrentFileDir),
 	format(atom(CurrentFileDirSlash),"~w/",[CurrentFileDir]),
-	search_include_dirs(F,CurrentFile,['','./',CurrentFileDirSlash|Dirs],R,Opts,OptsIn).
+	search_include_dirs(XF,CurrentFile,['','./',CurrentFileDirSlash|Dirs],R,Opts,OptsIn).
 
 search_include_dirs(F,CurrentFile,[],_,_,_) :-
 	format(string(Err),"Couldn't find makefile ~w included from ~w",[F,CurrentFile]),

@@ -210,7 +210,8 @@ shell_eval(Exec,CodeList) :-
 
 shell_eval_str(Exec,Result) :-
         shell_eval(Exec,Rnl),
-	newlines_to_spaces(Rnl,Rspc),
+	chomp(Rnl,Rchomp),
+	newlines_to_spaces(Rchomp,Rspc),
 	string_codes(Result,Rspc).
 
 shell_quote(S,QS) :-
@@ -222,6 +223,10 @@ shell_quote(S,QS) :-
 escape_quotes([]) --> [].
 escape_quotes(['\'','"','\'','"','\''|Cs]) --> ['\''], !, escape_quotes(Cs).  % ' --> '"'"'
 escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
+
+chomp([],Out) :- !.
+chomp([0'\n],Out) :- !.
+chomp([C|In],[C|Out]) :- chomp(In,Out).
 
 newlines_to_spaces([],[]).
 newlines_to_spaces([0'\n|N],[0'\s|S]) :- newlines_to_spaces(N,S).
