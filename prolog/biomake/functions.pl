@@ -111,7 +111,7 @@ makefile_function(Result,V) --> lb("call"), xvar_arg(UserFunc,V), opt_whitespace
 	  eval_var(UserFunc,Result,v(V1,V2,V3,BL)) }.
 
 makefile_function(Result,V) --> lb("shell"), xstr_arg(Exec,V), rb, !,
-	{ shell_eval_str(Exec,Result), format("Result='~w'~n",[Result]) }.
+	{ shell_eval_str(Exec,Result) }.
 
 makefile_function(Result,V) --> lb("foreach"), var_arg(Var), opt_whitespace, comma, xlst_arg(List,V), comma, str_arg(Text), rb, !,
         { makefile_foreach(Var,List,Text,R,V),

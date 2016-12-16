@@ -224,8 +224,8 @@ escape_quotes([]) --> [].
 escape_quotes(['\'','"','\'','"','\''|Cs]) --> ['\''], !, escape_quotes(Cs).  % ' --> '"'"'
 escape_quotes([C|Cs]) --> [C], !, escape_quotes(Cs).
 
-chomp([],Out) :- !.
-chomp([0'\n],Out) :- !.
+chomp([],_) :- !.
+chomp([0'\n],_) :- !.
 chomp([C|In],[C|Out]) :- chomp(In,Out).
 
 newlines_to_spaces([],[]).

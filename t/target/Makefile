@@ -227,7 +227,7 @@ call:
 	$(call FUNC,ian,tidy) >>$@
 
 shell:
-	echo $(shell echo hello world) >$@
+	echo '$(shell echo hello world)' >$@
 
 shell_assign != echo hello there
 shell_assign:
