@@ -332,6 +332,9 @@ xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(
 makefile_special_target(queue(none),Lines) -->
     makefile_recipe(rule([".NOTPARALLEL"],_,_),Lines).
 
+makefile_special_target(oneshell(true),Lines) -->
+    makefile_recipe(rule([".ONESHELL"],_,_),Lines).
+
 makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     makefile_targets(Head),
     opt_linebreak,
