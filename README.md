@@ -537,6 +537,12 @@ In particular, the `--qsub-args` command-line option (applying to all recipes)
 and the `QsubArgs` Prolog variable (on a per-recipe basis)
 can be used to pass parameters such as the queue name.
 
+Here's an example of using `QsubArgs`:
+
+~~~~
+my_target: my_dependency { QsubArgs = '--cores-per-socket=4' }
+    do_something >$@
+~~~~
 
 More
 ----
