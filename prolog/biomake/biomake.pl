@@ -926,8 +926,18 @@ expand_deps(Deps,Result,V) :-
     normalize_patterns(Deps,NormDeps,V),
     maplist(unwrap_t,NormDeps,ExpandedDeps),
     maplist(split_spaces,ExpandedDeps,DepLists),
-    flatten_trim(DepLists,Result).
+    flatten_trim(DepLists,FlatDeps),
+    maplist(apply_wildcards,FlatDeps,LumpyWild),
+    flatten_trim(LumpyWild,Result).
 
+apply_wildcards(F,L) :-
+    atom_chars(F,C),
+    member('*',C),
+    !,
+    expand_file_name(F,All),
+    include(exists_file,All,L).
+apply_wildcards(F,F).
+	  
 expand_execs(Execs,Result,V) :-
     normalize_patterns_body(Execs,NormExecs,V),
     maplist(unwrap_t,NormExecs,ExpandedExecs),

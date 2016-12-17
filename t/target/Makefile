@@ -94,6 +94,12 @@ split_recipe_lines : ; @(echo 'hello \
 	world'; echo "hello \
     world") >$@
 
+wdep1 wdep2:
+	touch $@
+
+wildcard_deps: wdep1 ../dir/* wdep2
+	echo $^ >$@
+
 # Functions
 firstword:
 	echo $(firstword $S) >$@

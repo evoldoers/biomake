@@ -406,6 +406,7 @@ Biomake supports most of the functionality of GNU Make, including
 - many of the same [command-line options](https://www.gnu.org/software/make/manual/html_node/Options-Summary.html)
 - [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html) and [conditional functions](https://www.gnu.org/software/make/manual/html_node/Conditional-Functions.html)
 - the [include](https://www.gnu.org/software/make/manual/html_node/Include.html) directive
+- [wildcards in dependency lists](https://www.gnu.org/software/make/manual/html_node/Wildcards.html)
 - various other quirks of GNU Make syntax e.g. single-line recipes, forced rebuilds
 
 Currently unsupported features of GNU Make
@@ -414,9 +415,9 @@ Currently unsupported features of GNU Make
 The following features of GNU Make are not (yet) implemented:
 
 - [Order-only prerequisites](https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html)
-- [Wildcards in dependency lists](https://www.gnu.org/software/make/manual/html_node/Wildcards.html)
 - [Phony targets](https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html)
 - Most of the [special built-in targets](https://www.gnu.org/software/make/manual/html_node/Special-Targets.html) (exceptions: `.NOTPARALLEL`, `.ONESHELL`)
+    - note that `.SECONDARY` is implicit: Biomake never removes intermediate files
 - [Multiple rules per target](https://www.gnu.org/software/make/manual/html_node/Multiple-Rules.html)
 - [Static pattern rules](https://www.gnu.org/software/make/manual/html_node/Static-Pattern.html)
 - [Double-colon rules](https://www.gnu.org/software/make/manual/html_node/Double_002dColon.html)
