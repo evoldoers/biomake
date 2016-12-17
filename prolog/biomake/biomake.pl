@@ -226,7 +226,7 @@ can_build_dep(T,SL,Opts) :-
 build_deps(_,_,Opts) :- get_opt(no_deps,true,Opts), !.
 build_deps([],_,_).
 build_deps([T|TL],SL,Opts) :-
-        build(T,SL,Opts),
+        (build_count(T,_); build(T,SL,Opts)),  % never build targets twice
         build_deps(TL,SL,Opts).
 
 % Special vars
@@ -333,7 +333,6 @@ rebuild_required(T,DL,SL,Opts) :-
         verbose_report('Target ~w does not have an up-to-date checksum - rebuild required',[T],SL,Opts).
 rebuild_required(T,_,SL,Opts) :-
         get_opt(always_make,true,Opts),
-        \+ build_count(T,_),  % don't always_make the same target twice
         !,
         verbose_report('Specified --always-make; rebuild required for target ~w',[T],SL,Opts).
 
