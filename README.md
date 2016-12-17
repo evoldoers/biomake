@@ -415,12 +415,23 @@ Currently unsupported features of GNU Make
 The following features of GNU Make are not (yet) implemented:
 
 - [Order-only prerequisites](https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html)
+- [Directory search](https://www.gnu.org/software/make/manual/html_node/Directory-Search.html)
 - [Phony targets](https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html)
-- Most of the [special built-in targets](https://www.gnu.org/software/make/manual/html_node/Special-Targets.html) (exceptions: `.NOTPARALLEL`, `.ONESHELL`)
-    - note that `.SECONDARY` is implicit: Biomake never removes intermediate files
+- Most of the [special built-in targets](https://www.gnu.org/software/make/manual/html_node/Special-Targets.html)
+    - `.NOTPARALLEL` is implemented
+    - `.ONESHELL` is implemented
+    - `.SECONDARY` is implicit and `.INTERMEDIATE` is unsupported: Biomake never removes intermediate files
+    - `.PRECIOUS` is implicit for all targets, and `.DELETE_ON_ERROR` is unsupported: Biomake does not delete files on interruption or error
+    - `.SECONDEXPANSION` is implicit
+    - `.SUFFIXES` is unsupported (or implicit with no dependencies), since suffix rules are unsupported
 - [Multiple rules per target](https://www.gnu.org/software/make/manual/html_node/Multiple-Rules.html)
 - [Static pattern rules](https://www.gnu.org/software/make/manual/html_node/Static-Pattern.html)
 - [Double-colon rules](https://www.gnu.org/software/make/manual/html_node/Double_002dColon.html)
+- [Suffix rules](https://www.gnu.org/software/make/manual/html_node/Suffix-Rules.html)
+- Modifiers in recipe lines:
+    - The [- sign to suppress errors in recipes](https://www.gnu.org/software/make/manual/html_node/Errors.html)
+    - The [+ sign to force execution during dry runs](https://www.gnu.org/software/make/manual/html_node/Instead-of-Execution.html)
+    - The [@ sign to execute recipe lines silently](https://www.gnu.org/software/make/manual/html_node/Echoing.html) _is_ supported
 
 Please [submit a GitHub issue](https://github.com/evoldoers/biomake/issues) if any of these are important to you.
 
@@ -461,6 +472,7 @@ Detailed build logic
 --------------------
 
 The build logic for biomake should _usually_ yield the same results as GNU Make, though there may be subtle differences.
+The GNU Make [algorithm](https://www.gnu.org/software/make/manual/html_node/Implicit-Rule-Search.html) differs in the details.
 
 Before attempting to build a target `T` using a rule `R`, Biomake performs the following steps:
 - It tries to match the target name `T` to one of the target names in `R`
