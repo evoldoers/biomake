@@ -452,7 +452,7 @@ but expands variables in recipe bodies later.
 This can cause differences between GNU and Biomake in situations where variables change value throughout the Makefile.
 These situations are usually counter-intuitive anyway, as the following example illustrates.
 This Makefile, which might naively be expected to print `hello everybody`,
-in fact prints `hello world` when run with GNU Make, but `goodbye world` when using Biomake:
+in fact prints `hello world` when run with `make test`, but `goodbye world` when run with `biomake test`:
 
 ~~~~
 A = hello
