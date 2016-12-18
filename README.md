@@ -475,7 +475,7 @@ It still gives the same results, though: `hello world` when run with `make test`
 A = hello
 B = everybody
 
-ifeq ($A,hello)
+ifeq ($B,everybody)
 test: $A
 	@echo $B
 else
