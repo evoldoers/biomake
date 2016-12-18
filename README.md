@@ -439,14 +439,14 @@ Other differences from GNU Make
 -------------------------------
 
 There are slight differences in the way variables are expanded, which arise from the fact that Biomake
-treats variable expansion as a post-processing step (performed at the last possible moment) rather than a pre-processing step (which is how GNU Make does it).
+treats variable expansion as a post-processing step (performed at the last possible moment) rather than a pre-processing step (which is how GNU Make does it - at least partly).
 
-Specifically, Biomake parses the Makefile, reading all variable and recipe declarations into memory, and only when the recipes are executed are variables expanded.
+Specifically, Biomake parses the Makefile, reading all variable and recipe declarations into memory, and only when the build begins are variables expanded.
 The only exception to this is when variables are used in [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html),
 to control which parts of the Makefile are actually read:
 these variables are expanded at parse-time.
 
-In contrast, GNU Make expands variables in dependency lists at parse time (along with conditional syntax as it parses the Makefile,
+In contrast, GNU Make expands variables in dependency lists at parse time (along with conditional syntax),
 but expands variables in recipe bodies later.
 
 This can cause differences between GNU and Biomake in situations where variables change value throughout the Makefile.
