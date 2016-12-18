@@ -468,6 +468,28 @@ hello goodbye:
 	@echo $@
 ~~~~
 
+This example gets even more counterintuitive if we wrap the `test` recipe with conditional syntax.
+It still gives the same results, though: `hello world` when run with `make test`, and `goodbye world` when run with `biomake test`.
+
+~~~~
+A = hello
+B = everybody
+
+ifeq ($A,hello)
+test: $A
+	@echo $B
+else
+test:
+	@echo Curioser and curioser
+endif
+
+A = goodbye
+B = world
+
+hello goodbye:
+	@echo $@
+~~~~
+
 Another consequence is that, when using Biomake, variable expansions must be aligned with the overall syntactic structure; they cannot span multiple syntactic elements.
 As a concrete example, GNU Make allows this sort of thing:
 
