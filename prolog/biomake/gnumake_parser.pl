@@ -434,7 +434,6 @@ exec_line([],0) --> call(eos), !.
 exec_line([0'\\,0'\n|Cs],Lplus1) --> "\\\n\t", !, exec_line(Cs,L), {Lplus1 is L + 1}.
 exec_line([0'\\,0'\n|Cs],Lplus1) --> "\\\n", !, exec_line(Cs,L), {Lplus1 is L + 1}.
 exec_line([],1) --> "\n", !.
-exec_line([],1) --> comment.
 exec_line([C|Cs],L) --> [C], exec_line(Cs,L).
 exec_line_as_string(S,L) --> exec_line(C,L), {string_codes(S,C)}.
 
@@ -443,6 +442,7 @@ line([0'\s|Cs],Lplus1) --> "\\\n", !, line(Cs,L), {Lplus1 is L + 1}.
 line([],1) --> "\n", !.
 line([],1) --> comment.
 line([C|Cs],L) --> [C], line(Cs,L).
+line_as_string("",1) --> comment.
 line_as_string(S,L) --> line(C,L), {string_codes(S,C)}.
 line_as_string(S) --> line_as_string(S,_).
 
