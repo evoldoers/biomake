@@ -442,7 +442,6 @@ line([0'\s|Cs],Lplus1) --> "\\\n", !, line(Cs,L), {Lplus1 is L + 1}.
 line([],1) --> "\n", !.
 line([],1) --> comment.
 line([C|Cs],L) --> [C], line(Cs,L).
-line_as_string("",1) --> comment.
 line_as_string(S,L) --> line(C,L), {string_codes(S,C)}.
 line_as_string(S) --> line_as_string(S,_).
 
