@@ -8,7 +8,16 @@
 % MAIN PROGRAM
 % ----------------------------------------
 
+
 main :-
+        % first 'prime' debugger
+        % see https://github.com/evoldoers/biomake/issues/29
+        debug(verbose,'',[]),
+        debug(md5,'',[]),
+        debug(bindrule,'',[]),
+        debug(build,'',[]),
+        debug(pattern,'',[]),
+        
         current_prolog_flag(argv, Arguments),
         (append(_SytemArgs, [--|Args], Arguments) ; =(Arguments,Args)),
         !,
