@@ -478,6 +478,11 @@ run_execs([E|Es],SL,Opts) :-
         run_execs(Es,SL,Opts).
 
 run_exec(Exec,SL,Opts) :-
+        string_chars(Exec,['-'|RealExecChars]),
+	!,
+	string_chars(RealExec,RealExecChars),
+	run_exec(RealExec,SL,[keep_going_on_error(true)|Opts]).
+run_exec(Exec,SL,Opts) :-
 	string_chars(Exec,['@'|SilentChars]),
 	!,
 	string_chars(Silent,SilentChars),
@@ -515,7 +520,6 @@ handle_error(Fmt,Args,SL,Opts) :-
 
 handle_error(Opts) :-
         get_opt(keep_going_on_error,true,Opts),
-        \+ get_opt(stop_on_error,true,Opts),
         !.
 handle_error(_) :-
         halt_error.

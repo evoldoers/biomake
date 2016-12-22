@@ -186,7 +186,7 @@ write_script_file_contents(T,Headers,Execs,_Opts,ScriptFilename) :-
 	shell_path(Sh),
 	maplist(shell_comment,Headers,Comments),
 	append(Execs,Comments,Contents),
-	concat_string_list(Contents,Str,"\n"),
+	concat_string_list(Contents,Str," &&\n"),
 	format(IO,"#!~w~ncd ~w~n~w~n",[Sh,CWD,Str]),
 	close(IO),
 	format(string(Chmod),"chmod +x ~w",[ScriptFilename]),

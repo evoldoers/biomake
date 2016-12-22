@@ -256,7 +256,7 @@ simple_arg('-k',keep_going_on_error(true)).
 arg_alias('-k','--keep-going').
 arg_info('-k','','Keep going after error').
 
-simple_arg('-S',stop_on_error(true)).
+simple_arg('-S',keep_going_on_error(false)).
 arg_alias('-S','--no-keep-going').
 arg_alias('-S','--stop').
 arg_info('-S','','Stop after error').

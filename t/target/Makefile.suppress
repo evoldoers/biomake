@@ -1,0 +1,6 @@
+# -*- makefile-gmake -*-
+
+suppress_errors_%:
+	echo this should work >$@
+	-nonexistent_command will not work
+	echo so should this >>$@

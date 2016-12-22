@@ -70,6 +70,8 @@ test :-
 	run_failure_test("--no-backtrace -f Makefile.nl","escaped_nl"),
 	run_test("--no-backtrace -f Makefile.nl2","escaped_nl2"),
 	run_test("wildcard_deps"),
+	run_test("-f Makefile.suppress","suppress_errors_temporarily"),
+	run_test("-f Makefile.suppress -Q test","suppress_errors_temporarily_in_script"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),

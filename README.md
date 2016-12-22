@@ -428,9 +428,9 @@ The following features of GNU Make are not (yet) implemented:
 - [Static pattern rules](https://www.gnu.org/software/make/manual/html_node/Static-Pattern.html)
 - [Double-colon rules](https://www.gnu.org/software/make/manual/html_node/Double_002dColon.html)
 - [Suffix rules](https://www.gnu.org/software/make/manual/html_node/Suffix-Rules.html)
-- Modifiers in recipe lines:
-    - The [- sign to suppress errors in recipes](https://www.gnu.org/software/make/manual/html_node/Errors.html)
-    - The [+ sign to force execution during dry runs](https://www.gnu.org/software/make/manual/html_node/Instead-of-Execution.html)
+- Modifiers in recipe lines are only partially supported:
+    - The [+ sign to force execution during dry runs](https://www.gnu.org/software/make/manual/html_node/Instead-of-Execution.html) is _not_ supported
+    - The [- sign to suppress errors in recipes](https://www.gnu.org/software/make/manual/html_node/Errors.html) _is_ supported
     - The [@ sign to execute recipe lines silently](https://www.gnu.org/software/make/manual/html_node/Echoing.html) _is_ supported
 
 Please [submit a GitHub issue](https://github.com/evoldoers/biomake/issues) if any of these are important to you.

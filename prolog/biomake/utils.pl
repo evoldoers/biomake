@@ -116,7 +116,7 @@ concat_string_list([S],S,_).
 concat_string_list([L|Ls],F,Sep) :- concat_string_list(Ls,R,Sep), string_concat(L,Sep,Lsep), string_concat(Lsep,R,F).
 
 split_spaces(S,L) :-
-	split_string(S," "," ",L).
+	split_string(S," \t"," \t",L).
 
 split_newlines(S,L) :-
         string_codes(S,C),
@@ -170,6 +170,16 @@ shell_wrap(Exec,ShellExec) :-
 	shell_quote(Exec,Escaped),
 	format(string(ShellExec),"~w -c ~w",[Sh,Escaped]).
 
+suppress_errors(Exec,SExec) :-
+	string_chars(Exec,['-'|RealExecChars]),
+	string_chars(RealExec,RealExecChars),
+	format(string(SExec),'(~w) || true',[RealExec]).
+
+echo_wrap(Exec,Result) :-
+        suppress_errors(Exec,SExec),
+        !,
+	echo_wrap(SExec,Result).
+	
 echo_wrap(Exec,Result) :-
 	string_chars(Exec,['@'|SilentChars]),
 	!,
@@ -178,6 +188,11 @@ echo_wrap(Exec,Result) :-
 echo_wrap(Exec,Result) :-
         shell_quote(Exec,Escaped),
         format(string(Result),"echo ~w; ~w",[Escaped,Exec]).
+
+shell_echo_wrap(Exec,Result) :-
+        suppress_errors(Exec,SExec),
+        !,
+	shell_echo_wrap(SExec,Result).
 
 shell_echo_wrap(Exec,Result) :-
 	string_chars(Exec,['@'|SilentChars]),

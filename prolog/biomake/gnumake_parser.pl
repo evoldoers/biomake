@@ -223,22 +223,22 @@ makefile_assignment(assignment(Var,Op,Val),Lines) -->
     line_as_string(Val,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
-    opt_space, "ifeq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
+    opt_space, "ifeq", whitespace, conditional_arg_pair(Active,Arg1,Arg2), opt_whitespace, "\n",
     !, {test_equal(Active,Arg1,Arg2,Condition)},
     begin_true_rules(Condition,Result,OptsOut,OptsIn,Line,File,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
-    opt_space, "ifneq", whitespace, conditional_arg_pair(Arg1,Arg2), opt_whitespace, "\n",
+    opt_space, "ifneq", whitespace, conditional_arg_pair(Active,Arg1,Arg2), opt_whitespace, "\n",
     !, {test_inequal(Active,Arg1,Arg2,Condition)},
     begin_true_rules(Condition,Result,OptsOut,OptsIn,Line,File,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
-    opt_space, "ifdef", whitespace, xvar(Arg),
+    opt_space, "ifdef", whitespace, axvar(Active,Arg),
     !, {test_inequal(Active,Arg,'',Condition)},
     begin_true_rules(Condition,Result,OptsOut,OptsIn,Line,File,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
-    opt_space, "ifndef", whitespace, xvar(Arg),
+    opt_space, "ifndef", whitespace, axvar(Active,Arg),
     !, {test_equal(Active,Arg,'',Condition)},
     begin_true_rules(Condition,Result,OptsOut,OptsIn,Line,File,Lines).
 
@@ -250,9 +250,12 @@ test_inequal(false,_,_,null).
 test_inequal(true,X,X,false) :- !.
 test_inequal(true,_,_,true).
 
-conditional_arg_pair(Arg1,Arg2) --> "(", xbracket(Arg1), ",",  opt_whitespace, xbracket(Arg2), ")".
-conditional_arg_pair(Arg1,Arg2) --> "'", xquote(Arg1), "'", whitespace, "'", xquote(Arg2), "'".
-conditional_arg_pair(Arg1,Arg2) --> "\"", xdblquote(Arg1), "\"", whitespace, "\"", xdblquote(Arg2), "\"".
+conditional_arg_pair(true,Arg1,Arg2) --> "(", xbracket(Arg1), ",",  opt_whitespace, xbracket(Arg2), ")".
+conditional_arg_pair(true,Arg1,Arg2) --> "'", xquote(Arg1), "'", whitespace, "'", xquote(Arg2), "'".
+conditional_arg_pair(true,Arg1,Arg2) --> "\"", xdblquote(Arg1), "\"", whitespace, "\"", xdblquote(Arg2), "\"".
+conditional_arg_pair(false,_,_) --> "(", null_bracket, ",",  opt_whitespace, null_bracket, ")".
+conditional_arg_pair(false,_,_) --> "'", null_quote, "'", whitespace, "'", null_quote, "'".
+conditional_arg_pair(false,_,_) --> "\"", null_dblquote, "\"", whitespace, "\"", null_dblquote, "\"".
 
 begin_true_rules(Condition,Rules,OptsOut,OptsIn,Line,File,Lines) -->
     { Lnext is Line + 1 },
@@ -307,6 +310,10 @@ false_rules(_,_,_,_,Line,File,_) -->
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
+null_bracket --> delim(_,0'(,0'),[0',],[0'\\,0'\n],0).
+null_quote --> code_list(_,[0'\']).
+null_dblquote --> code_list(_,[0'\"]).
+
 xbracket(Sx) --> xdelim(Sx,0'(,0'),[0',],[0'\\,0'\n],0).
 xbrace(Sx,NL) --> xdelim(Sx,0'{,0'},[],[],NL).
 xdelim(Sx,L,R,XO,XI,NL) --> delim(S,L,R,XO,XI,NL), !, {expand_vars(S,Sx)}.
@@ -328,6 +335,9 @@ delim_inner([],_,_,_,0) --> !.
 xquote(Sx) --> code_list(C,[0'\']), {string_codes(S,C), expand_vars(S,Sx)}.
 xdblquote(Sx) --> code_list(C,[0'\"]), {string_codes(S,C), expand_vars(S,Sx)}.
 xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx)}.
+
+axvar(true,Sx) --> xvar(Sx).
+axvar(false,_) --> makefile_var_string_from_codes(_), opt_whitespace, "\n".
 
 makefile_special_target(queue(none),Lines) -->
     makefile_recipe(rule([".NOTPARALLEL"],_,_),Lines).
