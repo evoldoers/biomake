@@ -165,11 +165,16 @@ makefile_subst_ref(Result) --> makefile_subst_ref(Result,v(null,null,null,[])).
 
 makefile_subst_ref(Result,V) --> ['('], xvar_arg(Var,V), [':'], suffix_arg(From), ['='], suffix_arg(To), [')'], !,
 	{ eval_var(Var,Val,V),
-	  string_chars(Val,Vc),
+	  split_spaces(Val,L),
+	  maplist(substref(From,To),L,Lsub),
+	  concat_string_list_spaced(Lsub,Result) }.
+
+substref(From,To,Orig,Result) :-
+	  string_chars(Orig,C),
 	  phrase(patsubst_lr(FL,FR),['%'|From]),
 	  phrase(patsubst_lr(TL,TR),['%'|To]),
-	  patsubst(FL,FR,TL,TR,Vc,Rc),
-	  string_chars(Result,Rc) }.
+	  patsubst(FL,FR,TL,TR,C,Rc),
+	  string_chars(Result,Rc).
 
 makefile_computed_var(Result) --> makefile_computed_var(Result,v(null,null,null,[])).
 

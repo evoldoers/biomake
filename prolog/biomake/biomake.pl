@@ -203,7 +203,7 @@ can_build_deps([T|TL],SL,Opts) :-
         can_build_deps(TL,SL,Opts).
 
 can_build_dep(T,SL,_) :-
-        debug_report(build,'Checking theoretical path to ~w',T,SL),
+        debug_report(build,'Checking theoretical build path to ~w',T,SL),
 	fail.
 can_build_dep(T,SL,Opts) :-
 	cyclic_dependency(T,SL,Opts),
@@ -221,6 +221,9 @@ can_build_dep(T,SL,Opts) :-
         target_bindrule(T,Rule,Opts),
         rule_dependencies(Rule,DL,Opts),
         can_build_deps(DL,[T|SL],Opts).
+can_build_dep(T,SL,_) :-
+        debug_report(build,"No theoretical build path to ~w",T,SL),
+        fail.
 
 % recursive build dependencies
 build_deps(_,_,Opts) :- get_opt(no_deps,true,Opts), !.

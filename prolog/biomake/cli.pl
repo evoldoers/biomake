@@ -387,7 +387,7 @@ arg_info('--flush','<target or directory>','Erase all jobs for given target/dir'
 % DEBUGGING
 % ----------------------------------------
 
-parse_arg(['-d'|L],L,null) :- debug(verbose), set_prolog_flag(verbose,normal).
+parse_arg(['-d'|L],L,null) :- debug(verbose), debug(build), set_prolog_flag(verbose,normal).
 arg_info('-d','','[developers] Print debugging messages. Equivalent to \'--debug verbose\'').
 
 parse_arg(['--debug',D|L],L,null) :- debug(D), set_prolog_flag(verbose,normal).

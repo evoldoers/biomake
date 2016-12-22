@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 
 # Tests
 
@@ -121,6 +122,7 @@ FEAR = Fear is the mind killer
 var_in_command:
 	echo $(wordlist 3,4,$(FEAR)) >$@
 
+# various substitutions
 subst:
 	echo $(subst bcd,xyz,abcdefg bcd) >$@
 
@@ -130,6 +132,10 @@ patsubst:
 substref:
 	echo $(FEAR:killer=thriller) >$@
 
+substref_list:
+	echo $(FEAR:r=RRR) >$@
+
+# more text functions
 strip:
 	echo $(strip this   string    has    lots      of redundant      space) >$@
 

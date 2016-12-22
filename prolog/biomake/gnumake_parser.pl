@@ -347,14 +347,14 @@ makefile_special_target(oneshell(true),Lines) -->
 
 makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     makefile_targets(Head),
-    opt_linebreak,
+    whitespace_or_linebreak,
     "{",
     xbrace(HeadGoalAtom,Lhead),
     "}",
     opt_whitespace,
     ":",
     opt_makefile_targets(Deps),
-    opt_linebreak,
+    whitespace_or_linebreak,
     "{",
     xbrace(DepGoalAtom,Ldep),
     "}",
@@ -367,7 +367,7 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
 
 makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{true},VNs),Lines) -->
     makefile_targets(Head),
-    opt_linebreak,
+    whitespace_or_linebreak,
     "{",
     xbrace(HeadGoalAtom,Lhead),
     "}",
@@ -384,7 +384,7 @@ makefile_recipe(rule(Head,Deps,Exec,{DepGoal},VNs),Lines) -->
     makefile_targets(Head),
     ":",
     opt_makefile_targets(Deps),
-    opt_linebreak,
+    whitespace_or_linebreak,
     "{",
     xbrace(DepGoalAtom,Ldep),
     "}",
@@ -420,11 +420,16 @@ opt_makefile_targets([]) --> opt_space.
 makefile_targets([T|Ts]) --> opt_space, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
 makefile_targets([T]) --> opt_space, makefile_target_string(T), opt_whitespace.
 
+whitespace_or_linebreak --> "\n", opt_whitespace.
+whitespace_or_linebreak --> whitespace.
+
 opt_linebreak --> [].
 opt_linebreak --> "\n", opt_whitespace.
 
 makefile_warning_text(S,NL) --> delim(S,0'(,0'),[0')],[0'\\],NL).
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
+makefile_target_string(S) --> [0'$,0'(], !, delim(Sv,0'(,0'),[0')],[0'\\,0'\n],0), [0')], {format(string(S),"$(~w)",[Sv])}, !.
+makefile_target_string(S) --> [0'$,0'{], !, delim(Sv,0'(,0'),[0'}],[0'\\,0'\n],0), [0'}], {format(string(S),"${~w}",[Sv])}, !.
 makefile_target_string(S) --> delim(S,0'(,0'),[0':,0';,0'{,0'\s,0'\t],[0'\\,0'\n],0), {S \= ""}, !.
 
 op_string("=") --> "=".

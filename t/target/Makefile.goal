@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 
 prolog
 valid(a).
@@ -30,4 +31,14 @@ multiline_depgoal_$X_$Y: { \+ (valid(X),
 
 multi_matches_$X.$Y.$Z: { valid(X), valid(Y), valid(Z) }
 	echo X=$X Y=$Y Z=$Z >$@
+
+
+# test that braces in a dependency list don't confuse the parser
+VAR = abc
+
+braces_in_deplist: ${VAR}
+	cat $< >$@
+
+abc:
+	echo this is abc >$@
 
