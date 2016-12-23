@@ -159,7 +159,7 @@ build(T,SL,Opts) :-
         debug_report(build,'Rule: ~w',[Rule],SL),
         rule_dependencies(Rule,DL,Opts),
         debug_report(build,'Dependencies: ~w',[DL],SL),
-        can_build_deps(DL,[T|SL],Opts),  % test theoretical path to dependencies
+        can_build_deps(DL,T,SL,Opts),  % test theoretical path to dependencies
         debug_report(build,'Dependencies buildable: ~w',[DL],SL),
         verbose_report('Checking dependencies: ~w <-- ~w',[T,DL],[T|SL],Opts),
         build_deps(DL,[T|SL],Opts),  % build dependencies
@@ -179,6 +179,13 @@ build(T,SL,Opts) :-
 	handle_error('Don\'t know how to make ~w',[T],SL,Opts),
 	!.
 build(T,SL,Opts) :-
+        target_bindrule(T,Rule,Opts),
+        rule_dependencies(Rule,DL,Opts),
+	member(D,DL),
+        \+ can_build_dep(D,[T|SL],Opts),
+	!,
+        handle_error('No rule to build ~w, needed by ~w',[D,T],SL,Opts).
+build(T,SL,Opts) :-
         handle_error('~w FAILED',[T],SL,Opts).
 
 % tests of pathological conditions
@@ -196,14 +203,18 @@ recursion_too_deep(SL,Opts) :-
 	report("Exceeds maximum length of dependency chain (~w)",[D],SL,Opts).
 
 % test whether theoretical path exists
-can_build_deps(_,_,Opts) :- get_opt(no_deps,true,Opts), !.
-can_build_deps([],_,_).
-can_build_deps([T|TL],SL,Opts) :-
-        can_build_dep(T,SL,Opts),
-        can_build_deps(TL,SL,Opts).
+can_build_deps(_,_,_,Opts) :- get_opt(no_deps,true,Opts), !.
+can_build_deps([],_,_,_).
+can_build_deps([D|DL],T,SL,Opts) :-
+        can_build_dep(D,[T|SL],Opts),
+	!,
+        can_build_deps(DL,T,SL,Opts).
+can_build_deps([D|_],T,SL,_) :-
+        debug_report(build,'No rule to build ~w, needed by ~w~n',[D,T],SL),
+	fail.
 
 can_build_dep(T,SL,_) :-
-        debug_report(build,'Checking theoretical build path to ~w',T,SL),
+        debug_report(build,'Checking theoretical build path to ~w',[T],SL),
 	fail.
 can_build_dep(T,SL,Opts) :-
 	cyclic_dependency(T,SL,Opts),
@@ -220,9 +231,9 @@ can_build_dep(T,_,_) :-
 can_build_dep(T,SL,Opts) :-
         target_bindrule(T,Rule,Opts),
         rule_dependencies(Rule,DL,Opts),
-        can_build_deps(DL,[T|SL],Opts).
+        can_build_deps(DL,T,SL,Opts).
 can_build_dep(T,SL,_) :-
-        debug_report(build,"No theoretical build path to ~w",T,SL),
+        debug_report(build,"No theoretical build path to ~w",[T],SL),
         fail.
 
 % recursive build dependencies
