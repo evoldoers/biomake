@@ -184,7 +184,7 @@ build(T,SL,Opts) :-
 	member(D,DL),
         \+ can_build_dep(D,[T|SL],Opts),
 	!,
-        handle_error('No rule to build ~w, needed by ~w',[D,T],SL,Opts).
+        handle_error('No way to build ~w, needed by ~w',[D,T],SL,Opts).
 build(T,SL,Opts) :-
         handle_error('~w FAILED',[T],SL,Opts).
 
@@ -210,7 +210,7 @@ can_build_deps([D|DL],T,SL,Opts) :-
 	!,
         can_build_deps(DL,T,SL,Opts).
 can_build_deps([D|_],T,SL,_) :-
-        debug_report(build,'No rule to build ~w, needed by ~w~n',[D,T],SL),
+        debug_report(build,'No way to build ~w, needed by ~w~n',[D,T],SL),
 	fail.
 
 can_build_dep(T,SL,_) :-
