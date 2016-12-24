@@ -916,7 +916,7 @@ dep_bindrule(rb(T,Ds,true,Exec1,V),Opts,rb(T,Ds,true,Execs,V),Opts) :-
 	expand_execs(Exec1,Execs,V).
 
 dep_bindrule(rb(T,Ds,DepGoal,Exec1,V),Opts,rb(T,Ds,true,Execs,V),[qsub_use_biomake(true)|Opts]) :-
-	(call_without_backtrace(DepGoal)
+	(call_without_backtrace(DepGoal)  % call DepGoal even if running on cluster, because it might set QsubArgs
          ; building_asynchronously(Opts)),
 	expand_execs(Exec1,Execs,V).
 
