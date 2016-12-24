@@ -3,6 +3,9 @@
 rule_precedence_$A:
 	echo $A is generic >$@
 
+rule_precedence_$A:
+	echo $A should be unreachable >$@
+
 rule_precedence_$A: { A = 'specific1' }
 	echo $A is specific1 >$@
 
