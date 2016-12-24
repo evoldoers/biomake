@@ -384,8 +384,7 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     { Lines is 1 + Lexecs + Lhead + Ldep,
       read_atom_as_makeprog_term(HeadGoalAtom,HeadGoal,HeadVNs),
       read_atom_as_makeprog_term(DepGoalAtom,DepGoal,DepVNs),
-      bind_duplicates(HeadVNs,DepVNs),
-      append(HeadVNs,DepVNs,VNs) }.
+      merge_unifications(HeadVNs,DepVNs,VNs) }.
 
 makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{true},VNs),Lines) -->
     makefile_targets(Head),
@@ -496,8 +495,14 @@ ignore_line --> ("\n" ; call(eos)), !.
 ignore_line --> [_], ignore_line.
 ignore_line --> [].
 
-bind_duplicates(VNs1,VNs2) :-
-    maplist(bind_duplicate(VNs2),VNs1).
+merge_unifications(Us1, Us2, Us) :-
+        append(Us1, Us2, Us3),
+        maplist(eq_pair, Us3, Pairs0),
+        keysort(Pairs0, Pairs),
+        group_pairs_by_key(Pairs, Groups),
+        maplist(vars_all_equal, Groups, Us).
 
-bind_duplicate(VNs,VN) :- member(VN,VNs), !.
-bind_duplicate(_,_).
+eq_pair(A=B, A-B).
+
+vars_all_equal(Label-[Var|Vars], Label=Var) :-
+        maplist(=(Var), Vars).
