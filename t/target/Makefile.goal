@@ -51,3 +51,6 @@ pass_var_to_prolog: { A = VAR }
 
 pass_var_to_prolog2 { A = VAR } : { B = VAR2 }
 	echo $A $B >$@
+
+pass_var_to_prolog3 { A = VAR } : { B = A }
+	echo $B >$@

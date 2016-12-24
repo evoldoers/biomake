@@ -263,6 +263,7 @@ test :-
 	run_test("-f Makefile.goal","multi_matches_abc.def.ghi.jkl"),
 	run_test("-f Makefile.goal","pass_var_to_prolog"),
 	run_test("-f Makefile.goal","pass_var_to_prolog2"),
+	run_test("-f Makefile.goal","pass_var_to_prolog3"),
 	run_test("ref/embedded","target/embedded",["rm [hmz]*"],[],"",""),
 	run_test("-f Makefile.precedence","rule_precedence_specific1"),
 	run_test("-f Makefile.precedence","rule_precedence_specific2"),
