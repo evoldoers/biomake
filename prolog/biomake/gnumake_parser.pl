@@ -384,6 +384,9 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     { Lines is 1 + Lexecs + Lhead + Ldep,
       read_atom_as_makeprog_term(HeadGoalAtom,HeadGoal,HeadVNs),
       read_atom_as_makeprog_term(DepGoalAtom,DepGoal,DepVNs),
+      % TODO: should really merge the lists here, instead of appending them
+      % i.e. if (VarLabel=_Var1) appears in first list and (VarLabel=_Var2) appears in second list,
+      % should unify _Var1 and _Var2
       append(HeadVNs,DepVNs,VNs) }.
 
 makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{true},VNs),Lines) -->
