@@ -1,0 +1,5 @@
+# -*- makefile-gmake -*-
+
+oneshell_control:
+	cd subdir
+	echo hello from subdir >../$@

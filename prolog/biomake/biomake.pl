@@ -44,7 +44,8 @@
 
 	   normalize_pattern/3,
 	   unwrap_t/2,
-
+	   flatten_trim/2,
+	   
            rule_target/3,
            rule_dependencies/3,
            rule_execs/3,
@@ -303,6 +304,11 @@ debug_report(Topic,Fmt,Args,SL) :-
 
 % The interactions between the various options are a little tricky...
 % Essentially (simplifying a little): MD5 overrides timestamps, except when queues are used.
+rebuild_required(T,_,SL,Opts) :-
+        member(phony_targets(PT),Opts),
+        member(T,PT),
+        !,
+        verbose_report('Target ~w is phony - build required',[T],SL,Opts).
 rebuild_required(T,DL,SL,Opts) :-
 	member(what_if(D),Opts),
         member(D,DL),

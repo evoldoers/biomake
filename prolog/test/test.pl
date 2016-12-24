@@ -77,6 +77,12 @@ test :-
 	run_test("-f Makefile.targetexpr","slash_var_in_deplist"),
 	run_test("-f Makefile.targetexpr","var_slash_var_in_deplist"),
 
+	announce("SPECIAL TARGETS"),
+	run_test("-f Makefile.oneshell","oneshell"),
+	run_test("ref","target",["echo untouched by biomake > oneshell_control"],[],"-f Makefile.oneshell_control","oneshell_control"),
+	run_test("ref","target",["echo empty > test.phony","echo empty > test2.phony"],[],"-f Makefile.phony1","phony_target"),
+	run_test("ref","target",["echo empty > test.phony","echo empty > test2.phony"],[],"-f Makefile.phony2","expanded_phony_target"),
+
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),
 	run_test("first_dep"),
@@ -106,7 +112,6 @@ test :-
 	run_test("shell_assign"),
 	
 	announce("CONDITIONAL SYNTAX"),
-
 	run_test("-f Makefile.cond","ifdef_true"),
 	run_test("-f Makefile.cond","ifdef_false"),
 	run_test("-f Makefile.cond","ifeq_true"),
@@ -224,7 +229,6 @@ test :-
 	run_test("ref","target",["rm test_file"],["sleep 2"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","your-own-personal-jesus"),
 
 	announce("COMMAND-LINE OPTIONS"),
-
 	run_test("--file=Makefile.argval","arg_equals_val"),
 	run_test("-f Makefile.subdir.include -I subdir","include_dir"),
 	run_test("ref","target",["touch what_if_dep","sleep 1","echo Pre-update >what_if"],[],"-W what_if_dep","what_if"),

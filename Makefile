@@ -8,6 +8,8 @@ datadir = $(prefix)/share
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 
+.PHONY: all clean test symlink install uninstall
+
 all: clean test
 
 test:

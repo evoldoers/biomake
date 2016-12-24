@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 
 include_dir:
 	echo Found subdir >$@

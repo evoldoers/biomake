@@ -1,0 +1,9 @@
+# -*- makefile-gmake -*-
+
+.PHONY: test.phony test2.phony
+
+phony_target: test.phony test2.phony
+	(echo $^; cat $^) >$@
+
+test.phony test2.phony:
+	echo Updated $@ >$@

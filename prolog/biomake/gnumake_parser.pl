@@ -347,6 +347,12 @@ makefile_special_target(queue(none),Lines) -->
 makefile_special_target(oneshell(true),Lines) -->
     makefile_recipe(rule([".ONESHELL"],_,_),Lines).
 
+makefile_special_target(phony_targets(XDL),Lines) -->
+    makefile_recipe(rule([".PHONY"],DL,_),Lines),
+    {maplist(expand_vars,DL,XDL1),
+     maplist(split_spaces,XDL1,XDL2),
+     flatten_trim(XDL2,XDL)}.
+
 makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     makefile_targets(Head),
     whitespace_or_linebreak,

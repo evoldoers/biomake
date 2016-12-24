@@ -407,6 +407,7 @@ Biomake supports most of the functionality of GNU Make, including
 - [conditional syntax](https://www.gnu.org/software/make/manual/html_node/Conditionals.html) and [conditional functions](https://www.gnu.org/software/make/manual/html_node/Conditional-Functions.html)
 - the [include](https://www.gnu.org/software/make/manual/html_node/Include.html) directive
 - [wildcards in dependency lists](https://www.gnu.org/software/make/manual/html_node/Wildcards.html)
+- [phony targets](https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html)
 - various other quirks of GNU Make syntax e.g. single-line recipes, forced rebuilds
 
 Currently unsupported features of GNU Make
@@ -416,8 +417,8 @@ The following features of GNU Make are not (yet) implemented:
 
 - [Order-only prerequisites](https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html)
 - [Directory search](https://www.gnu.org/software/make/manual/html_node/Directory-Search.html)
-- [Phony targets](https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html)
 - Most of the [special built-in targets](https://www.gnu.org/software/make/manual/html_node/Special-Targets.html)
+    - `.PHONY` is implemented
     - `.NOTPARALLEL` is implemented
     - `.ONESHELL` is implemented
     - `.SECONDARY` is implicit and `.INTERMEDIATE` is unsupported: Biomake never removes intermediate files
