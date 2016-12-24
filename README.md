@@ -144,8 +144,8 @@ Brief overview:
 
 - Prolog can be embedded within `prolog` and `endprolog` directives
 - `$(bagof Template,Goal)` expands to the space-separated `List` from the Prolog `bagof(Template,Goal,List)`
-- Following the target list with `{TargetGoal}` causes the rule to match only if `TargetGoal` is satisfied. This goal will be tested _before_ any dependencies are built. The special variable `TARGET`, if used, will be bound to the target filename (i.e. `$@`)
-- Following the dependent list with `{DepGoal}` causes the recipe to be executed only if `DepGoal` is satisfied. This goal will be tested _after_ any dependencies are built (so it can examine the dependent files). The special variables `TARGET` and `DEPS`, if used, will be bound to the target and dependency-list (i.e. `$@` and `$^`, loosely speaking; except the latter is a true Prolog list, not encoded as a string with whitespace separators as in GNU Make)
+- Following the target list with `{TargetGoal}` causes the rule to match only if `TargetGoal` is satisfied. The target goal will be tested _before_ any dependencies are built. The special variable `TARGET`, if used, will be bound to the target filename (i.e. `$@`)
+- Following the dependent list with `{DepsGoal}` causes the recipe to be executed only if `DepsGoal` is satisfied. The deps goal will be tested _after_ any dependencies are built (so it can examine the dependent files). The special variables `TARGET` and `DEPS`, if used, will be bound to the target and dependency-list (i.e. `$@` and `$^`, loosely speaking; except the latter is a true Prolog list, not encoded as a string with whitespace separators as in GNU Make)
 
 Examples
 --------
@@ -544,6 +544,9 @@ Before attempting to build a target `T` using a rule `R`, Biomake performs the f
 
 If any of these tests fail, Biomake will backtrack and attempt to build the target using a different rule, or a different pattern-match to the same rule.
 If all the tests pass, Biomake will commit to using the rule, and will attempt to execute the recipe using the shell (or the queueing engine).
+
+Note that the target goal is tested multiple times (to plan theoretical build paths) and so should probably not have side effects.
+The deps goal is tested later, and only once for every time the rule is bound, so it is a bit safer for the deps goal to have side effects.
 
 Failure during execution of the recipe (or execution of any recipes in the dependency tree) will never cause Biomake to backtrack; it will either halt, or (if the `-k` command-line option was specified) soldier on obliviously.
 
