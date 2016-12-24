@@ -1012,7 +1012,8 @@ not_empty(X) :- X \= "", X \= ''.
         mkrule/5,
         with/2.
 
-mkrule_default(T,D,E,Ghead,Gdep,VNs) :- with(mkrule(T,D,E,Ghead,Gdep),VNs).
+mkrule_default(T,D,E,Ghead,Gdep,VNs) :- with(mkrule(T,D,E,Ghead,Gdep),VNs), Gdep \= true.
+mkrule_default(T,D,E,Ghead,true,VNs) :- with(mkrule(T,D,E,Ghead,true),VNs).
 mkrule_default(T,D,E,true,Gdep,VNs) :- with(mkrule(T,D,E,Gdep),VNs).
 mkrule_default(T,D,E,true,true,VNs) :- with(mkrule(T,D,E),VNs).
 

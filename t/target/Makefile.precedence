@@ -8,3 +8,15 @@ rule_precedence_$A: { A = 'specific1' }
 
 rule_precedence_$A: { A = 'specific2' }
 	echo $A is specific2 >$@
+
+rule_precedence_$A { A = 'specific3' } :
+	echo $A is specific3 >$@
+
+rule_precedence_$A : { atom_concat(_,'specific',A) }
+	echo $A is somewhat specific >$@
+
+rule_precedence_$A { atom_concat('even_more',_,A) } :
+	echo $A is a control >$@
+
+rule_precedence_$A { atom_concat('even_more',_,A) } : { atom_concat(_,'specific',A) }
+	echo $A is even more specific >$@

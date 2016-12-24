@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use Time::HiRes qw(usleep);
+
 # dummy version of qsub that just forks a process and sleeps
 
 my @hold;
@@ -28,6 +30,6 @@ if ($child) {
 	    last unless grep($_ eq $hold,@pids);
 	}
     }
-    sleep(1);
+    usleep(1e5);  # sleep for 100ms
     system "@ARGV";
 }
