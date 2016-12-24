@@ -21,6 +21,18 @@ depgoal_$X: { valid(X) }
 depgoal_$X: { \+ valid(X) }
 	echo $X is invalid. >$@
 
+head_and_dep_goals_$X_$Y { valid(X) } : { valid(Y) }
+	echo $X and $Y are valid. >$@
+
+head_and_dep_goals_$X_$Y { valid(X) }:
+	echo $X is valid, $Y is invalid. >$@
+
+head_and_dep_goals_$X_$Y : { valid(Y) }
+	echo $X is invalid, $Y is valid. >$@
+
+head_and_dep_goals_$X_$Y:
+	echo Both $X and $Y are invalid. >$@
+
 multiline_depgoal_$X_$Y: { valid(X),
 		           valid(Y) }
 	echo $X and $Y are valid >$@
@@ -33,5 +45,9 @@ multi_matches_$X.$Y.$Z: { valid(X), valid(Y), valid(Z) }
 	echo X=$X Y=$Y Z=$Z >$@
 
 VAR = foo
+VAR2 = bar
 pass_var_to_prolog: { A = VAR }
 	echo $A >$@
+
+pass_var_to_prolog2 { A = VAR } : { B = VAR2 }
+	echo $A $B >$@

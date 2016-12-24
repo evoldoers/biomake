@@ -382,8 +382,9 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     !,
     makefile_execs(Exec,Lexecs),
     { Lines is 1 + Lexecs + Lhead + Ldep,
-      read_atom_as_makeprog_term(HeadGoalAtom,HeadGoal,VNs),
-      read_atom_as_makeprog_term(DepGoalAtom,DepGoal,VNs) }.
+      read_atom_as_makeprog_term(HeadGoalAtom,HeadGoal,HeadVNs),
+      read_atom_as_makeprog_term(DepGoalAtom,DepGoal,DepVNs),
+      append(HeadVNs,DepVNs,VNs) }.
 
 makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{true},VNs),Lines) -->
     makefile_targets(Head),
