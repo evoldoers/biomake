@@ -495,6 +495,7 @@ ignore_line --> ("\n" ; call(eos)), !.
 ignore_line --> [_], ignore_line.
 ignore_line --> [].
 
+% due to @triska
 merge_unifications(Us1, Us2, Us) :-
         append(Us1, Us2, Us3),
         maplist(eq_pair, Us3, Pairs0),
