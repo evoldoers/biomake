@@ -22,6 +22,6 @@ $A.$B.foo:
 $A.$B.$C.$D.$E: $A.$B.$C.baz $D.$E.bo
 	cat $^ >$@
 
-$A-$B-$C-$D: { QsubArgs = "--echo testing test_file" }
+$A-$B-$C-$D { QsubArgs = "--echo testing test_file" } :
 	cat test_file >$@
 	echo $A $B $C $D >>$@

@@ -587,15 +587,18 @@ There are several queueing engines currently supported:
 For Sun Grid Engine, PBS and SLURM, the paths to the relevant job control executables, and any arguments to those executables
 (such as the name of the queue that jobs should be run on), can be controlled using various command-line arguments.
 In particular, the `--qsub-args` command-line option (applying to all recipes)
-and the `QsubArgs` Prolog variable (on a per-recipe basis)
+and the `QsubArgs` Prolog variable (on a per-recipe basis, in the target goal)
 can be used to pass parameters such as the queue name.
 
 Here's an example of using `QsubArgs`:
 
 ~~~~
-my_target: my_dependency { QsubArgs = '--cores-per-socket=4' }
+my_target { QsubArgs = '--cores-per-socket=4' } : my_dependency
     do_something >$@
 ~~~~
+
+Note that `QsubArgs` has to be set in the target goal, not the deps goal
+(since the job is submitted to the queueing engine before the dependencies are guaranteed to have been built).
 
 More
 ----
