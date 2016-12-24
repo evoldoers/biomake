@@ -2,18 +2,12 @@
 
 # dummy version of qsub that just forks a process and sleeps
 
+my @hold;
 while (@ARGV && $ARGV[0] =~ /^-/) {
     my $arg = shift;
     if ($arg eq '-hold_jid') {
 	my $hold_jobs = shift;
-	my @hold = split /,/, $hold_jobs;
-	for my $hold (@hold) {
-	    while (1) {
-		my $pids = `ps -opid`;
-		my @pids = split /\s+/, $pids;
-		last unless grep($_ eq $hold,@pids);
-	    }
-	}
+	@hold = split /,/, $hold_jobs;
     } elsif ($arg eq '--fake-arg') {
 	shift;
     } elsif ($arg eq '--echo') {
@@ -27,6 +21,13 @@ my $child = fork();
 if ($child) {
     print "Job number is ", $child, "\n";
 } else {
+    for my $hold (@hold) {
+	while (1) {
+	    my $pids = `ps -opid`;
+	    my @pids = split /\s+/, $pids;
+	    last unless grep($_ eq $hold,@pids);
+	}
+    }
     sleep(1);
     system "@ARGV";
 }

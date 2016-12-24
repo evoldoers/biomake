@@ -1,0 +1,15 @@
+#!/usr/bin/env perl
+
+# dummy script that waits for all fake_qsub jobs to finish
+
+my $last_fake_qsub_jobs;
+while (1) {
+    my $ps = `ps -ocommand`;
+    my $fake_qsub_jobs = 0;
+    while ($ps =~ /fake_qsub/g) { ++$fake_qsub_jobs }
+    last unless $fake_qsub_jobs;
+    if ($fake_qsub_jobs != $last_fake_qsub_jobs) {
+	warn "Jobs remaining: ", $fake_qsub_jobs, "\n";
+	$last_fake_qsub_jobs = $fake_qsub_jobs;
+    }
+}
