@@ -347,11 +347,23 @@ makefile_special_target(queue(none),Lines) -->
 makefile_special_target(oneshell(true),Lines) -->
     makefile_recipe(rule([".ONESHELL"],_,_),Lines).
 
-makefile_special_target(phony_targets(XDL),Lines) -->
-    makefile_recipe(rule([".PHONY"],DL,_),Lines),
+makefile_special_target(phony_targets(TL),Lines) -->
+    makefile_special_deplist(".PHONY",TL,Lines).
+
+makefile_special_target(silent_targets(TL),Lines) -->
+    makefile_special_deplist(".SILENT",TL,Lines).
+
+makefile_special_target(Opt,Lines) -->
+    makefile_special_deplist(".IGNORE",TL,Lines),
+    { TL = []
+      -> Opt = keep_going_on_error(true)
+      ; Opt = ignore_errors_in_targets(TL) }.
+
+makefile_special_deplist(SpecialTarget,DepList,Lines) -->
+    makefile_recipe(rule([SpecialTarget],DL,_),Lines),
     {maplist(expand_vars,DL,XDL1),
      maplist(split_spaces,XDL1,XDL2),
-     flatten_trim(XDL2,XDL)}.
+     flatten_trim(XDL2,DepList)}.
 
 makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     makefile_targets(Head),

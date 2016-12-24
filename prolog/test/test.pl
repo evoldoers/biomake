@@ -82,6 +82,9 @@ test :-
 	run_test("ref","target",["echo untouched by biomake > oneshell_control"],[],"-f Makefile.oneshell_control","oneshell_control"),
 	run_test("ref","target",["echo empty > test.phony","echo empty > test2.phony"],[],"-f Makefile.phony1","phony_target"),
 	run_test("ref","target",["echo empty > test.phony","echo empty > test2.phony"],[],"-f Makefile.phony2","expanded_phony_target"),
+	run_test("-f Makefile.ignore","ignore"),
+	run_failure_test("-f Makefile.ignore_control","ignore_control"),
+	run_test("-f Makefile.ignore_all","ignore_all"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),

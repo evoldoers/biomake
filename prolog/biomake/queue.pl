@@ -217,7 +217,7 @@ run_execs_in_queue(test,Rule,SL,Opts) :-
         rule_dependencies(Rule,DL,Opts),
 	qsub_rule_execs(Rule,Es,Opts),
 	write_script_file(T,Es,Opts,Script),
-	report_run_exec(Script,SL,Opts),
+	report_run_exec(Script,T,SL,Opts),
 	update_hash(T,DL,Opts).
 
 % ----------------------------------------

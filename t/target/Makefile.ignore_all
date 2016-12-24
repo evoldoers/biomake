@@ -1,0 +1,12 @@
+# -*- makefile-gmake -*-
+
+.IGNORE:
+
+ignore_all: ok_dep_control2 error_dep_control2
+	cat ok_dep_control2 >$@
+
+ok_dep_control2:
+	echo OK >$@
+
+error_dep_control2:
+	nonexistent_command will not work >$@

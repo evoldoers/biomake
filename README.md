@@ -417,14 +417,17 @@ The following features of GNU Make are not (yet) implemented:
 
 - [Order-only prerequisites](https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html)
 - [Directory search](https://www.gnu.org/software/make/manual/html_node/Directory-Search.html)
-- Most of the [special built-in targets](https://www.gnu.org/software/make/manual/html_node/Special-Targets.html)
+- Many of the [special built-in targets](https://www.gnu.org/software/make/manual/html_node/Special-Targets.html), with some exceptions:
     - `.PHONY` is implemented
+    - `.SILENT` is implemented
     - `.NOTPARALLEL` is implemented
     - `.ONESHELL` is implemented
+    - `.IGNORE` is implemented
     - `.SECONDARY` is implicit and `.INTERMEDIATE` is unsupported: Biomake never removes intermediate files
     - `.PRECIOUS` is implicit for all targets, and `.DELETE_ON_ERROR` is unsupported: Biomake does not delete files on interruption or error
     - `.SECONDEXPANSION` is implicit
     - `.SUFFIXES` is unsupported (or implicit with no dependencies), since suffix rules are unsupported
+    - other special targets not mentioned in the above list are not supported (they'll just be parsed as regular targets, i.e. ignored)
 - [Multiple rules per target](https://www.gnu.org/software/make/manual/html_node/Multiple-Rules.html)
 - [Static pattern rules](https://www.gnu.org/software/make/manual/html_node/Static-Pattern.html)
 - [Double-colon rules](https://www.gnu.org/software/make/manual/html_node/Double_002dColon.html)

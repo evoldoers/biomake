@@ -52,7 +52,7 @@
            rule_vars/6,
 
 	   run_execs_now/3,
-	   report_run_exec/3,
+	   report_run_exec/4,
 	   update_hash/3,
 
 	   bindvar/3,
@@ -177,7 +177,7 @@ build(T,SL,Opts) :-
         verbose_report('Nothing to be done for ~w',[T],SL,Opts).
 build(T,SL,Opts) :-
         \+ target_bindrule(T,_,Opts),
-	handle_error('Don\'t know how to make ~w',[T],SL,Opts),
+	handle_error('Don\'t know how to make ~w',[T],T,SL,Opts),
 	!.
 build(T,SL,Opts) :-
         target_bindrule(T,Rule,Opts),
@@ -185,9 +185,9 @@ build(T,SL,Opts) :-
 	member(D,DL),
         \+ can_build_dep(D,[T|SL],Opts),
 	!,
-        handle_error('No way to build ~w, needed by ~w',[D,T],SL,Opts).
+        handle_error('No way to build ~w, needed by ~w',[D,T],T,SL,Opts).
 build(T,SL,Opts) :-
-        handle_error('~w FAILED',[T],SL,Opts).
+        handle_error('~w FAILED',[T],T,SL,Opts).
 
 % tests of pathological conditions
 cyclic_dependency(T,SL,Opts) :-
@@ -452,7 +452,7 @@ dispatch_run_execs(Rule,SL,Opts) :-
         rule_dependencies(Rule,DL,Opts),
 	format(string(Cmd),"touch ~w",[T]),
 	shell(Cmd),
-	(running_silent(Opts) -> true; report('~w',[Cmd],SL,Opts)),
+	(running_silent(T,Opts) -> true; report('~w',[Cmd],SL,Opts)),
 	update_hash(T,DL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
 	get_opt(queue,Q,Opts),
@@ -474,7 +474,7 @@ run_execs_now(Rule,SL,Opts) :-
 	rule_target(Rule,T,Opts),
         rule_dependencies(Rule,DL,Opts),
 	rule_execs(Rule,Es,Opts),
-	run_execs(Es,SL,Opts),
+	run_execs(Es,T,SL,Opts),
 	update_hash(T,DL,Opts).
 
 run_execs_in_script(Rule,SL,Opts) :-
@@ -483,7 +483,7 @@ run_execs_in_script(Rule,SL,Opts) :-
         rule_dependencies(Rule,DL,Opts),
 	rule_execs(Rule,Es,Opts),
 	write_script_file(T,Es,Opts,Script),
-	report_run_exec(Script,SL,Opts),
+	report_run_exec(Script,T,SL,Opts),
 	update_hash(T,DL,Opts).
 
 update_hash(T,DL,Opts) :-
@@ -492,56 +492,66 @@ update_hash(T,DL,Opts) :-
     update_md5_file(T,DL,Opts).
 update_hash(_,_,_).
 
-run_execs([],_,_).
-run_execs([E|Es],SL,Opts) :-
-        run_exec(E,SL,Opts),
-        run_execs(Es,SL,Opts).
+run_execs([],_,_,_).
+run_execs([E|Es],T,SL,Opts) :-
+        run_exec(E,T,SL,Opts),
+        run_execs(Es,T,SL,Opts).
 
-run_exec(Exec,SL,Opts) :-
+run_exec(Exec,T,SL,Opts) :-
         string_chars(Exec,['-'|RealExecChars]),
 	!,
 	string_chars(RealExec,RealExecChars),
-	run_exec(RealExec,SL,[keep_going_on_error(true)|Opts]).
-run_exec(Exec,SL,Opts) :-
+	run_exec(RealExec,T,SL,[keep_going_on_error(true)|Opts]).
+run_exec(Exec,T,SL,Opts) :-
 	string_chars(Exec,['@'|SilentChars]),
 	!,
 	string_chars(Silent,SilentChars),
-	silent_run_exec(Silent,SL,Opts).
-run_exec(Exec,SL,Opts) :-
-        running_silent(Opts),
-        silent_run_exec(Exec,SL,Opts).
-run_exec(Exec,SL,Opts) :-
-	report_run_exec(Exec,SL,Opts).
+	silent_run_exec(Silent,T,SL,Opts).
+run_exec(Exec,T,SL,Opts) :-
+        running_silent(T,Opts),
+        silent_run_exec(Exec,T,SL,Opts).
+run_exec(Exec,T,SL,Opts) :-
+	report_run_exec(Exec,T,SL,Opts).
 
-report_run_exec(Exec,SL,Opts) :-
+report_run_exec(Exec,T,SL,Opts) :-
         report('~w',[Exec],SL,Opts),
-	silent_run_exec(Exec,SL,Opts).
+	silent_run_exec(Exec,T,SL,Opts).
 
-running_silent(Opts) :-
+running_silent(_,Opts) :-
         get_opt(silent,true,Opts),
         \+ get_opt(dry_run,true,Opts).
 
-silent_run_exec(Exec,SL,Opts) :-
+running_silent(T,Opts) :-
+        member(silent_targets(TL),Opts),
+	member(T,TL),
+        \+ get_opt(dry_run,true,Opts).
+
+silent_run_exec(Exec,T,SL,Opts) :-
         get_time(T1),
         shell(Exec,Err),
         get_time(T2),
         DT is T2-T1,
         debug_report(build,'  Return: ~w Time: ~w',[Err,DT],SL),
-	handle_exec_error(Exec,Err,SL,Opts),
+	handle_exec_error(Exec,Err,T,SL,Opts),
         !.
 
-handle_exec_error(_,0,_,_) :- !.
-handle_exec_error(Exec,Err,SL,Opts) :-
-        handle_error('Error ~w executing ~w',[Err,Exec],SL,Opts).
+handle_exec_error(_,0,_,_,_) :- !.
+handle_exec_error(Exec,Err,T,SL,Opts) :-
+        handle_error('Error ~w executing ~w',[Err,Exec],T,SL,Opts).
 
-handle_error(Fmt,Args,SL,Opts) :-
-        report(Fmt,Args,SL),
-	handle_error(Opts).
+handle_error(Fmt,Args,T,SL,Opts) :-
+        format(string(WhileFmt),"While building ~w: ~w",[T,Fmt]),
+        report(WhileFmt,Args,SL),
+	handle_error(T,Opts).
 
-handle_error(Opts) :-
+handle_error(_,Opts) :-
         get_opt(keep_going_on_error,true,Opts),
         !.
-handle_error(_) :-
+handle_error(T,Opts) :-
+        member(ignore_errors_in_targets(TL),Opts),
+	member(T,TL),
+        !.
+handle_error(_,_) :-
         halt_error.
 
 

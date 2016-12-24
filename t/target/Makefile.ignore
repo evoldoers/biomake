@@ -1,0 +1,12 @@
+# -*- makefile-gmake -*-
+
+.IGNORE: error_dep
+
+ignore: ok_dep error_dep
+	cat ok_dep >$@
+
+ok_dep:
+	echo OK >$@
+
+error_dep:
+	nonexistent_command will not work >$@

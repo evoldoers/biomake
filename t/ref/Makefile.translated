@@ -15,4 +15,11 @@ ABC = "abc".
 "HeadGoal", {test} <-- [], {true}, "something".
 "DepGoal" <-- [], {test}, "something else".
 "HeadAndDepGoals", {test1} <-- [], {test2}, "a third thing".
+option(silent_targets([a,b,c])).
+option(phony_targets([d,e,f])).
+option(queue(none)).
+option(oneshell(true)).
+option(ignore_errors_in_targets([x,y,z])).
+option(keep_going_on_error(true)).
+".NOT_A_SPECIAL_TARGET" <-- ["m","n","o"].
 "Makefile.translated" <-- [].
