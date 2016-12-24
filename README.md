@@ -13,8 +13,8 @@ Indeed: [Prolog](https://en.wikipedia.org/wiki/Prolog).
 No knowledge of the dark logical arts is necessary to use Biomake; the software can be
 run directly off a GNU Makefile. However, if you know (or are prepared to
 learn) a little Prolog, you can do a lot more.
-Makefiles are logic programs: their power comes from combining a _declarative_ specification of dependency structure
-from an _imperative_ specification of build recipes.
+Makefiles are logic programs: their power comes from combining a _declarative_ specification of dependencies
+with _procedural_ shell scripts to build targets.
 Prolog is a simple but expressive language for logic programming
 that allows Makefile rules to be extended in sophisticated and flexible ways.
 
