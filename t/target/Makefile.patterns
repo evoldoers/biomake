@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 # This test Makefile highlights a few quirks in the way that pattern rules are processed.
 
 # GNU Make will refuse to build deps_exist_but_rules_fail, even if dep1 exists,

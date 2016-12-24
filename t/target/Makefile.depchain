@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 
 dep_chain_$A: dep1 { A = 'two_step' }
 	cp $< $@

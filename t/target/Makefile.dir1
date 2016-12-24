@@ -1,1 +1,2 @@
+# -*- makefile-gmake -*-
 include dir1/Makefile

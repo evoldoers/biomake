@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 %.bar: %.foo
 	perl -pe 'tr/a-z/A-Z/' $< > $@
 

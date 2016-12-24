@@ -1,1 +1,3 @@
+# -*- makefile-gmake -*-
+
 GREETING = Valar Morghulis

@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 $(warning Included Makefile.include2)
 
 inc2.test: inc1.test

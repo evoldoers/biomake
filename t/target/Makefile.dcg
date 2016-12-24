@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 prolog
 match_dcg --> ['d','c','g'], match_rest.
 match_rest --> [_], match_rest.

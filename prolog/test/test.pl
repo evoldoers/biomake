@@ -72,6 +72,10 @@ test :-
 	run_test("wildcard_deps"),
 	run_test("-f Makefile.suppress","suppress_errors_temporarily"),
 	run_test("-f Makefile.suppress -Q test","suppress_errors_temporarily_in_script"),
+	run_test("-f Makefile.targetexpr","braces_in_deplist"),
+	run_test("-f Makefile.targetexpr","function_in_deplist"),
+	run_test("-f Makefile.targetexpr","slash_var_in_deplist"),
+	run_test("-f Makefile.targetexpr","var_slash_var_in_deplist"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),
@@ -246,7 +250,6 @@ test :-
 	run_test("-f Makefile.goal","multiline_depgoal_a_x"),
 	run_test("-f Makefile.goal","multiline_depgoal_x_b"),
 	run_test("-f Makefile.goal","multi_matches_abc.def.ghi.jkl"),
-	run_test("-f Makefile.goal","braces_in_deplist"),
 	run_test("ref/embedded","target/embedded",["rm [hmz]*"],[],"",""),
 	run_test("-f Makefile.precedence","rule_precedence_specific1"),
 	run_test("-f Makefile.precedence","rule_precedence_specific2"),

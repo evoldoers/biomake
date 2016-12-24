@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 
 rule_precedence_$A:
 	echo $A is generic >$@

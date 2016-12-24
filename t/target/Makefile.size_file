@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 size_file_%: % { DEPS = [F], size_file(F,0) }
 	echo $F is empty >$@
 

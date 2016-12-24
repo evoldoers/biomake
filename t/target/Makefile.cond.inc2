@@ -1,1 +1,2 @@
+# -*- makefile-gmake -*-
 GREETING = Valar Dohaeris

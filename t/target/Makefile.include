@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 $(info In Makefile.include)
 
 include Makefile.include2

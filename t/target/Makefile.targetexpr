@@ -1,0 +1,20 @@
+# -*- makefile-gmake -*-
+
+VAR = abc
+DIR = subdir
+
+braces_in_deplist: ${VAR}
+	(echo $^; cat $^) >$@
+
+function_in_deplist: $(addsuffix .foo,${VAR})
+	(echo $^; cat $^) >$@
+
+slash_var_in_deplist: subdir/$(VAR)
+	(echo $^; cat $^) >$@
+
+var_slash_var_in_deplist: ${DIR}/$(VAR)
+	(echo $^; cat $^) >$@
+
+abc abc.foo subdir/abc:
+	echo this is $@ >$@
+

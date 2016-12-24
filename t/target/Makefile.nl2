@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 $(warning This\
 should\
 work\

@@ -310,30 +310,32 @@ false_rules(_,_,_,_,Line,File,_) -->
     {format(string(Err),"GNU makefile parse error (expected endif) at line ~d of file ~w: ~w",[Line,File,L]),
     syntax_error(Err)}.
 
-null_bracket --> delim(_,0'(,0'),[0',],[0'\\,0'\n],0).
-null_quote --> code_list(_,[0'\']).
-null_dblquote --> code_list(_,[0'\"]).
+xbracket(Sx) --> xdelim(Sx,[[0'(,0')],[0'{,0'}]],[0'),0',],[0'\\,0'\n],0).
+null_bracket --> delim(_,[[0'(,0')],[0'{,0'}]],[0'),0',],[0'\\,0'\n],0).
 
-xbracket(Sx) --> xdelim(Sx,0'(,0'),[0',],[0'\\,0'\n],0).
-xbrace(Sx,NL) --> xdelim(Sx,0'{,0'},[],[],NL).
-xdelim(Sx,L,R,XO,XI,NL) --> delim(S,L,R,XO,XI,NL), !, {expand_vars(S,Sx)}.
-delim(S,L,R,X,XA,NL) --> {XI=[L,R|XA],append(X,XI,XO)}, delim_outer(Sc,L,R,XO,XI,NL), {string_codes(S,Sc)}.
-delim_outer([0'\s|S],L,R,XO,XI,NL) --> [0'\\,0'\n], !, delim_outer(S,L,R,XO,XI,NLnext), {NL is NLnext + 1}.
-delim_outer([0'\n|S],L,R,XO,XI,NL) --> {NL \= 0}, [0'\n], !, delim_outer(S,L,R,XO,XI,NLnext), {NL is NLnext + 1}.
-delim_outer(S,L,R,XO,XI,NL) --> [L], !, delim_inner(I,L,R,XI,NLi), [R], delim_outer(Rest,L,R,XO,XI,NLo),
+xbrace(Sx,NL) --> xdelim(Sx,[[0'{,0'}]],[0'}],[],NL).
+xdelim(Sx,LR,XO,XI,NL) --> delim(S,LR,XO,XI,NL), !, {expand_vars(S,Sx)}.
+delim(S,LR,X,XA,NL) --> {bagof(L,member([L,_],LR),XL), append(XL,XA,XI), append(X,XI,XO)}, delim_codes(Sc,LR,XO,XI,NL), {string_codes(S,Sc)}.
+
+% delim_codes(-S,+LR,+XO,+XI,-NL)
+% general parser
+% S = list of character codes
+% LR = list of pairs of delimiter character codes [Left,Right]
+% XO = list of character codes that are to be excluded in the outermost context
+% XI = list of character codes that are to be excluded in the innermost context
+% NL = number of lines matched
+delim_codes([0'\s|S],LR,XO,XI,NL) --> [0'\\,0'\n], !, delim_codes(S,LR,XO,XI,NLnext), {NL is NLnext + 1}.
+delim_codes([0'\n|S],LR,XO,XI,NL) --> {NL \= 0}, [0'\n], !, delim_codes(S,LR,XO,XI,NLnext), {NL is NLnext + 1}.
+delim_codes(S,LR,XO,XI,NL) --> {member([L,R],LR)}, [L], !, delim_codes(I,LR,[R|XI],XI,NLi), [R], delim_codes(Rest,LR,XO,XI,NLo),
        { append([L|I],[R],LIR), append(LIR,Rest,S), NL is NLi + NLo }.
-delim_outer([C|Cs],L,R,XO,XI,NL) --> [0'\\,C], {member(C,XO)}, !, delim_outer(Cs,L,R,XO,XI,NL).
-delim_outer([C|Cs],L,R,XO,XI,NL) --> [C], {\+ member(C,XO)}, !, delim_outer(Cs,L,R,XO,XI,NL).
-delim_outer([],_,_,_,_,0) --> !.
-delim_inner([0'\s|S],L,R,X,NL) --> [0'\\,0'\n], !, delim_inner(S,L,R,X,NLnext), {NL is NLnext + 1}.
-delim_inner([0'\n|S],L,R,X,NL) --> {NL \= 0}, [0'\n], !, delim_inner(S,L,R,X,NLnext), {NL is NLnext + 1}.
-delim_inner(S,L,R,X,NL) --> [L], !, delim_inner(I,L,R,X,NL), [R], delim_inner(Rest,L,R,X,NL), {append([L|I],[R|Rest],S)}.
-delim_inner([C|Cs],L,R,X,NL) --> [0'\\,C], {member(C,X)}, !, delim_inner(Cs,L,R,X,NL).
-delim_inner([C|Cs],L,R,X,NL) --> [C], {\+ member(C,X)}, !, delim_inner(Cs,L,R,X,NL).
-delim_inner([],_,_,_,0) --> !.
+delim_codes([C|Cs],LR,XO,XI,NL) --> [0'\\,C], {member(C,XO)}, !, delim_codes(Cs,LR,XO,XI,NL).
+delim_codes([C|Cs],LR,XO,XI,NL) --> [C], {\+ member(C,XO)}, !, delim_codes(Cs,LR,XO,XI,NL).
+delim_codes([],_,_,_,0) --> !.
 
 xquote(Sx) --> code_list(C,[0'\']), {string_codes(S,C), expand_vars(S,Sx)}.
+null_quote --> code_list(_,[0'\']).
 xdblquote(Sx) --> code_list(C,[0'\"]), {string_codes(S,C), expand_vars(S,Sx)}.
+null_dblquote --> code_list(_,[0'\"]).
 xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(S,Sx)}.
 
 axvar(true,Sx) --> xvar(Sx).
@@ -426,11 +428,16 @@ whitespace_or_linebreak --> whitespace.
 opt_linebreak --> [].
 opt_linebreak --> "\n", opt_whitespace.
 
-makefile_warning_text(S,NL) --> delim(S,0'(,0'),[0')],[0'\\],NL).
+makefile_warning_text(S,NL) --> delim(S,[[0'(,0')]],[0')],[0'\\],NL).
 makefile_filename_string(S) --> string_from_codes(S," \t\n").
-makefile_target_string(S) --> [0'$,0'(], !, delim(Sv,0'(,0'),[0')],[0'\\,0'\n],0), [0')], {format(string(S),"$(~w)",[Sv])}, !.
-makefile_target_string(S) --> [0'$,0'{], !, delim(Sv,0'(,0'),[0'}],[0'\\,0'\n],0), [0'}], {format(string(S),"${~w}",[Sv])}, !.
-makefile_target_string(S) --> delim(S,0'(,0'),[0':,0';,0'{,0'\s,0'\t],[0'\\,0'\n],0), {S \= ""}, !.
+
+makefile_target_string(S) --> makefile_target_codes(Sc,null), {Sc \= [], string_codes(S,Sc)}.
+makefile_target_codes(S,Rterm) --> [0'$,0'(], !, makefile_target_codes(Sv,0')), [0')], makefile_target_codes(St,Rterm), {append([0'$,0'(|Sv],[0')|St],S)}, !.
+makefile_target_codes(S,Rterm) --> [0'$,0'{], !, makefile_target_codes(Sv,0'}), [0'}], makefile_target_codes(St,Rterm), {append([0'$,0'{|Sv],[0'}|St],S)}, !.
+makefile_target_codes([C|St],Rterm) --> [0'$], makefile_var_char(C), !, makefile_target_codes(St,Rterm), !.
+makefile_target_codes([C|St],Rterm) --> [C], {Rterm \= null, \+ member(C,[Rterm,0'\n])}, !, makefile_target_codes(St,Rterm).
+makefile_target_codes([C|St],null) --> [C], {\+ member(C,[0':,0';,0'\s,0'\t,0'\n])}, !, makefile_target_codes(St,null).
+makefile_target_codes([],_) --> [].
 
 op_string("=") --> "=".
 op_string(":=") --> ":=".

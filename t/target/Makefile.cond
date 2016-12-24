@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 
 ABC = blah
 FOO = blah

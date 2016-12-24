@@ -1,3 +1,4 @@
+# -*- makefile-gmake -*-
 
 # This Makefile has an isolated tab, which should cause an error.
 # The tab is on the following line:
