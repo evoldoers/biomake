@@ -31,3 +31,7 @@ multiline_depgoal_$X_$Y: { \+ (valid(X),
 
 multi_matches_$X.$Y.$Z: { valid(X), valid(Y), valid(Z) }
 	echo X=$X Y=$Y Z=$Z >$@
+
+VAR = foo
+pass_var_to_prolog: { A = VAR }
+	echo $A >$@

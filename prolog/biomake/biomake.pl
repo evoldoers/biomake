@@ -38,6 +38,7 @@
 	   add_gnumake_clause/3,
 	   
 	   global_binding/2,
+	   expand_global_binding/2,
 	   
            target_bindrule/3,
            rebuild_required/4,
@@ -859,6 +860,7 @@ global_binding(Var,Val) :- global_lazy_binding(Var,Val).
 
 target_bindrule_exact(T) :-
         mkrule_default(TP1,_,_,HeadGoal,_,Bindings),
+	bind_globals(Bindings),
 	V=v(null,T,_,Bindings),
         normalize_patterns(TP1,TPs,V),
 	member(TP,TPs),
@@ -868,6 +870,7 @@ target_bindrule_exact(T) :-
 
 target_bindrule(T,rb(T,Ds,DepGoal,Exec1,V),_Opts) :-
         mkrule_default(TP1,DP1,Exec1,HeadGoal,DepGoal,Bindings),
+	bind_globals(Bindings),
 	debug(bindrule,"rule: T=~w TP1=~w DP1=~w E1=~w HG=~w DG=~w B=~w",[T,TP1,DP1,Exec1,HeadGoal,DepGoal,Bindings]),
         append(Bindings,_,Bindings_Open),
         V=v(_Base,T,Ds,Bindings_Open),
@@ -921,6 +924,16 @@ setauto(VarLabel,Value,Bindings) :-
 	member((VarLabel = Value), Bindings),
 	!.
 setauto(_,_,_).
+
+bind_globals(Bindings) :-
+    maplist(bind_global,Bindings).
+
+bind_global((VarLabel = Var)) :- var(Var), expand_global_binding(VarLabel,Var), !.
+bind_global(_).
+
+expand_global_binding(VarLabel,Value) :- global_cmdline_binding(VarLabel,Value), !.
+expand_global_binding(VarLabel,Value) :- global_simple_binding(VarLabel,Value), !.
+expand_global_binding(VarLabel,Value) :- global_lazy_binding(VarLabel,V), !, expand_vars(V,Value).
 
 exact_match(t(TL),A) :- !, exact_match(TL,A).
 exact_match([],'').
@@ -1192,4 +1205,4 @@ bindvar_debug(VL,V,Var) :-
 
 show_global_bindings :-
     forall(global_binding(Var,Val),
-	   format("global binding: ~w = ~w\n",[Var,Val])).
+	   (type_of(Var,T), format("global binding: ~w (~w) = ~w\n",[Var,T,Val]))).

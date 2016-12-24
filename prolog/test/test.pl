@@ -257,6 +257,7 @@ test :-
 	run_test("-f Makefile.goal","multiline_depgoal_a_x"),
 	run_test("-f Makefile.goal","multiline_depgoal_x_b"),
 	run_test("-f Makefile.goal","multi_matches_abc.def.ghi.jkl"),
+	run_test("-f Makefile.goal","pass_var_to_prolog"),
 	run_test("ref/embedded","target/embedded",["rm [hmz]*"],[],"",""),
 	run_test("-f Makefile.precedence","rule_precedence_specific1"),
 	run_test("-f Makefile.precedence","rule_precedence_specific2"),
