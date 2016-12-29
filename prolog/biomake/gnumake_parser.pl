@@ -455,7 +455,7 @@ makefile_target_codes(S,Rterm) --> [0'$,0'(], !, makefile_target_codes(Sv,0')), 
 makefile_target_codes(S,Rterm) --> [0'$,0'{], !, makefile_target_codes(Sv,0'}), [0'}], makefile_target_codes(St,Rterm), {append([0'$,0'{|Sv],[0'}|St],S)}, !.
 makefile_target_codes([C|St],Rterm) --> [0'$], makefile_var_char(C), !, makefile_target_codes(St,Rterm), !.
 makefile_target_codes([C|St],Rterm) --> [C], {Rterm \= null, \+ member(C,[Rterm,0'\n])}, !, makefile_target_codes(St,Rterm).
-makefile_target_codes([C|St],null) --> [C], {\+ member(C,[0':,0';,0'\s,0'\t,0'\n])}, !, makefile_target_codes(St,null).
+makefile_target_codes([C|St],null) --> [C], {\+ member(C,[0':,0';,0'\s,0'\t,0'\n,0'\\])}, !, makefile_target_codes(St,null).
 makefile_target_codes([],_) --> [].
 
 op_string("=") --> "=".
