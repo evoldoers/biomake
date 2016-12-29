@@ -8,6 +8,11 @@
 % MAIN PROGRAM
 % ----------------------------------------
 
+% Declare all debug topics defined in this module
+:- nodebug(verbose).
+:- nodebug(build).
+:- nodebug(md5).
+
 
 main :-
         current_prolog_flag(argv, Arguments),
