@@ -66,8 +66,7 @@ read_md5_file(T,Opts) :-
         -> (debug(md5,'MD5 hash file ~w has an older timestamp than ~w - recomputing hash',[F,T]),
 	    retract_md5_hash(T),
 	    compute_md5(T,_,_,Opts))
-	; true))),
-    !.
+	; true))).
 
 md5_check_size(File,Size,Hash,_Opts) :- exists_file(File), size_file(File,Size), md5_hash(File,Size,Hash).
 
