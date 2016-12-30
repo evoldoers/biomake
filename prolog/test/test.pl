@@ -82,6 +82,7 @@ test :-
 	run_test("-f Makefile.targetexpr","var_slash_var_in_deplist"),
 	run_test("-f Makefile.modifier","padded_modifier"),
 	run_test("-f Makefile.modifier","padded_modifier_from_foreach"),
+	run_test("-f Makefile.dep_linebreak","dep_linebreak"),
 
 	announce("SPECIAL TARGETS"),
 	run_test("-f Makefile.oneshell","oneshell"),

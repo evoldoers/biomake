@@ -1,0 +1,8 @@
+# -*- makefile-gmake -*-
+
+dep_linebreak: dep_linebreak1\
+ dep_linebreak2
+	echo Deps are $^ >$@
+
+dep_linebreak%:
+
