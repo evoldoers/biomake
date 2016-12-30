@@ -1,0 +1,10 @@
+# -*- makefile-gmake -*-
+
+SRC = Makefile
+
+md5_avoid_update_dep:
+	rm md5_avoid_update || true  # force rebuild of md5_avoid_update if this target is built
+	echo dep >$@
+
+md5_avoid_update: md5_avoid_update_dep
+	echo set from $(SRC) >$@

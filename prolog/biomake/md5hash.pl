@@ -46,15 +46,8 @@ read_md5_file(T,Opts) :-
     md5_filename(T,F),
     exists_file(T),
     exists_file(F),
-    (member(ignore_md5_timestamp(true),Opts)
-    ; (time_file(T,Ttime),
-       time_file(F,Ftime),
-       (Ttime > Ftime
-        -> (debug(md5,'MD5 hash file ~w has an older timestamp than ~w - ignoring',[F,T]),
-	    fail)
-	; true))),
-    !,
     debug(md5,'Reading MD5 hash file: ~w',[F]),
+    !,
     retract_md5_hash(T),
     open(F,read,IO,[]),
     repeat,
@@ -65,7 +58,16 @@ read_md5_file(T,Opts) :-
          debug(md5,'parsed term: ~w',[Term]),
          assert(Term),
          fail),
-    close(IO).
+    close(IO),
+    (member(ignore_md5_timestamp(true),Opts)
+    ; (time_file(T,Ttime),
+       time_file(F,Ftime),
+       (Ttime > Ftime
+        -> (debug(md5,'MD5 hash file ~w has an older timestamp than ~w - recomputing hash',[F,T]),
+	    retract_md5_hash(T),
+	    compute_md5(T,_,_,Opts))
+	; true))),
+    !.
 
 md5_check_size(File,Size,Hash,_Opts) :- exists_file(File), size_file(File,Size), md5_hash(File,Size,Hash).
 
@@ -78,7 +80,7 @@ md5_check(File,Size,Hash,Opts) :-
 	!,
 	md5_check_size(File,Size,Hash,Opts).
 md5_check(File,Size,Hash,Opts) :-
-	compute_md5(File,Size,Hash,Opts).
+        compute_md5(File,Size,Hash,Opts).
 
 retract_md5_hash(T) :-
     md5_hash(T,_,_),

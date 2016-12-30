@@ -16,6 +16,10 @@ biomake_path(Path) :-
 	base_path(Dir),
 	string_concat(Dir,"bin/biomake",Path).
 
+biomake_cmd(Args,Target,Cmd) :-
+	biomake_path(Make),
+	format(string(Cmd),"~s ~s ~s",[Make,Args,Target]).
+
 user:prolog_exception_hook(_,
                            _, _, _) :-
         backtrace(99),
@@ -195,8 +199,12 @@ test :-
 
 	announce("MD5 CHECKSUMS"),
 
-	% this is a test of the MD5 checksums
+	% this is a low-level unit test of the MD5 checksums
 	run_test("ref/md5","target/md5",[],[],"-B -H --debug md5","hello_world"),
+
+	% this tests that the file is not rebuilt just because of modification times
+	biomake_cmd("-f Makefile.md5 -H --debug md5","md5_avoid_update",MakeMd5AvoidUpdate),
+	run_test("ref","target",[MakeMd5AvoidUpdate,"sleep 1","touch md5_avoid_update_dep"],[],"-f Makefile.md5 -H --debug md5 SRC=test","md5_avoid_update"),
 
 	% the next test fakes out the MD5 checksums... kind of hacky
 	% the general idea is to test whether biomake can be tricked into NOT making a target
@@ -370,8 +378,7 @@ make_test_path(Dir,Target,TestPath) :-
 exec_test(RefDir,TestDir,Setup,Cleanup,Args,Target) :-
 	make_test_path(TestDir,TestPath),
 	make_test_path(TestDir,Target,TargetPath),
-	biomake_path(Make),
-	format(string(Exec),"~s ~s ~s",[Make,Args,Target]),
+	biomake_cmd(Args,Target,Exec),
 	working_directory(CWD,TestPath),
 	% If no "Setup" shell commands were specified, remove the target file.
 	% If Setup commands were specified, let the caller take care of this.
