@@ -1,0 +1,8 @@
+# -*- makefile-gmake -*-
+
+X=a b c d
+padded_modifier_from_foreach:
+	$(foreach o, $(X), @echo $o ) >$@
+
+padded_modifier:
+	  @echo Should be silent >$@

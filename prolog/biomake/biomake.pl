@@ -435,9 +435,8 @@ run_execs_and_update(Rule,SL,Opts) :-
     rule_target(Rule,T,Opts),
     rule_execs(Rule,Execs,Opts),
     forall(member(Exec,Execs),
-	   (string_chars(Exec,['@'|EC])
-	    -> (string_chars(ES,EC),
-		report('~w',[ES],SL,Opts))
+	   (has_modifier(Exec,'@',ES)
+	    -> report('~w',[ES],SL,Opts)
 	    ; report('~w',[Exec],SL,Opts))),
     flag_as_rebuilt(T).
 
@@ -499,14 +498,12 @@ run_execs([E|Es],T,SL,Opts) :-
         run_execs(Es,T,SL,Opts).
 
 run_exec(Exec,T,SL,Opts) :-
-        string_chars(Exec,['-'|RealExecChars]),
+        has_modifier(Exec,'-',RealExec),
 	!,
-	string_chars(RealExec,RealExecChars),
 	run_exec(RealExec,T,SL,[keep_going_on_error(true)|Opts]).
 run_exec(Exec,T,SL,Opts) :-
-	string_chars(Exec,['@'|SilentChars]),
+        has_modifier(Exec,'@',Silent),
 	!,
-	string_chars(Silent,SilentChars),
 	silent_run_exec(Silent,T,SL,Opts).
 run_exec(Exec,T,SL,Opts) :-
         running_silent(T,Opts),
@@ -526,6 +523,16 @@ running_silent(T,Opts) :-
         member(silent_targets(TL),Opts),
 	member(T,TL),
         \+ get_opt(dry_run,true,Opts).
+
+has_modifier(InStr,ModChar,StrippedStr) :-
+        string_chars(InStr,InChars),
+	phrase(strip_mod(ModChar,StrippedChars),InChars),
+	string_chars(StrippedStr,StrippedChars).
+
+strip_mod(M,S) --> [' '], strip_mod(M,S).
+strip_mod(M,S) --> [M], strip_mod_tail(S).
+strip_mod_tail([C|S]) --> [C], strip_mod_tail(S).
+strip_mod_tail([]) --> [].
 
 silent_run_exec(Exec,T,SL,Opts) :-
         get_time(T1),
