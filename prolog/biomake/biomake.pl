@@ -72,6 +72,12 @@
 :- user:op(1103,xfy,+=).
 :- user:op(1104,xfy,=*).
 
+% Declare all debug topics defined in this module
+:- nodebug(poolq).
+:- nodebug(biomake).
+:- nodebug(pattern).
+:- nodebug(bindrule).
+
 % Configuration
 max_recurse_depth(100).
 

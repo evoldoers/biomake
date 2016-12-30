@@ -11,6 +11,9 @@
 :- use_module(library(biomake/functions)).
 :- use_module(library(biomake/biomake)).
 
+% Declare all debug topics defined in this module
+:- nodebug(makefile).
+
 % Wrapper for reading GNU Makefile
 parse_gnu_makefile(F,M,OptsOut,OptsIn) :-
     parse_gnu_makefile('',F,M,OptsOut,OptsIn).
