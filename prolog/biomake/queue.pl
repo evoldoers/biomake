@@ -84,7 +84,7 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 			  [Engine],
 			  ScriptFilename),
 	format(string(QsubCmd),"~w ~w ~w ~w ~w ~w ~w ~w ~w >~w",[QsubExec,OutArg,ErrArg,QArgs,QsubArgs,RuleQsubArgs,DepArg,ExtraArgs,ScriptFilename,JobFilename]),
-	verbose_report("Submitting job: ~w",[QsubCmd],SL,Opts),
+	report("Submitting job: ~w",[QsubCmd],Opts),
 	shell(QsubCmd).
 
 qsub_rule_execs(Rule,[Chdir,Biomake],Opts) :-
