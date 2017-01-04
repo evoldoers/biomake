@@ -6,7 +6,7 @@
               init_queue/2,
               release_queue/1,
 	      write_script_file/4,
-	      write_script_file/6,
+	      write_script_file/7,
 	      run_execs_in_queue/4,
 	      flush_queue_recursive/2
           ]).
@@ -22,6 +22,8 @@
 :- discontiguous run_execs_in_queue/4.
 :- discontiguous default_qsub_exec/2.
 :- discontiguous default_qdel_exec/2.
+:- discontiguous qsub_output_arg/3.
+:- discontiguous qsub_error_arg/3.
 :- discontiguous qsub_dep_arg/3.
 :- discontiguous qsub_dep_arg_prefix/2.
 :- discontiguous qsub_dep_prefix/2.
@@ -57,11 +59,14 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 	biomake_private_filename_dir_exists(T,[Engine,"job"],JobFilename),
 	format(string(RemoveJobFile),"rm ~w",[JobFilename]),
 	qsub_rule_execs(Rule,Es,Opts),
-	append(Es,[RemoveJobFile],ExecsWithCleanup),
 	qsub_job_ids(Engine,DL,DepJobs),
 	qsub_script_headers(Engine,DepJobs,Opts,Headers),
 	append(Headers,["","# Main script"],HeadersWithComment),
 	qsub_dep_arg(Engine,DepJobs,DepArg),
+	biomake_private_filename_dir_exists(T,[Engine,"out"],OutPath),
+	qsub_output_arg(Engine,OutPath,OutArg),
+	biomake_private_filename_dir_exists(T,[Engine,"err"],ErrPath),
+	qsub_error_arg(Engine,ErrPath,ErrArg),
 	!,
 	write_script_file(T,
 			  ["# Header from QsubHeader variable",
@@ -73,11 +78,12 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 			   "# Contents of header file specified by --qsub-header-file",
 			   QsubHeaderFileContents,
 			   "# Generic headers" | HeadersWithComment],
-			  ExecsWithCleanup,
+			  Es,
+			  [RemoveJobFile],
 			  Opts,
 			  [Engine],
 			  ScriptFilename),
-	format(string(QsubCmd),"~w ~w ~w ~w ~w ~w ~w >~w",[QsubExec,QArgs,QsubArgs,RuleQsubArgs,DepArg,ExtraArgs,ScriptFilename,JobFilename]),
+	format(string(QsubCmd),"~w ~w ~w ~w ~w ~w ~w ~w ~w >~w",[QsubExec,OutArg,ErrArg,QArgs,QsubArgs,RuleQsubArgs,DepArg,ExtraArgs,ScriptFilename,JobFilename]),
 	verbose_report("Submitting job: ~w",[QsubCmd],SL,Opts),
 	shell(QsubCmd).
 
@@ -187,17 +193,15 @@ flush_queue_recursive(_,_,_,_).
 % ----------------------------------------
 
 write_script_file(T,Es,Opts,ScriptFilename) :-
-	write_script_file(T,[],Es,Opts,[],ScriptFilename).
+	write_script_file(T,[],Es,[],Opts,[],ScriptFilename).
 
-write_script_file(T,Headers,Es,Opts,Subdirs,ScriptFilename) :-
-	get_opt(oneshell,true,Opts),
-	!,
-	maplist(echo_wrap,Es,EchoedEs),
-	write_script_file_contents(T,Headers,EchoedEs,Opts,Subdirs,ScriptFilename).
-
-write_script_file(T,Headers,Es,Opts,Subdirs,ScriptFilename) :-
-	maplist(shell_echo_wrap,Es,Execs),
-	write_script_file_contents(T,Headers,Execs,Opts,Subdirs,ScriptFilename).
+write_script_file(T,Headers,Es,Cleanup,Opts,Subdirs,ScriptFilename) :-
+        (get_opt(oneshell,true,Opts)
+	 -> maplist(echo_wrap,Es,ShellExecs)
+	 ; maplist(shell_echo_wrap,Es,ShellExecs)),
+	maplist(shell_wrap,Cleanup,ShellCleanup),
+	append(ShellExecs,ShellCleanup,ExecsWithCleanup),
+	write_script_file_contents(T,Headers,ExecsWithCleanup,Opts,Subdirs,ScriptFilename).
 
 write_script_file_contents(T,Headers,Execs,_Opts,Subdirs,ScriptFilename) :-
 	working_directory(CWD,CWD),
@@ -254,6 +258,8 @@ run_execs_in_queue(sge,Rule,SL,Opts) :-
 
 default_qsub_exec(sge,"qsub").
 default_qdel_exec(sge,"qdel").
+qsub_output_arg(sge,F,S) :- format(string(S),"-o ~w",[F]).
+qsub_error_arg(sge,F,S) :- format(string(S),"-e ~w",[F]).
 qsub_dep_arg_prefix(sge,"-hold_jid ").
 qsub_dep_prefix(sge,"").
 qsub_dep_separator(sge,",").
@@ -275,6 +281,8 @@ run_execs_in_queue(pbs,Rule,SL,Opts) :-
 
 default_qsub_exec(pbs,"qsub").
 default_qdel_exec(pbs,"qdel").
+qsub_output_arg(pbs,F,S) :- format(string(S),"-o ~w",[F]).
+qsub_error_arg(pbs,F,S) :- format(string(S),"-e ~w",[F]).
 qsub_dep_arg_prefix(pbs,"-W depend=").
 qsub_dep_prefix(pbs,"afterok:").
 qsub_dep_separator(pbs,",").
@@ -296,6 +304,8 @@ run_execs_in_queue(slurm,Rule,SL,Opts) :-
 
 default_qsub_exec(slurm,"sbatch").
 default_qdel_exec(slurm,"scancel").
+qsub_output_arg(slurm,F,S) :- format(string(S),"-o ~w",[F]).
+qsub_error_arg(slurm,F,S) :- format(string(S),"-e ~w",[F]).
 qsub_dep_arg_prefix(slurm,"--dependency=").
 qsub_dep_prefix(slurm,"afterok:").
 qsub_dep_separator(slurm,",").

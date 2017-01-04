@@ -5,11 +5,16 @@ use Time::HiRes qw(usleep);
 # dummy version of qsub that just forks a process and sleeps
 
 my @hold;
+my ($out, $err) = ("", "");
 while (@ARGV && $ARGV[0] =~ /^-/) {
     my $arg = shift;
     if ($arg eq '-hold_jid') {
 	my $hold_jobs = shift;
 	@hold = split /,/, $hold_jobs;
+    } elsif ($arg eq '-o') {
+	$out = ">" . shift;
+    } elsif ($arg eq '-e') {
+	$err = "2>" . shift;
     } elsif ($arg eq '--fake-arg') {
 	shift;
     } elsif ($arg eq '--echo') {
@@ -31,5 +36,5 @@ if ($child) {
 	}
     }
     usleep(1e5);  # sleep for 100ms
-    system "@ARGV";
+    system "@ARGV $out $err";
 }
