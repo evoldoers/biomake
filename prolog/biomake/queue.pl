@@ -46,18 +46,35 @@ run_execs_with_qsub(Engine,Rule,SL,Opts) :-
 	(get_opt(qsub_exec,QsubExec,Opts); default_qsub_exec(Engine,QsubExec)),
 	(get_opt(qsub_args,QsubArgs,Opts); QsubArgs = ""),
 	(get_opt(queue_args,QArgs,Opts); QArgs = ""),
+	(get_opt(qsub_header,QsubHeader,Opts); QsubHeader = ""),
+	(get_opt(qsub_header_file,QsubHeaderFile,Opts)
+	 -> file_contents(QsubHeaderFile,QsubHeaderFileContents)
+	 ; QsubHeaderFileContents = ""),
 	qsub_extra_args(Engine,ExtraArgs),
-	qsub_get_var_args(VarArgs,Rule,Opts),
+	bindvar_rule('QsubArgs',Rule,Opts,RuleQsubArgs),
+	bindvar_rule('QsubHeader',Rule,Opts,RuleQsubHeader),
+	bindvar_rule('QsubHeaderFile',Rule,Opts,RuleQsubHeaderFile),
+	file_contents(RuleQsubHeaderFile,RuleQsubHeaderFileContents),
 	biomake_private_filename_dir_exists(T,Engine,JobFilename),
 	format(string(RemoveJobFile),"rm ~w",[JobFilename]),
 	qsub_rule_execs(Rule,Es,Opts),
 	append(Es,[RemoveJobFile],ExecsWithCleanup),
 	qsub_job_ids(Engine,DL,DepJobs),
 	qsub_script_headers(Engine,DepJobs,Opts,Headers),
+	append(Headers,["","# Main script"],HeadersWithComment),
 	qsub_dep_arg(Engine,DepJobs,DepArg),
 	!,
-	write_script_file(T,Headers,ExecsWithCleanup,Opts,ScriptFilename),
-	format(string(QsubCmd),"~w ~w ~w ~w ~w ~w ~w >~w",[QsubExec,QArgs,QsubArgs,VarArgs,DepArg,ExtraArgs,ScriptFilename,JobFilename]),
+	write_script_file(T,["# Header from QsubHeader variable",
+			     RuleQsubHeader,
+			     "# Header from --qsub-header",
+			     QsubHeader,
+			     "# Contents of header file specified by QsubHeaderFile variable",
+			     RuleQsubHeaderFileContents,
+			     "# Contents of header file specified by --qsub-header-file",
+			     QsubHeaderFileContents,
+			     "# Generic headers" | HeadersWithComment],
+			  ExecsWithCleanup,Opts,ScriptFilename),
+	format(string(QsubCmd),"~w ~w ~w ~w ~w ~w ~w >~w",[QsubExec,QArgs,QsubArgs,RuleQsubArgs,DepArg,ExtraArgs,ScriptFilename,JobFilename]),
 	verbose_report("Submitting job: ~w",[QsubCmd],SL,Opts),
 	shell(QsubCmd).
 
@@ -75,11 +92,16 @@ qsub_rule_execs(Rule,[Chdir,Biomake],Opts) :-
 qsub_rule_execs(Rule,Es,Opts) :-
 	rule_execs(Rule,Es,Opts).
 
+file_contents(Filename,String) :-
+        Filename \= '',
+	exists_file(Filename),
+	read_file_to_codes(Filename,Codes,[]),
+	string_codes(String,Codes),
+	!.
+file_contents(_,"").
+
 qsub_use_biomake(Opts) :-
 	get_opt(qsub_use_biomake,true,Opts).
-
-qsub_get_var_args(QA,Rule,Opts) :-
-        bindvar_rule('QsubArgs',Rule,Opts,QA).
 
 qsub_job_ids(Engine,[D|Ds],[N|Ns]) :-
 	qsub_job_id(Engine,D,N),
@@ -184,14 +206,13 @@ write_script_file_contents(T,Headers,Execs,_Opts,ScriptFilename) :-
 	working_directory(CWD,CWD),
 	open_script_file(T,ScriptFilename,IO),
 	shell_path(Sh),
-	maplist(shell_comment,Headers,Comments),
-	append(Execs,Comments,Contents),
-	concat_string_list(Contents,Str," &&\n"),
-	format(IO,"#!~w~ncd ~w~n~w~n",[Sh,CWD,Str]),
+	concat_string_list(Execs,ExecStr," &&\n"),
+	concat_string_list(Headers,HeaderStr,"\n"),
+	format(IO,"#!~w~n~w~ncd ~w~n~w~n",[Sh,HeaderStr,CWD,ExecStr]),
 	close(IO),
 	format(string(Chmod),"chmod +x ~w",[ScriptFilename]),
 	shell(Chmod).
-	
+
 
 % ----------------------------------------
 % No queue engine (runs execs immediately)

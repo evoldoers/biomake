@@ -25,3 +25,11 @@ $A.$B.$C.$D.$E: $A.$B.$C.baz $D.$E.bo
 $A-$B-$C-$D { QsubArgs = "--echo testing test_file" } :
 	cat test_file >$@
 	echo $A $B $C $D >>$@
+
+$A-$B,$C-$D { QsubHeader = "echo testing test_file2 >test_file2" } :
+	cat test_file2 >$@
+	echo $A $B $C $D >>$@
+
+$A_$B_$C_$D_$E_$F { QsubHeaderFile = "test_header_file" } :
+	cat test_file3 >$@
+	echo $A $B $C $D $E $F >>$@

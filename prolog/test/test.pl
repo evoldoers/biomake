@@ -241,6 +241,8 @@ test :-
 	run_test("ref","target",[],["t/sge/fake_qwait"],"-d -f Makefile.queue -Q sge -H --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","that.was.my.favourite.dress"),
 	run_test("ref","target",[],["t/sge/fake_qwait"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel --queue-args '--fake-arg dummy'","walk.right.through.the.door"),
 	run_test("ref","target",["rm test_file"],["t/sge/fake_qwait"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","your-own-personal-jesus"),
+	run_test("ref","target",["rm test_file2"],["t/sge/fake_qwait"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","reach-out,touch-faith"),
+	run_test("ref","target",["echo 'echo testing test_file3 >test_file3' >test_header_file"],["t/sge/fake_qwait"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","flesh_and_bone_by_the_telephone"),
 
 	announce("COMMAND-LINE OPTIONS"),
 	run_test("--file=Makefile.argval","arg_equals_val"),

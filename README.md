@@ -123,6 +123,10 @@ Var=Val
     Force qsub/sbatch to always call biomake recursively
 --qsub-biomake-args,--sbatch-biomake-args 'ARGS'
     Arguments passed recursively to biomake by qsub/sbatch (default: '-N')
+--qsub-header,--sbatch-header 'HEADER'
+    Header for qsub (sge,pbs) or sbatch (slurm)
+--qsub-header-file,--sbatch-header-file 'FILENAME'
+    Header file for qsub (sge,pbs) or sbatch (slurm)
 --qdel-args,--scancel-args 'ARGS'
     Additional arguments for qdel (sge,pbs) or scancel (slurm)
 --flush,--qsub-flush <target or directory>
@@ -584,10 +588,10 @@ There are several queueing engines currently supported:
 - `-Q poolq` uses an internal thread pool for running jobs in parallel on the same machine that `biomake` is running on
 - `-Q sge` uses [Sun Grid Engine](https://en.wikipedia.org/wiki/Oracle_Grid_Engine) or compatible (e.g. [Open Grid Scheduler](http://gridscheduler.sourceforge.net/))
 - `-Q pbs` uses [PBS](https://en.wikipedia.org/wiki/Portable_Batch_System)
-- `-Q slurm` uses [SLURM](https://slurm.schedmd.com/)
+- `-Q slurm` uses [Slurm](https://slurm.schedmd.com/)
 - `-Q test` just runs the jobs synchronously. Used for testing purposes only
 
-For Sun Grid Engine, PBS and SLURM, the paths to the relevant job control executables, and any arguments to those executables
+For Sun Grid Engine, PBS and Slurm, the paths to the relevant job control executables, and any arguments to those executables
 (such as the name of the queue that jobs should be run on), can be controlled using various command-line arguments.
 In particular, the `--qsub-args` command-line option (applying to all recipes)
 and the `QsubArgs` Prolog variable (on a per-recipe basis, in the target goal)
@@ -602,6 +606,13 @@ my_target { QsubArgs = '--cores-per-socket=4' } : my_dependency
 
 Note that `QsubArgs` has to be set in the target goal, not the deps goal
 (since the job is submitted to the queueing engine before the dependencies are guaranteed to have been built).
+
+Similarly, you can use the `QsubHeader` variable (or the `--qsub-header` command-line option) to add header lines to the wrapper script that is submitted to the queue engine
+(for example, to provide queue configuration directives),
+or you can use `QsubHeaderFile` (or `--qsub-header-file`) to specify the filename of a header file to include.
+
+The names of these Prolog variables for fine-grained queue configuration (`QsubArgs`, `QsubHeader`, `QsubHeaderFile`) are the same for Slurm as for SGE and PBS,
+even though the batch submission command for Slurm is `sbatch` and not `qsub`.
 
 More
 ----

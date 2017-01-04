@@ -372,6 +372,14 @@ arg_info('--qsub-biomake-args','\'ARGS\'',S) :-
     default_qsub_biomake_args(Default),
     format(atom(S),'Arguments passed recursively to biomake by qsub/sbatch (default: ~q)',[Default]).
 
+parse_arg(['--qsub-header',X|L],L,qsub_header(X)).
+arg_alias('--qsub-header','--sbatch-header').
+arg_info('--qsub-header','\'HEADER\'','Header for qsub (sge,pbs) or sbatch (slurm)').
+
+parse_arg(['--qsub-header-file',X|L],L,qsub_header_file(X)).
+arg_alias('--qsub-header-file','--sbatch-header-file').
+arg_info('--qsub-header-file','\'FILENAME\'','Header file for qsub (sge,pbs) or sbatch (slurm)').
+
 parse_arg(['--qdel-args',X|L],L,qdel_args(X)).
 arg_alias('--qdel-args','--scancel-args').
 arg_info('--qdel-args','\'ARGS\'','Additional arguments for qdel (sge,pbs) or scancel (slurm)').
