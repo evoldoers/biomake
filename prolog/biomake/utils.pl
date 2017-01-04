@@ -281,28 +281,31 @@ makefile_var_codes([C|Cs]) --> makefile_var_code(C), makefile_var_codes(Cs).
 makefile_var_atom_from_codes(A) --> makefile_var_codes(Cs), {atom_codes(A,Cs)}.
 makefile_var_string_from_codes(S) --> makefile_var_codes(Cs), {string_codes(S,Cs)}.
 
-biomake_private_dir(Target,Path) :-
+biomake_private_subdir_list(Target,Subdirs,[D,".biomake"|Subdirs]) :-
 	absolute_file_name(Target,F),
-	file_directory_name(F,D),
-	format(string(Path),"~w/.biomake",[D]).
+	file_directory_name(F,D).
 
-biomake_private_subdir(Target,Subdir,Path) :-
-	biomake_private_dir(Target,Private),
-	format(string(Path),"~w/~w",[Private,Subdir]).
+biomake_private_dir(Target,Subdirs,Path) :-
+        biomake_private_subdir_list(Target,Subdirs,List),
+	concat_string_list(List,Path,"/").
 
-biomake_private_filename(Target,Subdir,Filename) :-
-	biomake_private_subdir(Target,Subdir,Private),
+biomake_private_filename(Target,Subdirs,Filename) :-
+	biomake_private_dir(Target,Subdirs,Private),
 	absolute_file_name(Target,F),
 	file_base_name(F,N),
 	format(string(Filename),"~w/~w",[Private,N]).
 
-biomake_private_filename_dir_exists(Target,Subdir,Filename) :-
-	biomake_private_dir(Target,Path),
-	safe_make_directory(Path),
-	biomake_private_subdir(Target,Subdir,SubPath),
-	safe_make_directory(SubPath),
-	biomake_private_filename(Target,Subdir,Filename).
+biomake_private_filename_dir_exists(Target,Subdirs,Filename) :-
+        biomake_private_subdir_list(Target,Subdirs,[Root|List]),
+	biomake_make_subdir_list(Root,List),
+	biomake_private_filename(Target,Subdirs,Filename).
 
+biomake_make_subdir_list(_,[]).
+biomake_make_subdir_list(Root,[Dir|Subdirs]) :-
+        format(string(Next),"~w/~w",[Root,Dir]),
+	safe_make_directory(Next),
+	biomake_make_subdir_list(Next,Subdirs).
+	
 safe_make_directory(Path) :-
         exists_directory(Path),
 	!.

@@ -105,7 +105,7 @@ try_md5_prog(Filename,Hash) :-
     absolute_file_name(Filename,Path),
     append(Args,[Path],Md5Args),
     atomic_list_concat(Md5Args," ",Md5ArgStr),
-    biomake_private_filename_dir_exists(Filename,"tmp",TmpFile),
+    biomake_private_filename_dir_exists(Filename,["tmp"],TmpFile),
     format(string(Exec),"~w ~w >~w",[Md5Prog,Md5ArgStr,TmpFile]),
     debug(md5,'computing hash: ~w',[Exec]),
     shell(Exec),
@@ -154,14 +154,14 @@ delete_md5_file(T) :-
 delete_md5_file(_).
 
 ensure_md5_directory_exists(Target) :-
-    biomake_private_filename_dir_exists(Target,"md5",_),
-    biomake_private_filename_dir_exists(Target,"tmp",_).
+    biomake_private_filename_dir_exists(Target,["md5"],_),
+    biomake_private_filename_dir_exists(Target,["tmp"],_).
 
 md5_filename(Target,Filename) :-
-    biomake_private_filename(Target,"md5",Filename).
+    biomake_private_filename(Target,["md5"],Filename).
 
 open_md5_file(Target,Stream) :-
-    open_biomake_private_file(Target,"md5",_,Stream).
+    open_biomake_private_file(Target,["md5"],_,Stream).
 
 make_md5_hash_term(T,S,H,Str) :-
     format(string(Str),"md5_hash(\"~w\",~d,\"~w\")",[T,S,H]).
