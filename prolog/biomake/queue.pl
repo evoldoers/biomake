@@ -300,7 +300,7 @@ qsub_dep_arg_prefix(slurm,"--dependency=").
 qsub_dep_prefix(slurm,"afterok:").
 qsub_dep_separator(slurm,",").
 qsub_dep_arg(slurm,DepJobs,Arg) :- qsub_make_dep_arg(slurm,DepJobs,Arg).
-qsub_extra_args(slurm,"-parsable").
+qsub_extra_args(slurm,"--parsable").
 qsub_script_headers(slurm,_,_,[]).
 qsub_job_id(slurm,T,N) :- qsub_generic_job_id(slurm,T,N).
 
