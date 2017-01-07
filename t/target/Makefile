@@ -67,6 +67,24 @@ S += world
 append_var:
 	echo $S >$@
 
+RECURSIVE_VAR1 = hello
+RECURSIVE_VAR2 = $(RECURSIVE_VAR1)
+
+RECURSIVE_VAR1 += there
+RECURSIVE_VAR2 += world
+
+append_recursive_var:
+	echo $(RECURSIVE_VAR2) >$@
+
+SIMPLE_VAR1 := hello
+SIMPLE_VAR2 := $(SIMPLE_VAR1)
+
+SIMPLE_VAR1 += there
+SIMPLE_VAR2 += world
+
+append_simple_var:
+	echo $(SIMPLE_VAR2) >$@
+
 # General syntax
 escape_dollar:
 	echo $$ >$@

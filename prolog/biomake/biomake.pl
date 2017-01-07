@@ -790,12 +790,19 @@ add_spec_clause( (Var += X), VNs, Opts, Opts) :-
         normalize_pattern(X,Y,v(_,_,_,VNs)),
 	unwrap_t(Y,Yflat),  % hack; parser adds too many t(...)'s
 	!,
-	(global_binding(Var,Old),
-	 concat_string_list([Old," ",Yflat],New);
-	 New = Yflat),
-        global_unbind(Var),
-        assertz(global_simple_binding(Var,New)),
-        debug(makeprog,'assign: ~w := ~w',[Var,New]).
+	% handle slightly differently depending on whether variable was previously simply or recursively expanded
+	((global_simple_binding(Var,Old)  % simply expanded
+	  ; global_cmdline_binding(Var,Old))  % variables set on command line are simply expanded
+	 -> (concat_string_list([Old," ",Yflat],New),
+             global_unbind(Var),
+             assertz(global_simple_binding(Var,New)),
+             debug(makeprog,'assign: ~w := ~w',[Var,New]))
+	 ; ((global_lazy_binding(Var,Old)  % recursively expanded
+	     -> (concat_string_list([Old," ",Yflat],New),
+		 global_unbind(Var))
+	     ; New = Yflat),
+	    assertz(global_lazy_binding(Var,New))),
+	   debug(makeprog,'assign: ~w = ~w',[Var,New])).
 
 add_spec_clause( (Var =* X), VNs, Opts, Opts) :-
         !,

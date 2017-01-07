@@ -115,6 +115,8 @@ test :-
 	run_test("unbound_var"),
 	run_test("multi_targets_from_var"),
 	run_test("append_var"),
+	run_test("append_simple_var"),
+	run_test("append_recursive_var"),
 	run_test("computed_var1"),
 	run_test("computed_var2"),
 	run_test("computed_var3"),
