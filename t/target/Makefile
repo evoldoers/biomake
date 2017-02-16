@@ -106,6 +106,12 @@ comment_in_rule:
 # it can be more than one line
 	echo Second line >>$@
 
+comment_in_deps: realdep # commentdep
+	cat $< >$@
+
+realdep:
+	echo This is a legit dep >$@
+
 # biomake's output for split_recipe_lines is as the GNU Make documentation describes,
 # but not (in our experience) the way GNU Make actually behaves...
 # GNU Make 3.81 vs https://www.gnu.org/software/make/manual/html_node/Splitting-Recipe-Lines.html

@@ -56,6 +56,7 @@ test :-
 	run_test("one_line"),
 	run_test("one_line_with_deps"),
 	run_test("comment_in_rule"),
+	run_test("comment_in_deps"),
 	run_test("-f Makefile.include","inc2.test"),
 	run_test("-f Makefile.include","makefile_list"),
 	run_test("-f Makefile.dir1","relative_include_path"),

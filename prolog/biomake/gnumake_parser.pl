@@ -381,7 +381,7 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     "{",
     xbrace(DepGoalAtom,Ldep),
     "}",
-    "\n",
+    opt_comment,
     !,
     makefile_execs(Exec,Lexecs),
     { Lines is 1 + Lexecs + Lhead + Ldep,
@@ -398,7 +398,7 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{true},VNs),Lines) -->
     opt_whitespace,
     ":",
     opt_makefile_targets(Deps),
-    "\n",
+    opt_comment,
     !,
     makefile_execs(Exec,Lexecs),
     { Lines is 1 + Lexecs + Lhead,
@@ -412,7 +412,7 @@ makefile_recipe(rule(Head,Deps,Exec,{DepGoal},VNs),Lines) -->
     "{",
     xbrace(DepGoalAtom,Ldep),
     "}",
-    "\n",
+    opt_comment,
     !,
     makefile_execs(Exec,Lexecs),
     { Lines is 1 + Lexecs + Ldep,
@@ -422,7 +422,7 @@ makefile_recipe(rule(Head,Deps,Exec),Lines) -->
     makefile_targets(Head),
     ":",
     opt_makefile_targets(Deps),
-    "\n",
+    opt_comment,
     !,
     makefile_execs(Exec,Lexecs),
     {Lines is 1 + Lexecs}.
@@ -458,7 +458,7 @@ makefile_target_codes(S,Rterm) --> [0'$,0'(], !, makefile_target_codes(Sv,0')), 
 makefile_target_codes(S,Rterm) --> [0'$,0'{], !, makefile_target_codes(Sv,0'}), [0'}], makefile_target_codes(St,Rterm), {append([0'$,0'{|Sv],[0'}|St],S)}, !.
 makefile_target_codes([C|St],Rterm) --> [0'$], makefile_var_char(C), !, makefile_target_codes(St,Rterm), !.
 makefile_target_codes([C|St],Rterm) --> [C], {Rterm \= null, \+ member(C,[Rterm,0'\n])}, !, makefile_target_codes(St,Rterm).
-makefile_target_codes([C|St],null) --> [C], {\+ member(C,[0':,0';,0'\s,0'\t,0'\n,0'\\])}, !, makefile_target_codes(St,null).
+makefile_target_codes([C|St],null) --> [C], {\+ member(C,[0'#,0':,0';,0'\s,0'\t,0'\n,0'\\])}, !, makefile_target_codes(St,null).
 makefile_target_codes([],_) --> [].
 
 op_string("=") --> "=".
@@ -493,6 +493,8 @@ makefile_def_body([],1) --> opt_space, "endef", !, opt_whitespace, "\n".
 makefile_def_body(['\n'|Cs],Lplus1) --> ['\n'], !, makefile_def_body(Cs,L), {Lplus1 is L + 1}.
 makefile_def_body([C|Cs],Lines) --> [C], makefile_def_body(Cs,Lines).
 
+opt_comment --> comment.
+opt_comment --> opt_space, "\n", [].
 comment --> opt_space, "#", ignore_line.
 ignore_line --> ("\n" ; call(eos)), !.
 ignore_line --> [_], ignore_line.
