@@ -14,3 +14,14 @@ bagof1:
 
 bagof2:
 	echo $(DEF) >$@
+
+prolog
+foo(a,1).
+foo(b,2).
+foo(c,3).
+endprolog
+
+bagof3: bagoff-param-b
+
+bagoff-param-%:
+	echo $(bagof X,foo($*,X))
