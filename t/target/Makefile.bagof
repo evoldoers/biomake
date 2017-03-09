@@ -21,7 +21,7 @@ foo(b,2).
 foo(c,3).
 endprolog
 
-bagof3: bagoff-param-b
+bagof3: bagoff-param-b-bagof3
 
-bagoff-param-%:
-	echo $(bagof X,foo($*,X))
+bagoff-param-$(P)-$(OUT):
+	echo $(bagof X,foo($(P),X)) > $(OUT)
