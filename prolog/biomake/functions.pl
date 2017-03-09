@@ -156,7 +156,7 @@ makefile_function(Result,V) --> lb("divide"), opt_whitespace, xstr_arg(Na,V), co
         { maplist(divide(Na),List,ResultList),
 	  concat_string_list_spaced(ResultList,Result) }.
 
-makefile_function(Result,_V) --> lb("bagof"), str_arg(Template), comma, str_arg(Goal), rb, !,
+makefile_function(Result,V) --> lb("bagof"), xstr_arg(Template,V), comma, xstr_arg(Goal,V), rb, !,
 	{ eval_bagof(Template,Goal,Result) }.
 
 makefile_function("",_V) --> ['('], str_arg(S), [')'], !, {format("Warning: unknown function $(~w)~n",[S])}.

@@ -265,6 +265,7 @@ test :-
 	announce("EMBEDDED PROLOG SYNTAX"),
 	run_test("-f Makefile.bagof","bagof1"),
 	run_test("-f Makefile.bagof","bagof2"),
+	run_test("-f Makefile.bagof","bagof3"),
 	run_test("-f Makefile.goal","headgoal_a"),
 	run_test("-f Makefile.goal","headgoal_x"),
 	run_test("-f Makefile.goal","depgoal_a"),
