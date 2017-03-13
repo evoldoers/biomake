@@ -8,3 +8,6 @@ inc1.test:
 
 makefile_list:
 	echo $(MAKEFILE_LIST) >$@
+
+goal% makecmdgoals:
+	echo $(MAKECMDGOALS) >$@

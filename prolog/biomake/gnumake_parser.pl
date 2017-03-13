@@ -20,12 +20,21 @@ parse_gnu_makefile(F,M,OptsOut,OptsIn) :-
 
 parse_gnu_makefile(DirSlash,F,M,OptsOut,OptsIn) :-
     debug(makefile,'reading: ~w',[F]),
+
     atom_string(MAKEFILE_LIST,"MAKEFILE_LIST"),
-    Assignment = assignment(MAKEFILE_LIST,"+=",F),
-    add_gnumake_clause(Assignment,OptsIn,OptsIn),
+    MakefileListAssignment = assignment(MAKEFILE_LIST,"+=",F),
+    add_gnumake_clause(MakefileListAssignment,OptsIn,OptsIn),
+
+    (bagof(G,member(toplevel(G),OptsIn),MakeCmdGoals)
+     ; MakeCmdGoals = []),
+    atomic_list_concat(MakeCmdGoals,' ',MakeCmdGoalStr),
+    atom_string(MAKECMDGOALS,"MAKECMDGOALS"),
+    MakeCmdGoalsAssignment = assignment(MAKECMDGOALS,"=",MakeCmdGoalStr),
+    add_gnumake_clause(MakeCmdGoalsAssignment,OptsIn,OptsIn),
+
     format(string(Path),"~w~w",[DirSlash,F]),
     phrase_from_file(makefile_rules(Mf,OptsOut,OptsIn,1,Path),Path),
-    M = [Assignment|Mf],
+    M = [MakefileListAssignment,MakeCmdGoalsAssignment|Mf],
     debug(makefile,"rules: ~w~noptions: ~w",[M,OptsOut]).
 
 eval_gnu_makefile(Text,M,OptsOut,OptsIn) :-

@@ -59,6 +59,7 @@ test :-
 	run_test("comment_in_deps"),
 	run_test("-f Makefile.include","inc2.test"),
 	run_test("-f Makefile.include","makefile_list"),
+	run_test("-f Makefile.include goal1 goal2 goal3","makecmdgoals"),
 	run_test("-f Makefile.dir1","relative_include_path"),
 	run_test("forced_rebuild"),
 	run_test("ref","target",["touch old_dep","echo Pre-update >older_dep"],[],"","older_dep"),
