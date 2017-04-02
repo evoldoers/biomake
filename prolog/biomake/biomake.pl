@@ -551,7 +551,10 @@ silent_run_exec(Exec,T,SL,Opts) :-
 
 handle_exec_error(_,0,_,_,_) :- !.
 handle_exec_error(Exec,Err,T,SL,Opts) :-
-        handle_error('Error ~w executing ~w',[Err,Exec],T,SL,Opts).
+        (   get_opt(keep_going_on_error,true,Opts)
+        ->  IgnoreInfo=' (ignored)'
+        ;   IgnoreInfo=''),
+        handle_error('Error ~w executing ~w~w',[Err,Exec,IgnoreInfo],T,SL,Opts).
 
 handle_error(Fmt,Args,T,SL,Opts) :-
         format(string(WhileFmt),"While building ~w: ~w",[T,Fmt]),
