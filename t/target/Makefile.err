@@ -1,9 +1,0 @@
-# -*- makefile-gmake -*-
-
-This Makefile should cause an error.
-
-
-
-# Here's a rule which shouldn't work
-empty:
-	touch empty
