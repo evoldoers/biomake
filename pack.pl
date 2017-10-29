@@ -6,3 +6,4 @@ author('Chris Mungall','cmungall@gmail.com').
 author('Ian Holmes','ihh@berkeley.edu').
 packager('Chris Mungall','cmungall@gmail.com').
 home('https://github.com/evoldoers/biomake').
+replaces(plmake).
