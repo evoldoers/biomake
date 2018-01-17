@@ -33,3 +33,13 @@ $A-$B,$C-$D { QsubHeader = "echo testing test_file2 >test_file2" } :
 $A_$B_$C_$D_$E_$F { QsubHeaderFile = "test_header_file" } :
 	cat test_file3 >$@
 	echo $A $B $C $D $E $F >>$@
+
+slurmtest: slurmhello slurmworld
+	cat $^ >$@
+	rm $^
+
+slurmhello:
+	echo hello >$@
+
+slurmworld:
+	echo world >$@

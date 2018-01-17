@@ -241,6 +241,7 @@ test :-
 	run_test("-f Makefile.queue -Q poolq","they.made.you.a.moron"),
 	run_test("-f Makefile.queue -Q test -H","under.blue.moon.i.saw.you"),
 	run_test("-f Makefile.queue -Q poolq -H","the.head.on.the.door"),
+	run_test("ref","target",[],["t/slurm/fake_swait"],"-d -f Makefile.queue -Q slurm --qsub-exec ../slurm/fake_sbatch --qdel-exec ../slurm/fake_scancel","slurmtest"),
 	run_test("ref","target",[],["t/sge/fake_qwait"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","outside.theres.a.boxcar.waiting"),
 	run_test("ref","target",[],["t/sge/fake_qwait"],"-d -f Makefile.queue -Q sge -H --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel","that.was.my.favourite.dress"),
 	run_test("ref","target",[],["t/sge/fake_qwait"],"-d -f Makefile.queue -Q sge --qsub-exec ../sge/fake_qsub --qdel-exec ../sge/fake_qdel --queue-args '--fake-arg dummy'","walk.right.through.the.door"),

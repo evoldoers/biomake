@@ -133,16 +133,6 @@ first_int_codes([C|Cs]) --> parse_num_code(C), !, first_int_codes(Cs).
 first_int_codes([]) --> [_], first_int_codes([]).
 first_int_codes([]) --> [].
 
-qsub_generic_job_id(Engine,T,Id) :-
-	biomake_private_filename(T,[Engine,"job"],JobFilename),
-	exists_file(JobFilename),
-	phrase_from_file(nl_to_spc(Id),JobFilename).
-
-nl_to_spc(S) --> nl_to_spc_codes(Cs), !, {string_codes(S,Cs)}.
-nl_to_spc_codes([0'\s|Cs]) --> [0'\n], !, nl_to_spc_codes(Cs).
-nl_to_spc_codes([C|Cs]) --> [C], nl_to_spc_codes(Cs).
-nl_to_spc_codes([]) --> [].
-
 qsub_make_dep_arg(_,[],"").
 qsub_make_dep_arg(Engine,DepJobs,DepArg) :-
         qsub_dep_arg_prefix(Engine,DepArgPrefix),
@@ -289,7 +279,7 @@ qsub_dep_separator(pbs,",").
 qsub_dep_arg(pbs,DepJobs,Arg) :- qsub_make_dep_arg(pbs,DepJobs,Arg).
 qsub_extra_args(pbs,"").
 qsub_script_headers(pbs,_,_,[]).
-qsub_job_id(pbs,T,N) :- qsub_generic_job_id(pbs,T,N).
+qsub_job_id(pbs,T,N) :- qsub_numeric_job_id(pbs,T,N).
 
 % ----------------------------------------
 % SLURM
@@ -312,7 +302,7 @@ qsub_dep_separator(slurm,",").
 qsub_dep_arg(slurm,DepJobs,Arg) :- qsub_make_dep_arg(slurm,DepJobs,Arg).
 qsub_extra_args(slurm,"--parsable").
 qsub_script_headers(slurm,_,_,[]).
-qsub_job_id(slurm,T,N) :- qsub_generic_job_id(slurm,T,N).
+qsub_job_id(slurm,T,N) :- qsub_numeric_job_id(slurm,T,N).
 
 % ----------------------------------------
 % POOLQ

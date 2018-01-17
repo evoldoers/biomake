@@ -1,0 +1,61 @@
+#!/usr/bin/env perl
+
+use Time::HiRes qw(usleep);
+
+# dummy version of sbatch that just forks a process and sleeps
+# Also does some extra checking if args match /slurmtest/
+# (specifically, there must be two dependencies in that case)
+
+my @hold;
+my $parsable;
+my ($out, $err) = ("", "");
+my @args = @ARGV;
+while (@ARGV && $ARGV[0] =~ /^-/) {
+    my $arg = shift;
+    if ($arg =~ /^--dependency=(.*)$/) {
+	my $deps = $1;
+	my @deps = split /,/, $deps;
+	for my $dep (@deps) {
+	    if ($dep =~ /^afterok:(\d+)$/) {
+		push @hold, $1;
+	    }
+	}
+    } elsif ($arg eq '-o') {
+	$out = ">" . shift;
+    } elsif ($arg eq '-e') {
+	$err = "2>" . shift;
+    } elsif ($arg eq '--fake-arg') {
+	shift;
+    } elsif ($arg eq '--parsable') {
+	$parsable = 1;
+    } elsif ($arg eq '--echo') {
+	my $text = shift;
+	my $file = shift;
+	system "echo $text >$file";
+    } else {
+	die "Unknown option $arg";
+    }
+}
+
+# Must always specify --parsable
+die "Option --parsable was not specified" unless $parsable;
+
+# 'slurmtest' must have two dependencies
+if (grep (/slurmtest/, @args)) {
+    die "'slurmtest' must have two dependencies" unless @hold == 2;
+}
+
+my $child = fork();
+if ($child) {
+    print $child, "\n";
+} else {
+    for my $hold (@hold) {
+	while (1) {
+	    my $pids = `ps -opid`;
+	    my @pids = split /\s+/, $pids;
+	    last unless grep($_ eq $hold,@pids);
+	}
+    }
+    usleep(1e5);  # sleep for 100ms
+    system "@ARGV $out $err";
+}

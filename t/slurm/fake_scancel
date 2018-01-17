@@ -1,0 +1,13 @@
+#!/usr/bin/env perl
+
+while (@ARGV && $ARGV[0] =~ /^-/) {
+    my $arg = shift;
+    if ($arg eq '--fake-arg') {
+	shift;
+    } elsif ($arg eq '--echo') {
+	shift;
+	shift;
+    }
+}
+
+system "kill @ARGV";

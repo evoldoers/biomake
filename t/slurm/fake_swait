@@ -1,0 +1,18 @@
+#!/usr/bin/env perl
+
+use Time::HiRes qw(usleep);
+
+# dummy script that waits for all fake_sbatch jobs to finish
+
+my $last_fake_sbatch_jobs;
+while (1) {
+    my $ps = `ps -ocommand`;
+    my $fake_sbatch_jobs = 0;
+    while ($ps =~ /fake_sbatch/g) { ++$fake_sbatch_jobs }
+    last unless $fake_sbatch_jobs;
+    if ($fake_sbatch_jobs != $last_fake_sbatch_jobs) {
+	warn "Jobs remaining: ", $fake_sbatch_jobs, "\n";
+	$last_fake_sbatch_jobs = $fake_sbatch_jobs;
+    }
+    usleep(2e5);  # sleep for 200ms
+}
