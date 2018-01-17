@@ -127,6 +127,8 @@ test :-
 	run_test("shell_assign"),
 	run_test("-f Makefile.env","envtest"),
 	run_test("-f Makefile.env","envtest2"),
+	run_test("-p Makespec.env2","envtest3"),
+	run_test("-p Makespec.env2","envtest4"),
 	
 	announce("CONDITIONAL SYNTAX"),
 	run_test("-f Makefile.cond","ifdef_true"),

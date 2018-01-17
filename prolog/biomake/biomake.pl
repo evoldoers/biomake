@@ -739,10 +739,9 @@ add_spec_clause(Ass,Opts,Opts) :-
 	add_spec_clause(Ass, [Var=Var], Opts, Opts).
 
 add_spec_clause(export(Var),Opts,Opts) :-
-        global_binding(Var,Val),
 	!,
-	setenv(Var,Val).
-
+	add_spec_clause(export(Var),[Var=Var],Opts,Opts).
+    
 add_spec_clause( Term, Opts, Opts ) :-
         add_spec_clause( Term, [], Opts, Opts ).
 
@@ -857,6 +856,12 @@ add_spec_clause(Rule,VNs,Opts,Opts) :-
         debug(makeprog,'with: ~w ~w',[Rule,VNs]),
 	set_default_target(T),
         assertz(with(Rule,VNs)).
+
+add_spec_clause(export(Var),[Var=Var],Opts,Opts) :-
+        global_binding(Var,Val),
+	!,
+        debug(makeprog,'export ~w = ~w',[Var,Val]),
+	setenv(Var,Val).
 
 add_spec_clause(Term,_,Opts,Opts) :-
         debug(makeprog,"assert ~w",Term),

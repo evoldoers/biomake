@@ -37,6 +37,8 @@ XYZ := $(ABC) xyz
 DEF ?= $(ABC)
 ABC = abc
 
+export ABC
+
 HeadGoal {test}:
 	something
 

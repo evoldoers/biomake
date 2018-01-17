@@ -1,0 +1,8 @@
+MAKEFILE_LIST += 'Makefile.env2'.
+MAKECMDGOALS = ''.
+EXPORTED_VAR = "hello".
+export(EXPORTED_VAR).
+"envtest3" <-- [], "echo $$EXPORTED_VAR >$@".
+EXPORTED_VAR2 = "world".
+export(EXPORTED_VAR2).
+"envtest4" <-- [], "echo $$EXPORTED_VAR2 >$@".
