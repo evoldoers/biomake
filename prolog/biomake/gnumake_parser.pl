@@ -385,7 +385,7 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{DepGoal},VNs),Lines) -->
     "}",
     opt_whitespace,
     ":",
-    opt_makefile_targets(Deps),
+    opt_makefile_deps(Deps),
     whitespace_or_linebreak,
     "{",
     xbrace(DepGoalAtom,Ldep),
@@ -406,7 +406,7 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{true},VNs),Lines) -->
     "}",
     opt_whitespace,
     ":",
-    opt_makefile_targets(Deps),
+    opt_makefile_deps(Deps),
     opt_comment,
     !,
     makefile_execs(Exec,Lexecs),
@@ -416,7 +416,7 @@ makefile_recipe(rule(Head,Deps,Exec,{HeadGoal},{true},VNs),Lines) -->
 makefile_recipe(rule(Head,Deps,Exec,{DepGoal},VNs),Lines) -->
     makefile_targets(Head),
     ":",
-    opt_makefile_targets(Deps),
+    opt_makefile_deps(Deps),
     whitespace_or_linebreak,
     "{",
     xbrace(DepGoalAtom,Ldep),
@@ -430,7 +430,7 @@ makefile_recipe(rule(Head,Deps,Exec,{DepGoal},VNs),Lines) -->
 makefile_recipe(rule(Head,Deps,Exec),Lines) -->
     makefile_targets(Head),
     ":",
-    opt_makefile_targets(Deps),
+    opt_makefile_deps(Deps),
     opt_comment,
     !,
     makefile_execs(Exec,Lexecs),
@@ -439,7 +439,7 @@ makefile_recipe(rule(Head,Deps,Exec),Lines) -->
 makefile_recipe(rule(Head,Deps,[Efirst|Erest]),Lines) -->
     makefile_targets(Head),
     ":",
-    opt_makefile_targets(Deps),
+    opt_makefile_deps(Deps),
     ";",
     opt_space,
     exec_line_as_string(Efirst,Lfirst),
@@ -447,8 +447,8 @@ makefile_recipe(rule(Head,Deps,[Efirst|Erest]),Lines) -->
     makefile_execs(Erest,Lexecs),
     {Lines is Lfirst + Lexecs}.
 
-opt_makefile_targets(T) --> makefile_targets(T).
-opt_makefile_targets([]) --> opt_space.
+opt_makefile_deps(T) --> opt_whitespace, makefile_targets(T).
+opt_makefile_deps([]) --> opt_whitespace.
 
 makefile_targets([T|Ts]) --> opt_space, makefile_target_string(T), whitespace, makefile_targets(Ts), opt_whitespace.
 makefile_targets([T]) --> opt_space, makefile_target_string(T), opt_whitespace.

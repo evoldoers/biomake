@@ -119,6 +119,14 @@ split_recipe_lines : ; @(echo 'hello \
 	world'; echo "hello \
     world") >$@
 
+split_target_lines: \
+	split_target_lines_dep1 \
+	split_target_lines_dep2
+	cat $^ >$@
+
+split_target_lines_dep1 split_target_lines_dep2:
+	echo $@ >$@
+
 wdep1 wdep2:
 	touch $@
 

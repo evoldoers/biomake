@@ -73,6 +73,7 @@ test :-
 	run_test("percent_in_body"),
 	run_test("split_lines"),
 	run_test("split_recipe_lines"),
+	run_test("split_target_lines"),
 	run_failure_test("--no-backtrace -f Makefile.nl","escaped_nl"),
 	run_test("--no-backtrace -f Makefile.nl2","escaped_nl2"),
 	run_test("wildcard_deps"),
