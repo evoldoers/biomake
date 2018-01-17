@@ -74,6 +74,7 @@ test :-
 	run_test("split_lines"),
 	run_test("split_recipe_lines"),
 	run_test("split_target_lines"),
+	run_test("-f Makefile.dep_linebreak","dep_linebreak"),  % overlaps somewhat with split_target_lines, so moved closer to it
 	run_failure_test("--no-backtrace -f Makefile.nl","escaped_nl"),
 	run_test("--no-backtrace -f Makefile.nl2","escaped_nl2"),
 	run_test("wildcard_deps"),
@@ -85,7 +86,6 @@ test :-
 	run_test("-f Makefile.targetexpr","var_slash_var_in_deplist"),
 	run_test("-f Makefile.modifier","padded_modifier"),
 	run_test("-f Makefile.modifier","padded_modifier_from_foreach"),
-	run_test("-f Makefile.dep_linebreak","dep_linebreak"),
 
 	announce("SPECIAL TARGETS"),
 	run_test("-f Makefile.oneshell","oneshell"),
@@ -125,6 +125,8 @@ test :-
 	run_test("computed_var3"),
 	run_test("two_lines"),
 	run_test("shell_assign"),
+	run_test("-f Makefile.env","envtest"),
+	run_test("-f Makefile.env","envtest2"),
 	
 	announce("CONDITIONAL SYNTAX"),
 	run_test("-f Makefile.cond","ifdef_true"),

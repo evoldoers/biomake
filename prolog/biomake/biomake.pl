@@ -655,10 +655,15 @@ translate_gnumake_clause(assignment(Var,"?=",Val), (Var ?= Val)):- !.
 translate_gnumake_clause(assignment(Var,":=",Val), (Var := Val)):- !.
 translate_gnumake_clause(assignment(Var,"+=",Val), (Var += Val)):- !.
 translate_gnumake_clause(assignment(Var,"!=",Val), (Var =* Val)):- !.
+translate_gnumake_clause(export(Var), export(Var)):- !.
 translate_gnumake_clause(C,_) :-
     format("Error translating ~w~n",[C]),
 	backtrace(20),
     fail.
+
+write_clause(IO,export(Var)) :-
+    !,
+    format(IO,"export(~w).~n",[Var]).
 
 write_clause(IO,option(Opt)) :-
     !,
@@ -733,6 +738,11 @@ add_spec_clause(Ass,Opts,Opts) :-
 	!,
 	add_spec_clause(Ass, [Var=Var], Opts, Opts).
 
+add_spec_clause(export(Var),Opts,Opts) :-
+        global_binding(Var,Val),
+	!,
+	setenv(Var,Val).
+
 add_spec_clause( Term, Opts, Opts ) :-
         add_spec_clause( Term, [], Opts, Opts ).
 
@@ -744,7 +754,6 @@ add_spec_clause( (Var ?= X) , _VNs, Opts, Opts) :-
         global_binding(Var,Oldval),
         !,
         debug(makeprog,"Ignoring ~w = ~w since ~w is already bound to ~w",[Var,X,Var,Oldval]).
-
 
 add_spec_clause( (Var ?= X), VNs, Opts, Opts) :-
         add_spec_clause((Var = X),VNs,Opts,Opts).

@@ -62,6 +62,12 @@ makefile_block(Rules,OptsOut,OptsIn,Line,File,Lines) --> makefile_conditional(tr
 makefile_block(Rules,OptsOut,OptsIn,_,File,1) --> include_line(true,File,Rules,OptsOut,OptsIn), !.
 makefile_block([Assignment],Opts,Opts,_,_,Lines) --> makefile_assignment(Assignment,Lines), !,
 	{add_gnumake_clause(Assignment,Opts,Opts)}.
+makefile_block([export(Var)],Opts,Opts,_,_,Lines) --> makefile_export(Var,Lines),
+	{add_gnumake_clause(export(Var),Opts,Opts)}.
+makefile_block([Assignment,export(Var)],Opts,Opts,_,_,Lines) --> makefile_export_assignment(Assignment,Lines),
+        {Assignment = assignment(Var,_,_),
+	 add_gnumake_clause(Assignment,Opts,Opts),
+	 add_gnumake_clause(export(Var),Opts,Opts)}.
 makefile_block([option(Opt)],[Opt|Opts],Opts,_,_,Lines) --> makefile_special_target(Opt,Lines), !.
 makefile_block([Rule],Opts,Opts,_,_,Lines) --> makefile_recipe(Rule,Lines), !,
 	{add_gnumake_clause(Rule,Opts,Opts)}.
@@ -233,6 +239,21 @@ makefile_assignment(assignment(Var,Op,Val),Lines) -->
     op_string(Op),
     opt_whitespace,
     line_as_string(Val,Lines).
+
+makefile_export(Var,1) -->
+    opt_space,
+    "export",
+    whitespace,
+    makefile_var_atom_from_codes(Var),
+    opt_whitespace,
+    "\n".
+
+makefile_export_assignment(Assignment,Lines) -->
+    opt_space,
+    "export",
+    whitespace,
+    makefile_assignment(Assignment,Lines),
+    "\n".
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifeq", whitespace, conditional_arg_pair(Active,Arg1,Arg2), opt_whitespace, "\n",

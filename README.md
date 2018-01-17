@@ -441,6 +441,7 @@ The following features of GNU Make are not (yet) implemented:
     - The [+ sign to force execution during dry runs](https://www.gnu.org/software/make/manual/html_node/Instead-of-Execution.html) is _not_ supported
     - The [- sign to suppress errors in recipes](https://www.gnu.org/software/make/manual/html_node/Errors.html) _is_ supported
     - The [@ sign to execute recipe lines silently](https://www.gnu.org/software/make/manual/html_node/Echoing.html) _is_ supported
+- The [export](https://www.gnu.org/software/make/manual/html_node/Variables_002fRecursion.html) keyword is supported, but "unexport" and "override" are _not_ supported
 
 Please [submit a GitHub issue](https://github.com/evoldoers/biomake/issues) if any of these are important to you.
 
