@@ -428,9 +428,9 @@ The following features of GNU Make are not (yet) implemented:
     - `.NOTPARALLEL` is implemented
     - `.ONESHELL` is implemented
     - `.IGNORE` is implemented
-    - `.SECONDARY` is implicit and `.INTERMEDIATE` is unsupported: Biomake never removes intermediate files
     - `.DELETE_ON_ERROR` is implemented
-    - `.PRECIOUS` is implicit for all targets, and `.DELETE_ON_ERROR` is unsupported: Biomake does not delete files on interruption or error
+    - `.SECONDARY` is implicit and `.INTERMEDIATE` is unsupported: Biomake never removes intermediate files (unless `.DELETE_ON_ERROR` is specified)
+    - `.PRECIOUS` is implicit for all targets
     - `.SECONDEXPANSION` is implicit
     - `.SUFFIXES` is unsupported (or implicit with no dependencies), since suffix rules are unsupported
     - other special targets not mentioned in the above list are not supported (they'll just be parsed as regular targets, i.e. ignored)
