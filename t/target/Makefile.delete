@@ -1,0 +1,17 @@
+deltest: deltest-dep
+	(cat $< || echo mushroom) >$@
+
+deltest2:
+	($(MAKE) $(addprefix -f ,$(MAKEFILE_LIST)) deltest2-dep || true)
+	(cat deltest2-dep || echo mushroom) >$@
+
+deltest-dep deltest2-dep:
+	echo hello >$@
+	this_line_should_cause_an_error_wardrobe_elephant_postman
+
+.DELETE_ON_ERROR:
+
+.SECONDARY:
+
+.IGNORE: deltest-dep
+

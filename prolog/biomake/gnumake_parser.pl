@@ -373,6 +373,9 @@ xvar(Sx) --> makefile_var_string_from_codes(S), opt_whitespace, "\n", {eval_var(
 axvar(true,Sx) --> xvar(Sx).
 axvar(false,_) --> makefile_var_string_from_codes(_), opt_whitespace, "\n".
 
+makefile_special_target(delete_on_error(true),Lines) -->
+    makefile_recipe(rule([".DELETE_ON_ERROR"],_,_),Lines).
+
 makefile_special_target(queue(none),Lines) -->
     makefile_recipe(rule([".NOTPARALLEL"],_,_),Lines).
 

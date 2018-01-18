@@ -95,6 +95,8 @@ test :-
 	run_test("-f Makefile.ignore","ignore"),
 	run_failure_test("-f Makefile.ignore_control","ignore_control"),
 	run_test("-f Makefile.ignore_all","ignore_all"),
+	run_test("-f Makefile.delete","deltest"),
+	run_test("-f Makefile.delete","deltest2"),
 
 	announce("AUTOMATIC VARIABLES"),
 	run_test("stem.echo"),

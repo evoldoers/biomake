@@ -568,6 +568,12 @@ handle_error(T,Opts) :-
         member(ignore_errors_in_targets(TL),Opts),
 	member(T,TL),
         !.
+handle_error(T,Opts) :-
+        get_opt(delete_on_error,true,Opts),
+	exists_file(T),
+        report('Deleting ~w',[T],Opts),
+        delete_file(T),
+        fail.
 handle_error(_,_) :-
         halt_error.
 
