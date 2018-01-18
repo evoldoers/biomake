@@ -252,8 +252,7 @@ makefile_export_assignment(Assignment,Lines) -->
     opt_space,
     "export",
     whitespace,
-    makefile_assignment(Assignment,Lines),
-    "\n".
+    makefile_assignment(Assignment,Lines).
 
 makefile_conditional(Active,Result,OptsOut,OptsIn,Line,File,Lines) -->
     opt_space, "ifeq", whitespace, conditional_arg_pair(Active,Arg1,Arg2), opt_whitespace, "\n",
