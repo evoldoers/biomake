@@ -311,6 +311,15 @@ simple_arg('--one-shell',oneshell(true)).
 arg_info('--one-shell','','Run recipes in single shell (loosely equivalent to GNU Make\'s .ONESHELL)').
 
 % ----------------------------------------
+% PROVENANCE
+% ----------------------------------------
+
+parse_arg(['--dbpath',X|L],L,dbpath(X)).
+arg_info('--dbpath','PATH','Path db file for recording actions').
+simple_arg('--prov',prov(true)) :- ensure_loaded(library(biomake/persistent_db)).
+arg_info('--prov','','Provenance mode').
+
+% ----------------------------------------
 % MD5 CHECKSUMS
 % ----------------------------------------
 

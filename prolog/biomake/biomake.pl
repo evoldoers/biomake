@@ -117,6 +117,14 @@ call_without_backtrace(Term) :-
 
 disable_backtrace :- assertz(no_backtrace).
 
+% ----------------------------------------
+% MESSAGE PASSING
+% ----------------------------------------
+
+:- multifile intercept_message_hook/1.
+fire_message(M) :-
+        findall(M,intercept_message_hook(M),_).
+
 
 % ----------------------------------------
 % TOP-LEVEL
@@ -175,7 +183,8 @@ build(T,SL,Opts) :-
 	dep_bindrule(Rule,Opts,Rule2,Opts2),  % test dependencies goal
         debug_report(build,'Post-dependency rule: ~w',[Rule2],SL),
         (   rebuild_required(T,DL,SL,Opts2)  % test if target is stale
-        ->  run_execs_and_update(Rule2,SL,Opts2)  % (re)build
+        ->  run_execs_and_update(Rule2,SL,Opts2),  % (re)build
+            fire_message(was_derived_from(T,DL,Rule2))
         ;   verbose_report('~w is up to date',[T],SL,Opts)),
 	!.
 build(T,SL,Opts) :-
@@ -458,6 +467,7 @@ dispatch_run_execs(Rule,SL,Opts) :-
         rule_dependencies(Rule,DL,Opts),
 	format(string(Cmd),"touch ~w",[T]),
 	shell(Cmd),
+        fire_message(was_generated_by(T,Cmd)),
 	(running_silent(T,Opts) -> true; report('~w',[Cmd],SL,Opts)),
 	update_hash(T,DL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
@@ -545,6 +555,7 @@ silent_run_exec(Exec,T,SL,Opts) :-
         shell(Exec,Err),
         get_time(T2),
         DT is T2-T1,
+        fire_message(was_generated_by(T,Exec,Err,T1,T2)),
         debug_report(build,'  Return: ~w Time: ~w',[Err,DT],SL),
 	handle_exec_error(Exec,Err,T,SL,Opts),
         !.
