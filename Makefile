@@ -44,6 +44,6 @@ docker-build:
 docker-run:
 	docker run --rm -ti --name biomake $(IM)
 
-docker-publish: build
+docker-publish: docker-build
 	@docker push $(IM):$(VERSION) \
 	&& docker push $(IM):latest
