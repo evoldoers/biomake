@@ -1,5 +1,15 @@
 # CHANGES
 
+## 0.1.4
+
+ * Fixed README lines about .DELETE_ON_ERROR - see #46
+ * Fixes #52
+ * Resolves #50 implementing 'export' with tests
+ * Resolves #46 and adds tests
+ * Fixes #52
+ * Fixes #44 with test
+ * Fixes #49 with test
+
 ## 0.1.2
 
  * If errors are ignored, report this. This happens if an exec fails, and either -k is passed or the line starts '-'
