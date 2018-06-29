@@ -1,5 +1,9 @@
 # CHANGES
 
+## 0.1.5
+
+No programmatic changes to 0.1.4. The 0.1.4 release did not have the pack version match the cli.pl version. Fixed by incrementing to 0.1.5
+
 ## 0.1.4
 
  * Fixed README lines about .DELETE_ON_ERROR - see #46
