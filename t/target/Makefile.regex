@@ -1,2 +1,2 @@
-testregex_$(ABC): { =~(ABC,'^a') }
+testregex_$(ABC): { re_match('^a',ABC) }
 	echo Fired rule for $@ >$@

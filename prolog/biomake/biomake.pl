@@ -64,7 +64,7 @@
 	   expand_vars/3
            ]).
 
-:- use_module(library(regex)).
+:- use_module(library(pcre)).
 
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
