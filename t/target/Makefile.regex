@@ -1,0 +1,2 @@
+testregex_$(ABC): { =~(ABC,'^a') }
+	echo Fired rule for $@ >$@

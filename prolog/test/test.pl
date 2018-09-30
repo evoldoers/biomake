@@ -309,6 +309,11 @@ test :-
 	run_test("-f Makefile.dcg","dcg_test"),
 	run_test("-f Makefile.dcg","mismatch_dcg_test"),
 
+	announce("MICHAEL HENDRICKS REGEX LIBRARY"),
+	run_test("-f Makefile.regex","testregex_apple"),
+	run_failure_test("-f Makefile.regex","testregex_cat"),
+	run_failure_test("-f Makefile.regex","testregex_ALBACORE"),  % fails due to default case-sensitivity of regexes
+	
 	% All done
 	report_counts,
         (   failed_test(_,_)
