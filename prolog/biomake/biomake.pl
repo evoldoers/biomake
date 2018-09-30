@@ -56,11 +56,15 @@
 	   report_run_exec/4,
 	   update_hash/3,
 
+	   shell_var_specified/1,
+	   
 	   bindvar/3,
            bindvar_rule/4,
 	   expand_vars/2,
 	   expand_vars/3
            ]).
+
+:- use_module(library(regex)).
 
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/functions)).
@@ -477,6 +481,10 @@ run_execs_now(Rule,SL,Opts) :-
 	!,
 	run_execs_in_script(Rule,SL,Opts).
 run_execs_now(Rule,SL,Opts) :-
+        shell_var_specified(_),
+	!,
+	run_execs_in_script(Rule,SL,Opts).
+run_execs_now(Rule,SL,Opts) :-
 	rule_target(Rule,T,Opts),
         rule_dependencies(Rule,DL,Opts),
 	rule_execs(Rule,Es,Opts),
@@ -542,13 +550,22 @@ strip_mod_tail([]) --> [].
 
 silent_run_exec(Exec,T,SL,Opts) :-
         get_time(T1),
-        shell(Exec,Err),
+        run_shell(Exec,Err),
         get_time(T2),
         DT is T2-T1,
         debug_report(build,'  Return: ~w Time: ~w',[Err,DT],SL),
 	handle_exec_error(Exec,Err,T,SL,Opts),
         !.
 
+shell_var_specified(Sh) :-
+    atom_string(SHELL,"SHELL"),
+    global_binding(SHELL,Sh).
+
+run_shell(Exec,Err) :-
+    !,
+    debug_report(shell,'sh ~w',[Exec]),
+    shell(Exec,Err).
+    
 handle_exec_error(_,0,_,_,_) :- !.
 handle_exec_error(Exec,Err,T,SL,Opts) :-
         (   get_opt(keep_going_on_error,true,Opts)

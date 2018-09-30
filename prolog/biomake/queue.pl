@@ -193,20 +193,42 @@ write_script_file(T,Headers,Es,Cleanup,Opts,Subdirs,ScriptFilename) :-
 	append(ShellExecs,ShellCleanup,ExecsWithCleanup),
 	write_script_file_contents(T,Headers,ExecsWithCleanup,Opts,Subdirs,ScriptFilename).
 
-write_script_file_contents(T,Headers,Execs,_Opts,Subdirs,ScriptFilename) :-
+write_script_file_contents(T,Headers,Execs,Opts,Subdirs,ScriptFilename) :-
 	working_directory(CWD,CWD),
 	open_script_file(T,Subdirs,ScriptFilename,IO),
 	shell_path(Sh),
-	concat_string_list(Execs,ExecStr," &&\n"),
+	wrap_shell_execs(T,Execs,Opts,Subdirs,ExecStr),
 	concat_string_list(Headers,HeaderStr,"\n"),
 	format(IO,"#!~w~n~w~ncd ~w~n~w~n",[Sh,HeaderStr,CWD,ExecStr]),
 	close(IO),
 	format(string(Chmod),"chmod +x ~w",[ScriptFilename]),
 	shell(Chmod).
 
+wrap_shell_execs(T,Execs,_Opts,Subdirs,ShellFilename) :-
+        shell_var_specified(Sh),
+        !,
+	open_shell_file(T,Subdirs,ShellFilename,IO),
+	concat_string_list(Execs,ExecStr,"\n"),
+	format(IO,"#!~w~n~w~n",[Sh,ExecStr]),
+	close(IO),
+	format(string(Chmod),"chmod +x ~w",[ShellFilename]),
+	shell(Chmod).
+
+wrap_shell_execs(_T,Execs,_Opts,_Subdirs,ExecStr) :-
+        !,
+	join_with_ands(Execs,ExecStr).
+
+join_with_ands(List,Str) :-
+        !,
+	concat_string_list(List,Str," &&\n").
+
 open_script_file(Target,Subdirs,Filename,Stream) :-
         append(Subdirs,["script"],SubdirsScript),
 	open_biomake_private_file(Target,SubdirsScript,Filename,Stream).
+
+open_shell_file(Target,Subdirs,Filename,Stream) :-
+        append(Subdirs,["shell"],SubdirsShell),
+	open_biomake_private_file(Target,SubdirsShell,Filename,Stream).
 
 % ----------------------------------------
 % No queue engine (runs execs immediately)
