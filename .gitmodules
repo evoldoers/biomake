@@ -1,0 +1,3 @@
+[submodule "regex"]
+	path = regex
+	url = https://github.com/mndrix/regex
