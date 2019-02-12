@@ -102,6 +102,10 @@ Var=Val
     Silent operation; do not print recipes as they are executed
 --one-shell 
     Run recipes in single shell (loosely equivalent to GNU Make's .ONESHELL)
+-y,--sync URI
+    Synchronize current working directory to a remote URI. If no --sync-exec is specified, S3-form URIs (s3://mybucket/my/path) are handled using the AWS CLI tool; other URIs will be passed to rsync.
+--sync-exec COMMAND
+    Specify executable for --sync.
 -H,--md5-hash 
     Use MD5 hashes instead of timestamps
 -C,--no-md5-cache 
