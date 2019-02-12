@@ -20,7 +20,7 @@ test-%: stage-test
 
 stage-test:
 	(test -e t/target && rm -rf t/target) || true
-	cp -r t/target-template t/target
+	cp -r t/init t/target
 
 clean:
 	git clean -fd || true
