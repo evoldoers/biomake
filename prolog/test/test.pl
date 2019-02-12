@@ -33,8 +33,6 @@ test(N) :-
 test :-
 	init_counts,
 
-%	run_test("ref/sync","target/sync",[],[],"","all"),
-	
 	announce("FAILURE TESTS"),
 	run_failure_test("-f Makefile.cyclic","test1"),
 	run_failure_test("-f Makefile.cyclic","cyclic.test1"),
@@ -315,6 +313,9 @@ test :-
 	run_test("-f Makefile.regex","testregex_apple"),
 	run_failure_test("-f Makefile.regex","testregex_cat"),
 	run_failure_test("-f Makefile.regex","testregex_ALBACORE"),  % fails due to default case-sensitivity of regexes
+
+	announce("REMOTE SYNC"),
+	run_test("ref/sync","target/sync",[],[],"","all"),
 	
 	% All done
 	report_counts,
