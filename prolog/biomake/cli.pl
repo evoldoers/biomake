@@ -317,11 +317,15 @@ arg_info('--one-shell','','Run recipes in single shell (loosely equivalent to GN
 parse_arg(['-y',URIs|L],L,sync(URI)) :-
         ensure_loaded(library(biomake/sync)),
 	atom_string(URI,URIs),
-	sync_uri(URI),
 	!.
 arg_alias('-y','--sync').
-recover_arg(['-y'],sync(true)).
-arg_info('-y','','Synchronize current working directory to a remote URI. Currently only S3-form URIs (s3://mybucket/my/path), using the AWS CLI tool.').
+recover_arg(['-y',URI],sync(URI)).
+arg_info('-y','URI','Synchronize current working directory to a remote URI. If no --sync-exec is specified, S3-form URIs (s3://mybucket/my/path) are handled using the AWS CLI tool; other URIs will be passed to rsync.').
+parse_arg(['--sync-exec',Es|L],L,sync_exec(E)) :-
+	atom_string(E,Es),
+	!.
+recover_arg(['--sync-exec',E],sync_exec(E)).
+arg_info('--sync-exec','COMMAND','Specify executable for --sync.').
 
 
 % ----------------------------------------
