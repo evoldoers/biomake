@@ -59,4 +59,4 @@ sync_exec(Exec,_URI,_Opts) :-
 
 s3_sync_exec("aws s3 sync --delete").
 
-rsync_exec("rsync -r").
+rsync_exec("rsync -r --delete").
