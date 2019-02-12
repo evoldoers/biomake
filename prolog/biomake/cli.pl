@@ -3,6 +3,7 @@
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/embed)).
+:- use_module(library(biomake/sync)).
 
 % ----------------------------------------
 % MAIN PROGRAM
@@ -12,7 +13,6 @@
 :- nodebug(verbose).
 :- nodebug(build).
 :- nodebug(md5).
-
 
 main :-
         current_prolog_flag(argv, Arguments),
@@ -30,9 +30,11 @@ main :-
                G),
         forall(member(flush_queue(T),AllOpts),
 	       flush_queue_recursive(T,AllOpts)),
+	sync_remote_to_cwd(Cwd,AllOpts),
 	(build_toplevel(AllOpts)
-	 -> halt_success
-	 ;  halt_error).
+	-> sync_dir_to_remote(Cwd,AllOpts),
+	   halt_success
+	;  halt_error).
 
 build_toplevel(Opts) :-
 	member(toplevel(_),Opts),
@@ -315,7 +317,6 @@ arg_info('--one-shell','','Run recipes in single shell (loosely equivalent to GN
 % ----------------------------------------
 
 parse_arg(['-y',URIs|L],L,sync(URI)) :-
-        ensure_loaded(library(biomake/sync)),
 	atom_string(URI,URIs),
 	!.
 arg_alias('-y','--sync').

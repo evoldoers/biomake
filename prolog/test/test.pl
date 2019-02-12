@@ -33,6 +33,8 @@ test(N) :-
 test :-
 	init_counts,
 
+	run_test("ref/sync","target/sync",[],[],"","all"),
+	
 	announce("FAILURE TESTS"),
 	run_failure_test("-f Makefile.cyclic","test1"),
 	run_failure_test("-f Makefile.cyclic","cyclic.test1"),
