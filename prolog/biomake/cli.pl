@@ -322,11 +322,13 @@ parse_arg(['-y',URIs|L],L,sync(URI)) :-
 arg_alias('-y','--sync').
 recover_arg(['-y',URI],sync(URI)).
 arg_info('-y','URI','Synchronize current working directory to a remote URI. If no --sync-exec is specified, S3-form URIs (s3://mybucket/my/path) are handled using the AWS CLI tool; other URIs will be passed to rsync.').
-parse_arg(['--sync-exec',Es|L],L,sync_exec(E)) :-
+
+parse_arg(['-x',Es|L],L,sync_exec(E)) :-
 	atom_string(E,Es),
 	!.
-recover_arg(['--sync-exec',E],sync_exec(E)).
-arg_info('--sync-exec','COMMAND','Specify executable for --sync.').
+arg_alias('-x','--sync-exec').
+recover_arg(['-x',E],sync_exec(E)).
+arg_info('-x','COMMAND','Specify executable for --sync.').
 
 
 % ----------------------------------------
