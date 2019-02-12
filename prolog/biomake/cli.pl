@@ -311,6 +311,20 @@ simple_arg('--one-shell',oneshell(true)).
 arg_info('--one-shell','','Run recipes in single shell (loosely equivalent to GNU Make\'s .ONESHELL)').
 
 % ----------------------------------------
+% SYNC TO REMOTE STORAGE
+% ----------------------------------------
+
+parse_arg(['-y',URIs|L],L,sync(URI)) :-
+        ensure_loaded(library(biomake/sync)),
+	atom_string(URI,URIs),
+	sync_uri(URI),
+	!.
+arg_alias('-y','--sync').
+recover_arg(['-y'],sync(true)).
+arg_info('-y','','Synchronize current working directory to a remote URI. Currently only S3-form URIs (s3://mybucket/my/path), using the AWS CLI tool.').
+
+
+% ----------------------------------------
 % MD5 CHECKSUMS
 % ----------------------------------------
 
