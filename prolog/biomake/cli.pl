@@ -296,14 +296,6 @@ makefile_val(S) --> string_from_codes(S," ").
 % ESOTERIC FEATURES
 % ----------------------------------------
 
-parse_arg(['-l',F|L],L,
-          goal( (collect_stored_targets(F,[]),
-                 show_stored_targets
-                ) )) :-
-        ensure_loaded(library(biomake/scan)),
-        !.
-arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
-
 simple_arg('-s',silent(true)).
 arg_alias('-s','--quiet').
 arg_alias('-s','--silent').
@@ -320,6 +312,7 @@ parse_arg(['-y',URIs|L],L,sync(URI)) :-
 	atom_string(URI,URIs),
 	!.
 arg_alias('-y','--sync').
+arg_alias('-y','--sync-dir').
 recover_arg(['-y',URI],sync(URI)).
 arg_info('-y','URI','Synchronize current working directory to a remote URI. If no --sync-exec is specified, S3-form URIs (s3://mybucket/my/path) are handled using the AWS CLI tool; other URIs will be passed to rsync.').
 
