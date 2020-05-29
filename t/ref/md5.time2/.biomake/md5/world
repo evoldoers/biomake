@@ -1,0 +1,2 @@
+md5_hash("world",6,"f8965eeb4165fef5104e147bb11b4bf5").
+md5_valid("world",6,"f8965eeb4165fef5104e147bb11b4bf5",X).

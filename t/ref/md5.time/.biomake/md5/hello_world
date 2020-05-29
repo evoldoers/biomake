@@ -1,4 +1,4 @@
-md5_hash("hello_world",12,"d1f1b13ee233eca000599110b021bce7").
-md5_valid("hello_world",12,"d1f1b13ee233eca000599110b021bce7",X) :-
+md5_hash("hello_world",12,"0f723ae7f9bf07744445e93ac5595156").
+md5_valid("hello_world",12,"0f723ae7f9bf07744445e93ac5595156",X) :-
   md5_check("hello",6,"b1946ac92492d2347c6235b4d2611184",X),
-  md5_check("world",6,"0f7220a0df94ad88e497ae2fa6c56cdd",X).
+  md5_check("world",6,"591785b794601e212b260e25925636fd",X).

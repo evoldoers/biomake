@@ -1,0 +1,4 @@
+md5_hash("hello_world",12,"36b2377c5f708db7c8ce844965b2757d").
+md5_valid("hello_world",12,"36b2377c5f708db7c8ce844965b2757d",X) :-
+  md5_check("hello",6,"b1946ac92492d2347c6235b4d2611184",X),
+  md5_check("world",6,"f8965eeb4165fef5104e147bb11b4bf5",X).

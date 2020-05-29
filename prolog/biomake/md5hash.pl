@@ -183,6 +183,8 @@ make_md5_valid_goal_list([],[],_).
 update_md5_file(T,DL,Opts) :-
     debug(md5,'updating MD5 hash file for ~w <-- ~w',[T,DL]),
     delete_md5_file(T),
+    % retract the database value, which will be stale
+    retract_md5_hash(T),
     md5_check(T,SizeT,HashT,Opts),
     make_md5_hash_term(T,SizeT,HashT,HashTerm),
     make_md5_valid_term(T,SizeT,HashT,ValidTerm),

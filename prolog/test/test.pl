@@ -234,7 +234,10 @@ test :-
 	run_test("ref/md5.len","target/md5.len",["echo wrong >hello","echo wrong length >world","echo wrong_wrong >hello_world","sleep 1","mkdir -p .biomake/md5","cp ../md5.checksums/* .biomake/md5"],[],"-H","hello_world"),
 
 	% this next test checks that the MD5 checksums are recomputed if the MD5 cache file modification times look stale.
-	run_test("ref/md5.time","target/md5.time",["echo wrong >hello","echo wrong_wrong >hello_world","sleep 1","mkdir -p .biomake/md5","cp ../md5.checksums/* .biomake/md5","sleep 1","echo wrong >world"],[],"-H","hello_world"),
+	run_test("ref/md5.time","target/md5.time",["echo wrong >hello","echo wrong_wrong >hello_world","sleep 1","mkdir -p .biomake/md5","cp ../md5.checksums/* .biomake/md5","sleep 1","echo world >world"],[],"-H","hello_world"),
+
+	% this next test checks that, once the MD5 checksums are recomputed if the MD5 cache file modification times look stale, the target is then rebuilt if the hash turns out to have been different from the one stored in the cache file.
+	run_test("ref/md5.time2","target/md5.time2",["echo wrong >hello","echo wrong_wrong >hello_world","sleep 1","mkdir -p .biomake/md5","cp ../md5.checksums/* .biomake/md5","sleep 1","echo wrong >world"],[],"-H","hello_world"),
 
 	announce("QUEUES"),
 
