@@ -12,14 +12,18 @@ bindir = $(exec_prefix)/bin
 
 all: clean test
 
-test:
+test: stage-test
 	$(SWIPL) -q -t test -l prolog/test/test
 
-test-%:
+test-%: stage-test
 	$(SWIPL) -q -t "test($*)" -l prolog/test/test
 
+stage-test:
+	(test -e t/target && rm -rf t/target) || true
+	cp -r t/init t/target
+
 clean:
-	git clean -fd t/target || true
+	git clean -fd || true
 
 symlink:
 	ln -sf $(MAKEFILE_DIR)bin/biomake $(bindir)/biomake

@@ -470,11 +470,11 @@ dispatch_run_execs(Rule,SL,Opts) :-
 	rule_target(Rule,T,Opts),
 	(get_opt(md5,true,Opts) -> ensure_md5_directory_exists(T) ; true),
 	run_execs_in_queue(Q,Rule,SL,Opts),
-	verbose_report('~w queued for rebuild',[T],SL,Opts).
+	verbose_report('Target ~w queued for rebuild',[T],SL,Opts).
 dispatch_run_execs(Rule,SL,Opts) :-
 	run_execs_now(Rule,SL,Opts),
 	rule_target(Rule,T,Opts),
-	verbose_report('~w built',[T],SL,Opts).
+	verbose_report('Target ~w built',[T],SL,Opts).
 
 run_execs_now(Rule,SL,Opts) :-
 	get_opt(oneshell,true,Opts),

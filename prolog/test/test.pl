@@ -316,6 +316,9 @@ test :-
 	run_test("-f Makefile.regex","testregex_apple"),
 	run_failure_test("-f Makefile.regex","testregex_cat"),
 	run_failure_test("-f Makefile.regex","testregex_ALBACORE"),  % fails due to default case-sensitivity of regexes
+
+	announce("REMOTE SYNC"),
+	run_test("ref/sync","target/sync",[],[],"","all"),
 	
 	% All done
 	report_counts,

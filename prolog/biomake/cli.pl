@@ -3,6 +3,7 @@
 :- use_module(library(biomake/biomake)).
 :- use_module(library(biomake/utils)).
 :- use_module(library(biomake/embed)).
+:- use_module(library(biomake/sync)).
 
 % ----------------------------------------
 % MAIN PROGRAM
@@ -12,7 +13,6 @@
 :- nodebug(verbose).
 :- nodebug(build).
 :- nodebug(md5).
-
 
 main :-
         current_prolog_flag(argv, Arguments),
@@ -30,9 +30,11 @@ main :-
                G),
         forall(member(flush_queue(T),AllOpts),
 	       flush_queue_recursive(T,AllOpts)),
+	sync_remote_to_cwd(Cwd,AllOpts),
 	(build_toplevel(AllOpts)
-	 -> halt_success
-	 ;  halt_error).
+	-> sync_dir_to_remote(Cwd,AllOpts),
+	   halt_success
+	;  halt_error).
 
 build_toplevel(Opts) :-
 	member(toplevel(_),Opts),
@@ -294,14 +296,6 @@ makefile_val(S) --> string_from_codes(S," ").
 % ESOTERIC FEATURES
 % ----------------------------------------
 
-parse_arg(['-l',F|L],L,
-          goal( (collect_stored_targets(F,[]),
-                 show_stored_targets
-                ) )) :-
-        ensure_loaded(library(biomake/scan)),
-        !.
-arg_info('-l','DIRECTORY','Iterates through directory writing metadata on each file found').
-
 simple_arg('-s',silent(true)).
 arg_alias('-s','--quiet').
 arg_alias('-s','--silent').
@@ -309,6 +303,26 @@ arg_info('-s','','Silent operation; do not print recipes as they are executed').
 
 simple_arg('--one-shell',oneshell(true)).
 arg_info('--one-shell','','Run recipes in single shell (loosely equivalent to GNU Make\'s .ONESHELL)').
+
+% ----------------------------------------
+% SYNC TO REMOTE STORAGE
+% ----------------------------------------
+
+parse_arg(['-y',URIs|L],L,sync(URI)) :-
+	atom_string(URI,URIs),
+	!.
+arg_alias('-y','--sync').
+arg_alias('-y','--sync-dir').
+recover_arg(['-y',URI],sync(URI)).
+arg_info('-y','URI','Synchronize current working directory to a remote URI. If no --sync-exec is specified, S3-form URIs (s3://mybucket/my/path) are handled using the AWS CLI tool; other URIs will be passed to rsync.').
+
+parse_arg(['-x',Es|L],L,sync_exec(E)) :-
+	atom_string(E,Es),
+	!.
+arg_alias('-x','--sync-exec').
+recover_arg(['-x',E],sync_exec(E)).
+arg_info('-x','COMMAND','Specify executable for --sync.').
+
 
 % ----------------------------------------
 % MD5 CHECKSUMS
