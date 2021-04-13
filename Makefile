@@ -37,3 +37,17 @@ install:
 uninstall:
 	(test -e $(datadir)/biomake && rm -rf $(datadir)/biomake) || true
 	(test -e $(bindir)/biomake && rm -rf $(bindir)/biomake) || true
+
+VERSION = "v0.0.1" 
+IM=cmungall/biomake
+
+docker-build:
+	@docker build -t $(IM):$(VERSION) . \
+	&& docker tag $(IM):$(VERSION) $(IM):latest
+
+docker-run:
+	docker run --rm -ti --name biomake $(IM)
+
+docker-publish: docker-build
+	@docker push $(IM):$(VERSION) \
+	&& docker push $(IM):latest
