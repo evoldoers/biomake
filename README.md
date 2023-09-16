@@ -270,7 +270,7 @@ Add the following rule to your `Makeprog`:
     '%.bar' <-- '%.foo',
         'foo2bar $< > $@'.
 
-Unlike makefiles, whitespace is irrelevant. However, you
+Unlike makefiles, whitespace is irrelevant (except inside the quote-delimited shell and filesystem expressions). However, you
 do need the quotes, and remember the closing ".",
 as this is Prolog syntax.
 
