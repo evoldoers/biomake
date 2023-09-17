@@ -485,13 +485,13 @@ compare_files(TestPath,RefPath) :-
     read_string_from_file(TestPath,TestText),
     read_string_from_file(RefPath,RefText),
     RefText = TestText,
-    format("match~n",[TestPath,RefPath]).
+    format("match: ~w == ~w~n",[TestPath,RefPath]).
 
 % If file version of compare_files failed, but files were present, then print a diff
 compare_files(TestPath,RefPath) :-
 	exists_file(TestPath),
 	exists_file(RefPath),
-	format("MISMATCH~n",[TestPath,RefPath]),
+	format("MISMATCH: ~w != ~w~n",[TestPath,RefPath]),
 	format(string(Diff),"diff -y ~s ~s",[TestPath,RefPath]),
 	format("~s:~n",[Diff]),
 	shell(Diff,_),
