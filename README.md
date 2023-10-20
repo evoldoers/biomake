@@ -4,9 +4,9 @@
 Biomake
 =======
 
-This is a [make](https://www.gnu.org/software/make/)-like utility for managing builds (or analysis workflows) involving multiple
+Biomake is a [make](https://www.gnu.org/software/make/)-compatible utility for managing builds (or analysis workflows) involving multiple
 dependent files.
-It supports most of the functionality of GNU Make, along with neat extensions like
+It supports most of the functionality (and syntax) of GNU Make, along with neat extensions like
 cluster-based job processing, multiple wildcards per target, MD5 checksums instead of timestamps,
 and declarative logic programming in Prolog.
 
