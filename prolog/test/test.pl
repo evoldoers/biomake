@@ -319,7 +319,25 @@ test :-
 
 	announce("REMOTE SYNC"),
 	run_test("ref/sync","target/sync",[],[],"","all"),
-	
+
+	announce("EXPANDED ARGUMENTS IN TEXT FUNCTIONS"),
+	run_test("-f Makefile.expand","abspath_expanded"),
+	run_test("-f Makefile.expand","addprefix_expanded"),
+	run_test("-f Makefile.expand","addsuffix_expanded"),
+	run_test("-f Makefile.expand","filter_expanded"),
+	run_test("-f Makefile.expand","filter_out_expanded"),
+	run_test("-f Makefile.expand","findstring1_expanded"),
+	run_test("-f Makefile.expand","findstring2_expanded"),
+	run_test("-f Makefile.expand","foreach_addsuffix_expanded"),
+	run_test("-f Makefile.expand","foreach_findstring_expanded"),
+	run_test("-f Makefile.expand","join_expanded"),
+	run_test("-f Makefile.expand","patsubst_expanded"),
+	run_test("-f Makefile.expand","realpath_expanded"),
+	run_test("-f Makefile.expand","sort_expanded"),
+	run_test("-f Makefile.expand","subst_expanded"),
+	run_test("-f Makefile.expand","wildcard_expanded"),
+	run_test("-f Makefile.expand","word2_expanded"),
+
 	% All done
 	report_counts,
         (   failed_test(_,_)

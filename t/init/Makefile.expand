@@ -1,0 +1,65 @@
+TWO = 2
+word2_expanded:
+	echo $(word $(TWO),hello world) >$@
+
+foreach_addsuffix_expanded:
+	echo $(foreach suff,cake bat,$(addsuffix $(suff),fruit pan pat-a-)) >$@
+
+# various substitutions
+ARG1 = bcd
+ARG2 = xyz
+subst_expanded:
+	echo $(subst $(ARG1),$(ARG2),abcdefg $(ARG1)) >$@
+
+C = c
+O = o
+patsubst_expanded:
+	echo $(patsubst %.$(C),%.$(O),a.c b.d e.$(C) f.c) >$@
+
+# more text functions
+RAB = rabbit
+RAB2 = rabbit duck
+findstring1_expanded:
+	echo $(findstring $(RAB),fox cow $(RAB2)) >$@
+
+findstring2_expanded:
+	echo $(findstring $(RAB),fox cow duck) >$@
+
+foreach_findstring_expanded:
+	echo $(foreach ANIMAL,cow $(RAB),$(findstring $(ANIMAL),rabbit fox cow duck)) >$@
+
+filter_expanded:
+	echo $(filter %.$(C),$(RAB).c fox.h cow.c duck.cpp) >$@
+
+filter_out_expanded:
+	echo $(filter-out %.$(C),$(RAB).c fox.h cow.c duck.cpp) >$@
+
+sort_expanded:
+	echo $(sort $(RAB) cow duck fox duck elephant) >$@
+
+S = soap
+B = bar
+addprefix_expanded:
+	echo $(addprefix $(S) ,dish opera $(B)) >$@
+
+CAKE = cake
+addsuffix_expanded:
+	echo $(addsuffix $(CAKE),fruit pan pat-a-) >$@
+
+I = inter
+STAR = star
+join_expanded:
+	echo $(join $(I) super D,national $(STAR) J) >$@
+
+D = dir
+wildcard_expanded:
+	echo $(wildcard ../$(D)/*) >$@
+
+L = lib
+abspath_expanded:
+	echo $(abspath /usr/share/../$(L)) >$@
+	echo $(abspath /etc//hosts) >>$@
+	echo $(abspath /this/file/does/not/exist) >>$@
+
+realpath_expanded:
+	echo $(realpath /this/file/does/not/exist) >$@

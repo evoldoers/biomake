@@ -82,11 +82,11 @@ makefile_function(Result,V) --> lb("suffix"), xlst_arg(Paths,V), rb, !,
 	{ maplist(suffix,Paths,R),
 	  concat_string_list_spaced(R,Result) }.
 
-makefile_function(Result,V) --> lb("addsuffix"), str_arg(Suffix), comma, xlst_arg(Prefixes,V), rb, !,
+makefile_function(Result,V) --> lb("addsuffix"), xstr_arg(Suffix,V), comma, xlst_arg(Prefixes,V), rb, !,
 	{ addsuffix(Suffix,Prefixes,R),
 	  concat_string_list_spaced(R,Result) }.
 
-makefile_function(Result,V) --> lb("addprefix"), str_arg(Prefix), comma, xlst_arg(Suffixes,V), rb, !,
+makefile_function(Result,V) --> lb("addprefix"), xstr_arg(Prefix,V), comma, xlst_arg(Suffixes,V), rb, !,
 	{ addprefix(Prefix,Suffixes,R),
 	  concat_string_list_spaced(R,Result) }.
 
@@ -115,7 +115,7 @@ makefile_function(Result,V) --> lb("shell"), xstr_arg(Exec,V), rb, !,
 	{ shell_eval_str(Exec,Result) }.
 
 makefile_function(Result,V) --> lb("foreach"), var_arg(Var), opt_whitespace, comma, xlst_arg(List,V), comma, str_arg(Text), rb, !,
-        { makefile_foreach(Var,List,Text,R,V),
+	{ makefile_foreach(Var,List,Text,R,V),
 	  concat_string_list_spaced(R,Result) }.
 
 makefile_function(Result,V) --> lb("if"), xstr_arg(Condition,V), opt_whitespace, comma, str_arg(Then), comma, str_arg(Else), rb, !,
