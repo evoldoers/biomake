@@ -48,6 +48,13 @@ The program can also be installed via the SWI-Prolog pack system.
 Just start SWI and type:
 
     ?- pack_install('biomake').
+    
+Use via Docker
+--------------
+
+An alternative to installing biomake is to run it via Docker:
+
+`docker run -v $PWD:/work -w /work --rm -ti evoldoers/biomake biomake [OPTIONS] [TARGETS]`
 
 Command-line
 ------------
